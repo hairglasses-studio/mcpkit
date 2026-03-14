@@ -13,12 +13,10 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/mark3labs/mcp-go/mcp"
 )
 
 // ToolHandlerFunc is the function signature for tool handlers.
-type ToolHandlerFunc func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error)
+type ToolHandlerFunc func(ctx context.Context, request CallToolRequest) (*CallToolResult, error)
 
 // Middleware wraps a tool handler with additional behavior.
 // It receives the tool name, definition, and next handler in the chain.
@@ -35,7 +33,7 @@ const (
 
 // ToolDefinition represents a complete tool with metadata.
 type ToolDefinition struct {
-	Tool                mcp.Tool
+	Tool                Tool
 	Handler             ToolHandlerFunc
 	Category            string
 	Subcategory         string
@@ -48,7 +46,7 @@ type ToolDefinition struct {
 	Timeout             time.Duration
 	CircuitBreakerGroup string
 	RuntimeGroup        string
-	OutputSchema        *mcp.ToolOutputSchema
+	OutputSchema        *ToolOutputSchema
 }
 
 // ToolModule is the interface that tool modules implement.
@@ -333,7 +331,7 @@ func (r *ToolRegistry) wrapHandler(toolName string, td ToolDefinition) ToolHandl
 	}
 	maxSize := r.config.MaxResponseSize
 
-	return func(ctx context.Context, request mcp.CallToolRequest) (result *mcp.CallToolResult, err error) {
+	return func(ctx context.Context, request CallToolRequest) (result *CallToolResult, err error) {
 		// Enforce timeout
 		if _, hasDeadline := ctx.Deadline(); !hasDeadline {
 			var cancel context.CancelFunc
@@ -375,15 +373,14 @@ func (r *ToolRegistry) wrapHandler(toolName string, td ToolDefinition) ToolHandl
 }
 
 // truncateResponse truncates text content exceeding maxSize.
-func truncateResponse(result *mcp.CallToolResult, maxSize int) *mcp.CallToolResult {
+func truncateResponse(result *CallToolResult, maxSize int) *CallToolResult {
 	if result == nil || maxSize <= 0 {
 		return result
 	}
 	for i, content := range result.Content {
-		if tc, ok := content.(mcp.TextContent); ok {
-			if len(tc.Text) > maxSize {
-				tc.Text = tc.Text[:maxSize] + fmt.Sprintf("\n\n[TRUNCATED: response exceeded %dKB limit]", maxSize/1024)
-				result.Content[i] = tc
+		if text, ok := ExtractTextContent(content); ok {
+			if len(text) > maxSize {
+				result.Content[i] = MakeTextContent(text[:maxSize] + fmt.Sprintf("\n\n[TRUNCATED: response exceeded %dKB limit]", maxSize/1024))
 			}
 		}
 	}

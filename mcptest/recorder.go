@@ -5,8 +5,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/mark3labs/mcp-go/mcp"
-
 	"github.com/hairglasses-studio/mcpkit/registry"
 )
 
@@ -14,7 +12,7 @@ import (
 type Call struct {
 	Name   string
 	Args   map[string]interface{}
-	Result *mcp.CallToolResult
+	Result *registry.CallToolResult
 	Err    error
 }
 
@@ -32,7 +30,7 @@ func NewRecorder() *Recorder {
 // Middleware returns a registry.Middleware that records tool calls.
 func (r *Recorder) Middleware() registry.Middleware {
 	return func(name string, td registry.ToolDefinition, next registry.ToolHandlerFunc) registry.ToolHandlerFunc {
-		return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		return func(ctx context.Context, request registry.CallToolRequest) (*registry.CallToolResult, error) {
 			result, err := next(ctx, request)
 
 			var args map[string]interface{}

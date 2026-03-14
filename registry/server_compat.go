@@ -1,4 +1,6 @@
-// server_compat.go abstracts the MCP server integration layer.
+//go:build !official_sdk
+
+// server_compat.go abstracts the MCP server integration layer (mcp-go variant).
 //
 // This file provides wrapper functions so that internal packages never
 // import the server package directly. When migrating to a different SDK,
