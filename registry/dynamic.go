@@ -3,8 +3,6 @@ package registry
 import (
 	"sort"
 	"sync"
-
-	"github.com/mark3labs/mcp-go/server"
 )
 
 // ChangeNotifier is called when the tool list changes at runtime.
@@ -81,7 +79,7 @@ func (d *DynamicRegistry) RegisterModule(module ToolModule) {
 
 // RegisterWithServer registers all tools with an MCP server and sets up
 // the change notifier to emit tools/list_changed notifications.
-func (d *DynamicRegistry) RegisterWithServer(s *server.MCPServer) {
+func (d *DynamicRegistry) RegisterWithServer(s *MCPServer) {
 	d.ToolRegistry.RegisterWithServer(s)
 
 	// Register change notifier that sends tools/list_changed
@@ -95,7 +93,7 @@ func (d *DynamicRegistry) RegisterWithServer(s *server.MCPServer) {
 				annotated.Tool.OutputSchema = *annotated.OutputSchema
 			}
 			wrapped := d.wrapHandler(tool.Tool.Name, tool)
-			s.AddTool(annotated.Tool, server.ToolHandlerFunc(wrapped))
+			AddToolToServer(s, annotated.Tool, wrapped)
 		}
 	})
 }
@@ -122,7 +120,7 @@ func (r *ToolRegistry) FilteredTools(filter ToolFilter) []ToolDefinition {
 }
 
 // RegisterFilteredWithServer registers only tools passing the filter with an MCP server.
-func (r *ToolRegistry) RegisterFilteredWithServer(s *server.MCPServer, filter ToolFilter) {
+func (r *ToolRegistry) RegisterFilteredWithServer(s *MCPServer, filter ToolFilter) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -135,7 +133,7 @@ func (r *ToolRegistry) RegisterFilteredWithServer(s *server.MCPServer, filter To
 			annotated.Tool.OutputSchema = *annotated.OutputSchema
 		}
 		wrapped := r.wrapHandler(tool.Tool.Name, tool)
-		s.AddTool(annotated.Tool, server.ToolHandlerFunc(wrapped))
+		AddToolToServer(s, annotated.Tool, wrapped)
 	}
 }
 

@@ -15,7 +15,8 @@ import (
 	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
-	"github.com/mark3labs/mcp-go/server"
+
+	"github.com/hairglasses-studio/mcpkit/registry"
 )
 
 // ResourceHandlerFunc is the function signature for resource read handlers.
@@ -217,18 +218,18 @@ func (r *ResourceRegistry) ModuleCount() int {
 
 // RegisterWithServer registers all resources and templates with an MCP server,
 // applying the configured middleware chain.
-func (r *ResourceRegistry) RegisterWithServer(s *server.MCPServer) {
+func (r *ResourceRegistry) RegisterWithServer(s *registry.MCPServer) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
 	for _, rd := range r.resources {
 		wrapped := r.wrapHandler(rd.Resource.URI, rd)
-		s.AddResource(rd.Resource, server.ResourceHandlerFunc(wrapped))
+		registry.AddResourceToServer(s, rd.Resource, wrapped)
 	}
 
 	for _, td := range r.templates {
 		wrapped := r.wrapTemplateHandler(td.Template.URITemplate.Raw(), td)
-		s.AddResourceTemplate(td.Template, server.ResourceTemplateHandlerFunc(wrapped))
+		registry.AddResourceTemplateToServer(s, td.Template, wrapped)
 	}
 }
 
