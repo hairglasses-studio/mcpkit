@@ -68,8 +68,7 @@ make check-dual          # Full check + official SDK build
 Current spec coverage: **100%** (14/14 MCP 2025-11-25 features implemented or partial).
 
 Next priorities:
-1. Official SDK full implementation for research package (currently stub-only)
-2. DPoP token binding (auth package)
-3. Official SDK TypedHandler variant for handler package
+1. DPoP token binding (auth package)
+2. Official SDK TypedHandler variant for handler package
 
 See [RESEARCH.md](RESEARCH.md) for full analysis: 17 roadmap items across 3 priority tiers, 4 implementation phases.
