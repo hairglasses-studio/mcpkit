@@ -64,8 +64,7 @@ make check               # All three above
 Current spec coverage: **86%** (12/14 MCP 2025-11-25 features implemented or partial).
 
 Next priorities:
-1. Example servers — minimal, full-featured, and migration showcase
-2. Official Go SDK migration path — compat.go update strategy, dual-SDK CI
-3. Streamable HTTP verification tests
+1. Official Go SDK migration path — compat.go update strategy, dual-SDK CI
+2. Streamable HTTP verification tests
 
 See [RESEARCH.md](RESEARCH.md) for full analysis: 17 roadmap items across 3 priority tiers, 4 implementation phases.
