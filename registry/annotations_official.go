@@ -1,4 +1,4 @@
-//go:build !official_sdk
+//go:build official_sdk
 
 package registry
 
@@ -28,37 +28,32 @@ func InferIsWrite(name string) bool {
 // ApplyMCPAnnotations applies MCP 2025 annotations based on tool metadata.
 // The prefix is stripped from tool names when generating human-readable titles.
 func ApplyMCPAnnotations(td ToolDefinition, prefix string) ToolDefinition {
-	td.Tool.Annotations.Title = toolNameToTitle(td.Tool.Name, prefix)
+	td.Tool.Annotations = &ToolAnnotation{
+		Title:    toolNameToTitle(td.Tool.Name, prefix),
+		ReadOnlyHint: !td.IsWrite,
+	}
 
-	readOnly := !td.IsWrite
-
-	destructive := false
 	if td.IsWrite {
 		nameLower := strings.ToLower(td.Tool.Name)
 		for _, suffix := range []string{"_delete", "_remove", "_reset", "_purge", "_clear", "_flush", "_destroy"} {
 			if strings.HasSuffix(nameLower, suffix) {
-				destructive = true
+				destructive := true
+				td.Tool.Annotations.DestructiveHint = &destructive
 				break
 			}
 		}
-	}
 
-	idempotent := !td.IsWrite
-	if td.IsWrite {
-		nameLower := strings.ToLower(td.Tool.Name)
 		for _, suffix := range []string{"_set", "_update", "_sync", "_enable", "_disable", "_assign"} {
 			if strings.HasSuffix(nameLower, suffix) {
-				idempotent = true
+				td.Tool.Annotations.IdempotentHint = true
 				break
 			}
 		}
+	} else {
+		td.Tool.Annotations.IdempotentHint = true
 	}
 
 	openWorld := true
-
-	td.Tool.Annotations.ReadOnlyHint = &readOnly
-	td.Tool.Annotations.DestructiveHint = &destructive
-	td.Tool.Annotations.IdempotentHint = &idempotent
 	td.Tool.Annotations.OpenWorldHint = &openWorld
 
 	return td

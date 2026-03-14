@@ -4,8 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/mark3labs/mcp-go/mcp"
-
 	"github.com/hairglasses-studio/mcpkit/registry"
 )
 
@@ -17,7 +15,7 @@ func (p *Provider) Middleware() registry.Middleware {
 		if category == "" {
 			category = "unknown"
 		}
-		return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		return func(ctx context.Context, request registry.CallToolRequest) (*registry.CallToolResult, error) {
 			ctx, span := p.StartSpan(ctx, name)
 			if span != nil {
 				defer span.End()

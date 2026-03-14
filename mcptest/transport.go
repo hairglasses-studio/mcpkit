@@ -1,3 +1,5 @@
+//go:build !official_sdk
+
 package mcptest
 
 import (
@@ -6,8 +8,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
+
+	"github.com/hairglasses-studio/mcpkit/registry"
 )
 
 // transport holds the SDK-specific session for communicating with the MCP server.
@@ -30,7 +33,7 @@ func newTransport(t testing.TB, s *Server) transport {
 	return transport{session: session, srv: s}
 }
 
-func (tr *transport) callTool(ctx context.Context, t testing.TB, name string, args map[string]interface{}) (*mcp.CallToolResult, error) {
+func (tr *transport) callTool(ctx context.Context, t testing.TB, name string, args map[string]interface{}) (*registry.CallToolResult, error) {
 	t.Helper()
 
 	reqBody := map[string]interface{}{
@@ -60,7 +63,7 @@ func (tr *transport) callTool(ctx context.Context, t testing.TB, name string, ar
 	}
 
 	var rpcResp struct {
-		Result *mcp.CallToolResult `json:"result"`
+		Result *registry.CallToolResult `json:"result"`
 		Error  *struct {
 			Code    int    `json:"code"`
 			Message string `json:"message"`
