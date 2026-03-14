@@ -29,6 +29,14 @@ type (
 	TextResourceContents = mcp.TextResourceContents
 	BlobResourceContents = mcp.BlobResourceContents
 	ReadResourceRequest  = mcp.ReadResourceRequest
+
+	// Prompt types
+	Prompt          = mcp.Prompt
+	PromptArgument  = mcp.PromptArgument
+	PromptMessage   = mcp.PromptMessage
+	GetPromptRequest = mcp.GetPromptRequest
+	GetPromptResult  = mcp.GetPromptResult
+	Role             = mcp.Role
 )
 
 var (
@@ -38,6 +46,11 @@ var (
 	// Resource constructors
 	NewResource         = mcp.NewResource
 	NewResourceTemplate = mcp.NewResourceTemplate
+
+	// Prompt constructors
+	NewPrompt        = mcp.NewPrompt
+	NewPromptMessage = mcp.NewPromptMessage
+	NewTextContent   = mcp.NewTextContent
 )
 
 // Task status constants re-exported for convenience.
@@ -51,4 +64,7 @@ const (
 	TaskSupportForbidden = mcp.TaskSupportForbidden
 	TaskSupportOptional  = mcp.TaskSupportOptional
 	TaskSupportRequired  = mcp.TaskSupportRequired
+
+	RoleUser      = mcp.RoleUser
+	RoleAssistant = mcp.RoleAssistant
 )
