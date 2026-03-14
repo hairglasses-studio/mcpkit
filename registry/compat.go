@@ -53,6 +53,45 @@ var (
 	NewTextContent   = mcp.NewTextContent
 )
 
+// MakeTextContent constructs a Content value containing text.
+// In mcp-go this is a value type; in the official SDK it would be a pointer.
+func MakeTextContent(text string) Content {
+	return mcp.TextContent{Type: "text", Text: text}
+}
+
+// MakeErrorResult creates a CallToolResult marked as an error with text content.
+func MakeErrorResult(text string) *CallToolResult {
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{MakeTextContent(text)},
+		IsError: true,
+	}
+}
+
+// MakeTextResult creates a CallToolResult with text content.
+func MakeTextResult(text string) *CallToolResult {
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{MakeTextContent(text)},
+	}
+}
+
+// IsResultError returns true if the result is marked as an error.
+func IsResultError(r *CallToolResult) bool {
+	if r == nil {
+		return false
+	}
+	return r.IsError
+}
+
+// ExtractTextContent extracts the text from a Content value if it is a TextContent.
+// Returns the text and true if successful, or empty string and false otherwise.
+func ExtractTextContent(c Content) (string, bool) {
+	tc, ok := c.(mcp.TextContent)
+	if !ok {
+		return "", false
+	}
+	return tc.Text, true
+}
+
 // Task status constants re-exported for convenience.
 const (
 	TaskStatusWorking       = mcp.TaskStatusWorking
