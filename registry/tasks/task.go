@@ -1,5 +1,3 @@
-//go:build !official_sdk
-
 package tasks
 
 import (
@@ -8,20 +6,38 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/hairglasses-studio/mcpkit/registry"
 )
 
-// TaskEntry wraps an mcp.Task with internal management fields.
+// TaskInfo holds the state of an async task. This is a portable type that
+// does not depend on any specific MCP SDK.
+type TaskInfo struct {
+	TaskId        string
+	Status        registry.TaskStatus
+	StatusMessage string
+	LastUpdatedAt string
+}
+
+// IsTerminal returns true if the task is in a terminal state.
+func (t TaskInfo) IsTerminal() bool {
+	switch t.Status {
+	case registry.TaskStatusCompleted, registry.TaskStatusFailed, registry.TaskStatusCancelled:
+		return true
+	}
+	return false
+}
+
+// TaskEntry wraps a TaskInfo with internal management fields.
 type TaskEntry struct {
 	mu        sync.RWMutex
-	Task      mcp.Task
-	Result    *mcp.CallToolResult
+	Task      TaskInfo
+	Result    *registry.CallToolResult
 	ExpiresAt time.Time
 	CancelFn  func()
 }
 
 // Update modifies the task's status and message atomically.
-func (e *TaskEntry) Update(status mcp.TaskStatus, message string) {
+func (e *TaskEntry) Update(status registry.TaskStatus, message string) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.Task.Status = status
@@ -30,14 +46,14 @@ func (e *TaskEntry) Update(status mcp.TaskStatus, message string) {
 }
 
 // SetResult stores the completed result.
-func (e *TaskEntry) SetResult(result *mcp.CallToolResult) {
+func (e *TaskEntry) SetResult(result *registry.CallToolResult) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.Result = result
 }
 
 // Snapshot returns a copy of the current task state.
-func (e *TaskEntry) Snapshot() mcp.Task {
+func (e *TaskEntry) Snapshot() TaskInfo {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 	return e.Task

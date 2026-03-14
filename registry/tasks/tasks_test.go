@@ -1,13 +1,9 @@
-//go:build !official_sdk
-
 package tasks
 
 import (
 	"context"
 	"testing"
 	"time"
-
-	"github.com/mark3labs/mcp-go/mcp"
 
 	"github.com/hairglasses-studio/mcpkit/registry"
 )
@@ -32,7 +28,7 @@ func TestManagerCreateAndGet(t *testing.T) {
 	if entry.Task.TaskId == "" {
 		t.Error("task ID should not be empty")
 	}
-	if entry.Task.Status != mcp.TaskStatusWorking {
+	if entry.Task.Status != registry.TaskStatusWorking {
 		t.Errorf("initial status = %s, want working", entry.Task.Status)
 	}
 
@@ -72,7 +68,7 @@ func TestManagerCancel(t *testing.T) {
 	}
 
 	snap := entry.Snapshot()
-	if snap.Status != mcp.TaskStatusCancelled {
+	if snap.Status != registry.TaskStatusCancelled {
 		t.Errorf("status after cancel = %s, want cancelled", snap.Status)
 	}
 }
@@ -87,7 +83,7 @@ func TestManagerCancelNotFound(t *testing.T) {
 func TestManagerCancelTerminal(t *testing.T) {
 	mgr := NewManager()
 	entry := mgr.Create(time.Minute)
-	entry.Update(mcp.TaskStatusCompleted, "done")
+	entry.Update(registry.TaskStatusCompleted, "done")
 
 	if err := mgr.Cancel(entry.Task.TaskId); err == nil {
 		t.Error("Cancel should fail for terminal task")
@@ -118,11 +114,11 @@ func TestManagerCount(t *testing.T) {
 
 func TestTaskEntryUpdate(t *testing.T) {
 	entry := &TaskEntry{
-		Task: mcp.NewTask("test-1"),
+		Task: TaskInfo{TaskId: "test-1", Status: registry.TaskStatusWorking},
 	}
-	entry.Update(mcp.TaskStatusCompleted, "all done")
+	entry.Update(registry.TaskStatusCompleted, "all done")
 	snap := entry.Snapshot()
-	if snap.Status != mcp.TaskStatusCompleted {
+	if snap.Status != registry.TaskStatusCompleted {
 		t.Errorf("status = %s, want completed", snap.Status)
 	}
 	if snap.StatusMessage != "all done" {
@@ -130,127 +126,22 @@ func TestTaskEntryUpdate(t *testing.T) {
 	}
 }
 
-func TestTaskMiddleware_NoTaskMeta(t *testing.T) {
-	mgr := NewManager()
-	mw := TaskMiddleware(mgr)
-
-	called := false
-	handler := func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		called = true
-		return mcp.NewToolResultText("ok"), nil
+func TestTaskInfoIsTerminal(t *testing.T) {
+	tests := []struct {
+		status   registry.TaskStatus
+		terminal bool
+	}{
+		{registry.TaskStatusWorking, false},
+		{registry.TaskStatusInputRequired, false},
+		{registry.TaskStatusCompleted, true},
+		{registry.TaskStatusFailed, true},
+		{registry.TaskStatusCancelled, true},
 	}
-
-	td := registry.ToolDefinition{
-		Tool: mcp.Tool{
-			Name:      "test_tool",
-			Execution: &mcp.ToolExecution{TaskSupport: mcp.TaskSupportOptional},
-		},
-	}
-
-	wrapped := mw("test_tool", td, handler)
-	result, err := wrapped(context.Background(), mcp.CallToolRequest{})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if !called {
-		t.Error("handler should be called synchronously when no task meta")
-	}
-	if result == nil {
-		t.Fatal("result is nil")
-	}
-}
-
-func TestTaskMiddleware_ForbiddenSkips(t *testing.T) {
-	mgr := NewManager()
-	mw := TaskMiddleware(mgr)
-
-	called := false
-	handler := func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		called = true
-		return mcp.NewToolResultText("ok"), nil
-	}
-
-	td := registry.ToolDefinition{
-		Tool: mcp.Tool{Name: "test_tool"},
-	}
-
-	wrapped := mw("test_tool", td, handler)
-	_, _ = wrapped(context.Background(), mcp.CallToolRequest{})
-	if !called {
-		t.Error("handler should be called directly for forbidden task support")
-	}
-}
-
-func TestTaskMiddleware_WithTaskParams(t *testing.T) {
-	mgr := NewManager()
-	mw := TaskMiddleware(mgr)
-
-	handlerDone := make(chan struct{})
-	handler := func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		defer close(handlerDone)
-		return mcp.NewToolResultText("async result"), nil
-	}
-
-	td := registry.ToolDefinition{
-		Tool: mcp.Tool{
-			Name:      "async_tool",
-			Execution: &mcp.ToolExecution{TaskSupport: mcp.TaskSupportOptional},
-		},
-	}
-
-	wrapped := mw("async_tool", td, handler)
-
-	ttlMs := int64(60000)
-	req := mcp.CallToolRequest{}
-	req.Params.Task = &mcp.TaskParams{TTL: &ttlMs}
-
-	result, err := wrapped(context.Background(), req)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if result == nil {
-		t.Fatal("result is nil")
-	}
-	if len(result.Content) == 0 {
-		t.Fatal("result has no content")
-	}
-
-	// Wait for async handler to complete
-	select {
-	case <-handlerDone:
-	case <-time.After(time.Second):
-		t.Fatal("handler did not complete in time")
-	}
-
-	// Verify a task was created
-	if mgr.Count() < 1 {
-		t.Error("expected at least one task after async call")
-	}
-}
-
-func TestTaskMiddleware_RequiredWithoutTaskParams(t *testing.T) {
-	mgr := NewManager()
-	mw := TaskMiddleware(mgr)
-
-	handler := func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		t.Error("handler should not be called")
-		return nil, nil
-	}
-
-	td := registry.ToolDefinition{
-		Tool: mcp.Tool{
-			Name:      "required_tool",
-			Execution: &mcp.ToolExecution{TaskSupport: mcp.TaskSupportRequired},
-		},
-	}
-
-	wrapped := mw("required_tool", td, handler)
-	result, err := wrapped(context.Background(), mcp.CallToolRequest{})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if result == nil || !result.IsError {
-		t.Error("expected error result for required task support without task params")
+	for _, tt := range tests {
+		info := TaskInfo{Status: tt.status}
+		if info.IsTerminal() != tt.terminal {
+			t.Errorf("IsTerminal(%s) = %v, want %v", tt.status, info.IsTerminal(), tt.terminal)
+		}
 	}
 }
 

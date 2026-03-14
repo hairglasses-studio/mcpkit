@@ -48,3 +48,15 @@ func AddResourceTemplateToServer(s *MCPServer, tmpl mcp.ResourceTemplate, handle
 func AddPromptToServer(s *MCPServer, prompt mcp.Prompt, handler PromptHandlerFunc) {
 	s.AddPrompt(&prompt, mcp.PromptHandler(handler))
 }
+
+// ServeStdio starts the MCP server on stdin/stdout.
+func ServeStdio(s *MCPServer) error {
+	ctx := context.Background()
+	_, err := s.Connect(ctx, &mcp.StdioTransport{}, nil)
+	if err != nil {
+		return err
+	}
+	// Block until stdin closes
+	<-ctx.Done()
+	return ctx.Err()
+}
