@@ -21,7 +21,7 @@ make check-dual          # Full check + official SDK build
 | `handler` | TypedHandler generics, param extraction, result builders, elicitation | `registry` |
 | `resilience` | CircuitBreaker, RateLimiter, CacheEntry generics, middleware | `registry` |
 | `mcptest` | Test server/client, assertion helpers, HTTP pool | `registry` |
-| `auth` | JWT/API key middleware, context identity | `registry` |
+| `auth` | JWT/JWKS validation, OAuth discovery, Bearer middleware, context identity | `registry` |
 | `security` | RBAC, audit logging middleware | `registry`, `auth` |
 | `health` | Health check endpoint and checker registry | none |
 | `observability` | OpenTelemetry tracing/metrics middleware | `registry` |
@@ -65,10 +65,10 @@ make check-dual          # Full check + official SDK build
 
 ## Roadmap
 
-Current spec coverage: **93%** (13/14 MCP 2025-11-25 features implemented or partial).
+Current spec coverage: **100%** (14/14 MCP 2025-11-25 features implemented or partial).
 
 Next priorities:
 1. Official SDK full implementations for resources, prompts, research (currently stub-only)
-2. OAuth token exchange flow (auth package)
+2. DPoP token binding (auth package)
 
 See [RESEARCH.md](RESEARCH.md) for full analysis: 17 roadmap items across 3 priority tiers, 4 implementation phases.
