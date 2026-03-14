@@ -1,3 +1,5 @@
+//go:build !official_sdk
+
 package handler
 
 import (

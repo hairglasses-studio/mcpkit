@@ -33,12 +33,7 @@ func (r *Recorder) Middleware() registry.Middleware {
 		return func(ctx context.Context, request registry.CallToolRequest) (*registry.CallToolResult, error) {
 			result, err := next(ctx, request)
 
-			var args map[string]interface{}
-			if request.Params.Arguments != nil {
-				if a, ok := request.Params.Arguments.(map[string]interface{}); ok {
-					args = a
-				}
-			}
+			args := registry.ExtractArguments(request)
 
 			r.mu.Lock()
 			r.calls = append(r.calls, Call{

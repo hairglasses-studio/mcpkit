@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/mark3labs/mcp-go/mcp"
-
 	"github.com/hairglasses-studio/mcpkit/registry"
 )
 
@@ -13,18 +11,13 @@ import (
 // a backwards-compatible text representation. This implements the MCP 2025-11-25
 // structured output pattern — servers return structuredContent for typed parsing
 // and content with serialized JSON for older clients.
-func StructuredResult(data any) *mcp.CallToolResult {
+func StructuredResult(data any) *registry.CallToolResult {
 	bytes, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
 		return ErrorResult(fmt.Errorf("failed to marshal structured result: %w", err))
 	}
 
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			registry.MakeTextContent(string(bytes)),
-		},
-		StructuredContent: data,
-	}
+	return registry.MakeStructuredResult(registry.MakeTextContent(string(bytes)), data)
 }
 
 // ResponseFormat represents the level of detail in a tool response.
@@ -43,7 +36,7 @@ const (
 
 // GetResponseFormat extracts the response_format parameter from the request,
 // defaulting to FormatDetailed if not specified.
-func GetResponseFormat(req mcp.CallToolRequest) ResponseFormat {
+func GetResponseFormat(req registry.CallToolRequest) ResponseFormat {
 	format := GetStringParam(req, "response_format")
 	switch ResponseFormat(format) {
 	case FormatConcise:

@@ -20,12 +20,7 @@ func AuditMiddleware(logger *AuditLogger, userFunc func(context.Context) string)
 				user = userFunc(ctx)
 			}
 
-			var auditParams map[string]any
-			if request.Params.Arguments != nil {
-				if args, ok := request.Params.Arguments.(map[string]interface{}); ok {
-					auditParams = args
-				}
-			}
+			auditParams := registry.ExtractArguments(request)
 
 			logger.LogToolCall(user, name, auditParams)
 			start := time.Now()

@@ -1,3 +1,5 @@
+//go:build !official_sdk
+
 // Command full demonstrates a production-grade mcpkit MCP server with all features.
 //
 // Features shown:

@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/mark3labs/mcp-go/mcp"
-
 	"github.com/hairglasses-studio/mcpkit/registry"
 )
 
@@ -20,17 +18,17 @@ const (
 )
 
 // TextResult creates a text result for a tool response.
-func TextResult(text string) *mcp.CallToolResult {
+func TextResult(text string) *registry.CallToolResult {
 	return registry.MakeTextResult(text)
 }
 
 // ErrorResult creates an error result for a tool response.
-func ErrorResult(err error) *mcp.CallToolResult {
+func ErrorResult(err error) *registry.CallToolResult {
 	return registry.MakeErrorResult(err.Error())
 }
 
 // JSONResult creates a JSON result for a tool response.
-func JSONResult(data interface{}) *mcp.CallToolResult {
+func JSONResult(data interface{}) *registry.CallToolResult {
 	bytes, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
 		return ErrorResult(err)
@@ -40,12 +38,12 @@ func JSONResult(data interface{}) *mcp.CallToolResult {
 
 // CodedErrorResult creates an error result with a structured error code prefix.
 // Format: "[ERROR_CODE] message"
-func CodedErrorResult(code string, err error) *mcp.CallToolResult {
+func CodedErrorResult(code string, err error) *registry.CallToolResult {
 	return registry.MakeErrorResult(fmt.Sprintf("[%s] %s", code, err.Error()))
 }
 
 // ActionableErrorResult creates an error result with suggestions for resolution.
-func ActionableErrorResult(code string, err error, suggestions ...string) *mcp.CallToolResult {
+func ActionableErrorResult(code string, err error, suggestions ...string) *registry.CallToolResult {
 	msg := fmt.Sprintf("[%s] %s", code, err.Error())
 	if len(suggestions) > 0 {
 		msg += "\n\nSuggested actions:"
@@ -54,13 +52,4 @@ func ActionableErrorResult(code string, err error, suggestions ...string) *mcp.C
 		}
 	}
 	return registry.MakeErrorResult(msg)
-}
-
-// ObjectOutputSchema creates an output schema for tools returning JSON objects.
-func ObjectOutputSchema(properties map[string]interface{}, required []string) *mcp.ToolOutputSchema {
-	return &mcp.ToolOutputSchema{
-		Type:       "object",
-		Properties: properties,
-		Required:   required,
-	}
 }

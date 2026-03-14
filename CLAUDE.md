@@ -9,6 +9,8 @@ go build ./...           # Build all packages
 go vet ./...             # Static analysis
 go test ./... -count=1   # Run all tests (no cache)
 make check               # All three above
+make build-official      # Verify official SDK build
+make check-dual          # Full check + official SDK build
 ```
 
 ## Package Map
@@ -44,6 +46,8 @@ make check               # All three above
 - Result builders: `handler.TextResult()`, `handler.JSONResult()`, `handler.ErrorResult()`, `handler.StructuredResult()`
 - Thread safety: all registries use `sync.RWMutex` — `RLock` for reads, `Lock` for writes
 - SDK compat: import MCP types through `registry/compat.go` aliases when building tool modules
+- Dual-SDK: `//go:build !official_sdk` tags on mcp-go specific files; `//go:build official_sdk` for go-sdk variants
+- Adapter functions: use `registry.MakeTextContent()`, `registry.MakeErrorResult()`, `registry.ExtractArguments()` instead of SDK-specific constructors
 
 ## Testing
 
@@ -64,7 +68,7 @@ make check               # All three above
 Current spec coverage: **86%** (12/14 MCP 2025-11-25 features implemented or partial).
 
 Next priorities:
-1. Official Go SDK migration path — compat.go update strategy, dual-SDK CI
-2. Streamable HTTP verification tests
+1. Streamable HTTP verification tests
+2. Official SDK full implementations for resources, prompts, research (currently stub-only)
 
 See [RESEARCH.md](RESEARCH.md) for full analysis: 17 roadmap items across 3 priority tiers, 4 implementation phases.
