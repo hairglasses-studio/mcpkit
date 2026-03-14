@@ -4,8 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/mark3labs/mcp-go/mcp"
-
 	"github.com/hairglasses-studio/mcpkit/registry"
 )
 
@@ -16,7 +14,7 @@ import (
 // field is left empty in audit events.
 func AuditMiddleware(logger *AuditLogger, userFunc func(context.Context) string) registry.Middleware {
 	return func(name string, td registry.ToolDefinition, next registry.ToolHandlerFunc) registry.ToolHandlerFunc {
-		return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		return func(ctx context.Context, request registry.CallToolRequest) (*registry.CallToolResult, error) {
 			user := ""
 			if userFunc != nil {
 				user = userFunc(ctx)
@@ -47,7 +45,7 @@ func AuditMiddleware(logger *AuditLogger, userFunc func(context.Context) string)
 // permission, the middleware returns an error result without calling the handler.
 func RBACMiddleware(rbac *RBAC, logger *AuditLogger, userFunc func(context.Context) string) registry.Middleware {
 	return func(name string, td registry.ToolDefinition, next registry.ToolHandlerFunc) registry.ToolHandlerFunc {
-		return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		return func(ctx context.Context, request registry.CallToolRequest) (*registry.CallToolResult, error) {
 			user := ""
 			if userFunc != nil {
 				user = userFunc(ctx)
@@ -57,7 +55,7 @@ func RBACMiddleware(rbac *RBAC, logger *AuditLogger, userFunc func(context.Conte
 				if logger != nil {
 					logger.LogAccessDenied(user, name, "insufficient permissions")
 				}
-				return mcp.NewToolResultError("[PERMISSION_DENIED] access denied for tool " + name), nil
+				return registry.MakeErrorResult("[PERMISSION_DENIED] access denied for tool " + name), nil
 			}
 
 			return next(ctx, request)

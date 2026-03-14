@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/mark3labs/mcp-go/mcp"
-
 	"github.com/hairglasses-studio/mcpkit/registry"
 )
 
@@ -18,9 +16,9 @@ func RateLimitMiddleware(reg *RateLimitRegistry) registry.Middleware {
 		if td.CircuitBreakerGroup == "" {
 			return next
 		}
-		return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		return func(ctx context.Context, request registry.CallToolRequest) (*registry.CallToolResult, error) {
 			if err := reg.Get(td.CircuitBreakerGroup).Wait(ctx); err != nil {
-				return mcp.NewToolResultError(fmt.Sprintf("rate limited: %v", err)), nil
+				return registry.MakeErrorResult(fmt.Sprintf("rate limited: %v", err)), nil
 			}
 			return next(ctx, request)
 		}
@@ -35,8 +33,8 @@ func CircuitBreakerMiddleware(reg *CircuitBreakerRegistry) registry.Middleware {
 		if td.CircuitBreakerGroup == "" {
 			return next
 		}
-		return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-			var result *mcp.CallToolResult
+		return func(ctx context.Context, request registry.CallToolRequest) (*registry.CallToolResult, error) {
+			var result *registry.CallToolResult
 			var handlerErr error
 
 			cb := reg.Get(td.CircuitBreakerGroup)
@@ -45,22 +43,16 @@ func CircuitBreakerMiddleware(reg *CircuitBreakerRegistry) registry.Middleware {
 				if handlerErr != nil {
 					return handlerErr
 				}
-				if result != nil && result.IsError {
+				if registry.IsResultError(result) {
 					return errors.New("tool returned error result")
 				}
 				return nil
 			})
 
 			if cbErr != nil && errors.Is(cbErr, ErrCircuitOpen) {
-				return &mcp.CallToolResult{
-					Content: []mcp.Content{
-						mcp.TextContent{
-							Type: "text",
-							Text: fmt.Sprintf("[CIRCUIT_OPEN] %s service is temporarily unavailable (circuit breaker open)", td.CircuitBreakerGroup),
-						},
-					},
-					IsError: true,
-				}, nil
+				return registry.MakeErrorResult(
+					fmt.Sprintf("[CIRCUIT_OPEN] %s service is temporarily unavailable (circuit breaker open)", td.CircuitBreakerGroup),
+				), nil
 			}
 
 			return result, handlerErr

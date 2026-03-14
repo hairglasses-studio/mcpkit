@@ -346,15 +346,7 @@ func (r *ToolRegistry) wrapHandler(toolName string, td ToolDefinition) ToolHandl
 			if r := recover(); r != nil {
 				stack := string(debug.Stack())
 				err = fmt.Errorf("panic in %s: %v\n%s", toolName, r, stack)
-				result = &mcp.CallToolResult{
-					Content: []mcp.Content{
-						mcp.TextContent{
-							Type: "text",
-							Text: fmt.Sprintf("Internal error in %s: recovered from panic", toolName),
-						},
-					},
-					IsError: true,
-				}
+				result = MakeErrorResult(fmt.Sprintf("Internal error in %s: recovered from panic", toolName))
 				slog.Error("tool panicked", "tool", toolName, "error", r)
 			}
 		}()
@@ -367,11 +359,11 @@ func (r *ToolRegistry) wrapHandler(toolName string, td ToolDefinition) ToolHandl
 		// Log errors
 		if err != nil {
 			slog.Error("tool failed", "tool", toolName, "error", err)
-		} else if result != nil && result.IsError {
+		} else if IsResultError(result) {
 			for _, content := range result.Content {
-				if tc, ok := content.(mcp.TextContent); ok && len(tc.Text) > 1 && tc.Text[0] == '[' {
-					if idx := strings.Index(tc.Text, "]"); idx > 0 {
-						code := tc.Text[1:idx]
+				if text, ok := ExtractTextContent(content); ok && len(text) > 1 && text[0] == '[' {
+					if idx := strings.Index(text, "]"); idx > 0 {
+						code := text[1:idx]
 						slog.Warn("tool error", "tool", toolName, "error_code", code)
 					}
 				}

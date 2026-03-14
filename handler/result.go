@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	"github.com/mark3labs/mcp-go/mcp"
+
+	"github.com/hairglasses-studio/mcpkit/registry"
 )
 
 // Structured error codes for programmatic categorization.
@@ -19,12 +21,12 @@ const (
 
 // TextResult creates a text result for a tool response.
 func TextResult(text string) *mcp.CallToolResult {
-	return mcp.NewToolResultText(text)
+	return registry.MakeTextResult(text)
 }
 
 // ErrorResult creates an error result for a tool response.
 func ErrorResult(err error) *mcp.CallToolResult {
-	return mcp.NewToolResultError(err.Error())
+	return registry.MakeErrorResult(err.Error())
 }
 
 // JSONResult creates a JSON result for a tool response.
@@ -33,13 +35,13 @@ func JSONResult(data interface{}) *mcp.CallToolResult {
 	if err != nil {
 		return ErrorResult(err)
 	}
-	return mcp.NewToolResultText(string(bytes))
+	return registry.MakeTextResult(string(bytes))
 }
 
 // CodedErrorResult creates an error result with a structured error code prefix.
 // Format: "[ERROR_CODE] message"
 func CodedErrorResult(code string, err error) *mcp.CallToolResult {
-	return mcp.NewToolResultError(fmt.Sprintf("[%s] %s", code, err.Error()))
+	return registry.MakeErrorResult(fmt.Sprintf("[%s] %s", code, err.Error()))
 }
 
 // ActionableErrorResult creates an error result with suggestions for resolution.
@@ -51,7 +53,7 @@ func ActionableErrorResult(code string, err error, suggestions ...string) *mcp.C
 			msg += "\n  • " + s
 		}
 	}
-	return mcp.NewToolResultError(msg)
+	return registry.MakeErrorResult(msg)
 }
 
 // ObjectOutputSchema creates an output schema for tools returning JSON objects.

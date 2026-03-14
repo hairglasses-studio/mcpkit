@@ -4,8 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/mark3labs/mcp-go/mcp"
-
 	"github.com/hairglasses-studio/mcpkit/registry"
 )
 
@@ -31,15 +29,15 @@ func TaskMiddleware(mgr Manager) registry.Middleware {
 	return func(name string, td registry.ToolDefinition, next registry.ToolHandlerFunc) registry.ToolHandlerFunc {
 		// Skip tools that don't support tasks
 		support := taskSupportFor(td)
-		if support == mcp.TaskSupportForbidden || support == "" {
+		if support == registry.TaskSupportForbidden || support == "" {
 			return next
 		}
 
-		return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		return func(ctx context.Context, request registry.CallToolRequest) (*registry.CallToolResult, error) {
 			// Check if the request includes task params
 			if !hasTaskParams(request) {
-				if support == mcp.TaskSupportRequired {
-					return mcp.NewToolResultError("[INVALID_PARAM] tool " + name + " requires task augmentation"), nil
+				if support == registry.TaskSupportRequired {
+					return registry.MakeErrorResult("[INVALID_PARAM] tool " + name + " requires task augmentation"), nil
 				}
 				return next(ctx, request)
 			}
@@ -62,42 +60,35 @@ func TaskMiddleware(mgr Manager) registry.Middleware {
 				defer cancel()
 				result, err := next(taskCtx, request)
 				if err != nil {
-					entry.Update(mcp.TaskStatusFailed, err.Error())
+					entry.Update(registry.TaskStatusFailed, err.Error())
 					return
 				}
 				entry.SetResult(result)
-				if result != nil && result.IsError {
-					entry.Update(mcp.TaskStatusFailed, "tool returned error")
+				if registry.IsResultError(result) {
+					entry.Update(registry.TaskStatusFailed, "tool returned error")
 				} else {
-					entry.Update(mcp.TaskStatusCompleted, "completed")
+					entry.Update(registry.TaskStatusCompleted, "completed")
 				}
 			}()
 
 			// Return task info immediately as a tool result
-			return &mcp.CallToolResult{
-				Content: []mcp.Content{
-					mcp.TextContent{
-						Type: "text",
-						Text: "Task created: " + entry.Task.TaskId,
-					},
-				},
-			}, nil
+			return registry.MakeTextResult("Task created: " + entry.Task.TaskId), nil
 		}
 	}
 }
 
-func taskSupportFor(td registry.ToolDefinition) mcp.TaskSupport {
+func taskSupportFor(td registry.ToolDefinition) registry.TaskSupport {
 	if td.Tool.Execution == nil {
-		return mcp.TaskSupportForbidden
+		return registry.TaskSupportForbidden
 	}
 	return td.Tool.Execution.TaskSupport
 }
 
-func hasTaskParams(req mcp.CallToolRequest) bool {
+func hasTaskParams(req registry.CallToolRequest) bool {
 	return req.Params.Task != nil
 }
 
-func extractTTL(req mcp.CallToolRequest) time.Duration {
+func extractTTL(req registry.CallToolRequest) time.Duration {
 	if req.Params.Task == nil || req.Params.Task.TTL == nil {
 		return 0
 	}
