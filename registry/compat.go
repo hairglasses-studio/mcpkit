@@ -94,6 +94,29 @@ func ExtractTextContent(c Content) (string, bool) {
 	return tc.Text, true
 }
 
+// ExtractArguments returns the tool arguments as map[string]interface{}.
+// In mcp-go, Arguments is type `any` and needs a type assertion.
+// In the official SDK, Arguments is json.RawMessage and needs unmarshaling.
+func ExtractArguments(req CallToolRequest) map[string]interface{} {
+	if req.Params.Arguments == nil {
+		return nil
+	}
+	args, ok := req.Params.Arguments.(map[string]interface{})
+	if !ok {
+		return nil
+	}
+	return args
+}
+
+// MakeStructuredResult creates a CallToolResult with both structured content
+// and a text representation.
+func MakeStructuredResult(content Content, data any) *CallToolResult {
+	return &mcp.CallToolResult{
+		Content:           []mcp.Content{content},
+		StructuredContent: data,
+	}
+}
+
 // Task status constants re-exported for convenience.
 const (
 	TaskStatusWorking       = mcp.TaskStatusWorking

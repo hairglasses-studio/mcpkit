@@ -9,6 +9,8 @@
 package registry
 
 import (
+	"encoding/json"
+
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -104,6 +106,28 @@ func IsResultError(r *CallToolResult) bool {
 		return false
 	}
 	return r.IsError
+}
+
+// ExtractArguments returns the tool arguments as map[string]interface{}.
+// In the official SDK, Arguments is json.RawMessage and needs unmarshaling.
+func ExtractArguments(req CallToolRequest) map[string]interface{} {
+	if req.Params == nil || len(req.Params.Arguments) == 0 {
+		return nil
+	}
+	var args map[string]interface{}
+	if err := json.Unmarshal(req.Params.Arguments, &args); err != nil {
+		return nil
+	}
+	return args
+}
+
+// MakeStructuredResult creates a CallToolResult with both structured content
+// and a text representation.
+func MakeStructuredResult(content Content, data any) *CallToolResult {
+	return &mcp.CallToolResult{
+		Content:           []mcp.Content{content},
+		StructuredContent: data,
+	}
 }
 
 // ExtractTextContent extracts the text from a Content value if it is a TextContent.

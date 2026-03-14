@@ -1,15 +1,12 @@
 // Package handler provides helper functions for MCP tool handlers.
 package handler
 
-import "github.com/mark3labs/mcp-go/mcp"
+import "github.com/hairglasses-studio/mcpkit/registry"
 
 // GetStringParam extracts a string parameter from the request.
-func GetStringParam(req mcp.CallToolRequest, name string) string {
-	if req.Params.Arguments == nil {
-		return ""
-	}
-	args, ok := req.Params.Arguments.(map[string]interface{})
-	if !ok {
+func GetStringParam(req registry.CallToolRequest, name string) string {
+	args := registry.ExtractArguments(req)
+	if args == nil {
 		return ""
 	}
 	val, ok := args[name]
@@ -24,12 +21,9 @@ func GetStringParam(req mcp.CallToolRequest, name string) string {
 }
 
 // GetIntParam extracts an integer parameter from the request.
-func GetIntParam(req mcp.CallToolRequest, name string, defaultVal int) int {
-	if req.Params.Arguments == nil {
-		return defaultVal
-	}
-	args, ok := req.Params.Arguments.(map[string]interface{})
-	if !ok {
+func GetIntParam(req registry.CallToolRequest, name string, defaultVal int) int {
+	args := registry.ExtractArguments(req)
+	if args == nil {
 		return defaultVal
 	}
 	val, ok := args[name]
@@ -44,12 +38,9 @@ func GetIntParam(req mcp.CallToolRequest, name string, defaultVal int) int {
 }
 
 // GetFloatParam extracts a float64 parameter from the request.
-func GetFloatParam(req mcp.CallToolRequest, name string, defaultVal float64) float64 {
-	if req.Params.Arguments == nil {
-		return defaultVal
-	}
-	args, ok := req.Params.Arguments.(map[string]interface{})
-	if !ok {
+func GetFloatParam(req registry.CallToolRequest, name string, defaultVal float64) float64 {
+	args := registry.ExtractArguments(req)
+	if args == nil {
 		return defaultVal
 	}
 	val, ok := args[name]
@@ -64,12 +55,9 @@ func GetFloatParam(req mcp.CallToolRequest, name string, defaultVal float64) flo
 }
 
 // GetBoolParam extracts a boolean parameter from the request.
-func GetBoolParam(req mcp.CallToolRequest, name string, defaultVal bool) bool {
-	if req.Params.Arguments == nil {
-		return defaultVal
-	}
-	args, ok := req.Params.Arguments.(map[string]interface{})
-	if !ok {
+func GetBoolParam(req registry.CallToolRequest, name string, defaultVal bool) bool {
+	args := registry.ExtractArguments(req)
+	if args == nil {
 		return defaultVal
 	}
 	val, ok := args[name]
@@ -84,25 +72,19 @@ func GetBoolParam(req mcp.CallToolRequest, name string, defaultVal bool) bool {
 }
 
 // HasParam checks if a parameter was explicitly provided in the request.
-func HasParam(req mcp.CallToolRequest, name string) bool {
-	if req.Params.Arguments == nil {
+func HasParam(req registry.CallToolRequest, name string) bool {
+	args := registry.ExtractArguments(req)
+	if args == nil {
 		return false
 	}
-	args, ok := req.Params.Arguments.(map[string]interface{})
-	if !ok {
-		return false
-	}
-	_, ok = args[name]
+	_, ok := args[name]
 	return ok
 }
 
 // GetStringArrayParam extracts a string array parameter from the request.
-func GetStringArrayParam(req mcp.CallToolRequest, name string) []string {
-	if req.Params.Arguments == nil {
-		return nil
-	}
-	args, ok := req.Params.Arguments.(map[string]interface{})
-	if !ok {
+func GetStringArrayParam(req registry.CallToolRequest, name string) []string {
+	args := registry.ExtractArguments(req)
+	if args == nil {
 		return nil
 	}
 	val, ok := args[name]
