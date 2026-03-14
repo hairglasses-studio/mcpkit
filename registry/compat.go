@@ -22,11 +22,22 @@ type (
 	Task             = mcp.Task
 	TaskSupport      = mcp.TaskSupport
 	ToolExecution    = mcp.ToolExecution
+
+	// Resource types
+	Resource             = mcp.Resource
+	ResourceTemplate     = mcp.ResourceTemplate
+	TextResourceContents = mcp.TextResourceContents
+	BlobResourceContents = mcp.BlobResourceContents
+	ReadResourceRequest  = mcp.ReadResourceRequest
 )
 
 var (
 	NewToolResultText  = mcp.NewToolResultText
 	NewToolResultError = mcp.NewToolResultError
+
+	// Resource constructors
+	NewResource         = mcp.NewResource
+	NewResourceTemplate = mcp.NewResourceTemplate
 )
 
 // Task status constants re-exported for convenience.
