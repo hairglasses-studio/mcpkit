@@ -26,11 +26,12 @@ make check               # All three above
 | `sanitize` | Input sanitization for tool params | none |
 | `secrets` | Secret provider interface, env/file providers, sanitizer | none |
 | `client` | HTTP pool and client utilities | none |
+| `resources` | Resource registry, middleware chain, server integration for URI-based data | none |
 | `research` | MCP ecosystem monitoring and viability assessment tools | `registry`, `handler`, `client` |
 
 ## Dependency Layers
 
-- **Layer 1** (no internal deps): `registry`, `health`, `sanitize`, `secrets`, `client`
+- **Layer 1** (no internal deps): `registry`, `resources`, `health`, `sanitize`, `secrets`, `client`
 - **Layer 2** (depend on Layer 1): `handler`, `resilience`, `mcptest`, `auth`, `observability`, `research`
 - **Layer 3** (depend on Layer 2): `security`
 
@@ -59,15 +60,14 @@ make check               # All three above
 
 ## Roadmap
 
-Current spec coverage: **72%** (10/14 MCP 2025-11-25 features implemented or partial).
+Current spec coverage: **79%** (11/14 MCP 2025-11-25 features implemented or partial).
 
 Next priorities:
-1. `resources` package — URI-based data exposure (Layer 1, mirrors registry pattern)
-2. `prompts` package — reusable prompt templates (Layer 1, mirrors registry pattern)
-3. Example servers — minimal, full-featured, and migration showcase
-4. Official Go SDK migration path — compat.go update strategy, dual-SDK CI
+1. `prompts` package — reusable prompt templates (Layer 1, mirrors registry pattern)
+2. Example servers — minimal, full-featured, and migration showcase
+3. Official Go SDK migration path — compat.go update strategy, dual-SDK CI
 
 Planned dependency layer additions:
-- **Layer 1**: `resources`, `prompts` (no internal deps)
+- **Layer 1**: `prompts` (no internal deps)
 
 See [RESEARCH.md](RESEARCH.md) for full analysis: 17 roadmap items across 3 priority tiers, 4 implementation phases.
