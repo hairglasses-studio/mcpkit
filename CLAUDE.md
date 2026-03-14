@@ -65,10 +65,10 @@ make check-dual          # Full check + official SDK build
 
 ## Roadmap
 
-Current spec coverage: **86%** (12/14 MCP 2025-11-25 features implemented or partial).
+Current spec coverage: **93%** (13/14 MCP 2025-11-25 features implemented or partial).
 
 Next priorities:
-1. Streamable HTTP verification tests
-2. Official SDK full implementations for resources, prompts, research (currently stub-only)
+1. Official SDK full implementations for resources, prompts, research (currently stub-only)
+2. OAuth token exchange flow (auth package)
 
 See [RESEARCH.md](RESEARCH.md) for full analysis: 17 roadmap items across 3 priority tiers, 4 implementation phases.
