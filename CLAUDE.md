@@ -69,6 +69,6 @@ Current spec coverage: **100%** (14/14 MCP 2025-11-25 features implemented or pa
 
 Next priorities:
 1. DPoP token binding (auth package)
-2. Official SDK TypedHandler variant for handler package
+2. Portable test helpers for official SDK (registry_test, mcptest_test)
 
 See [RESEARCH.md](RESEARCH.md) for full analysis: 17 roadmap items across 3 priority tiers, 4 implementation phases.

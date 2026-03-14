@@ -1,5 +1,3 @@
-//go:build !official_sdk
-
 package tasks
 
 import (
@@ -37,7 +35,7 @@ func TaskMiddleware(mgr Manager) registry.Middleware {
 
 		return func(ctx context.Context, request registry.CallToolRequest) (*registry.CallToolResult, error) {
 			// Check if the request includes task params
-			if !hasTaskParams(request) {
+			if !registry.HasTaskParams(request) {
 				if support == registry.TaskSupportRequired {
 					return registry.MakeErrorResult("[INVALID_PARAM] tool " + name + " requires task augmentation"), nil
 				}
@@ -45,7 +43,11 @@ func TaskMiddleware(mgr Manager) registry.Middleware {
 			}
 
 			// Extract TTL from request
-			ttl := extractTTL(request)
+			ttlMs := registry.ExtractTaskTTL(request)
+			var ttl time.Duration
+			if ttlMs > 0 {
+				ttl = time.Duration(ttlMs) * time.Millisecond
+			}
 
 			// Create the task
 			entry := mgr.Create(ttl)
@@ -80,19 +82,5 @@ func TaskMiddleware(mgr Manager) registry.Middleware {
 }
 
 func taskSupportFor(td registry.ToolDefinition) registry.TaskSupport {
-	if td.Tool.Execution == nil {
-		return registry.TaskSupportForbidden
-	}
-	return td.Tool.Execution.TaskSupport
-}
-
-func hasTaskParams(req registry.CallToolRequest) bool {
-	return req.Params.Task != nil
-}
-
-func extractTTL(req registry.CallToolRequest) time.Duration {
-	if req.Params.Task == nil || req.Params.Task.TTL == nil {
-		return 0
-	}
-	return time.Duration(*req.Params.Task.TTL) * time.Millisecond
+	return registry.GetToolTaskSupport(td.Tool)
 }

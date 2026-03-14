@@ -108,6 +108,27 @@ func ExtractArguments(req CallToolRequest) map[string]interface{} {
 	return args
 }
 
+// GetToolTaskSupport returns the TaskSupport setting from a Tool, or TaskSupportForbidden if not set.
+func GetToolTaskSupport(tool Tool) TaskSupport {
+	if tool.Execution == nil {
+		return TaskSupportForbidden
+	}
+	return tool.Execution.TaskSupport
+}
+
+// HasTaskParams returns true if the request includes task augmentation params.
+func HasTaskParams(req CallToolRequest) bool {
+	return req.Params.Task != nil
+}
+
+// ExtractTaskTTL returns the task TTL from the request, or 0 if not specified.
+func ExtractTaskTTL(req CallToolRequest) int64 {
+	if req.Params.Task == nil || req.Params.Task.TTL == nil {
+		return 0
+	}
+	return *req.Params.Task.TTL
+}
+
 // MakeStructuredResult creates a CallToolResult with both structured content
 // and a text representation.
 func MakeStructuredResult(content Content, data any) *CallToolResult {
