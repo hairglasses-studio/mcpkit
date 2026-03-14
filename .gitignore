@@ -1,2 +1,6 @@
 # Claude Code personal settings (not shared with team)
 .claude/settings.local.json
+
+# Compiled binaries
+/minimal
+/full

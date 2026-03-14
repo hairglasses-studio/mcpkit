@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	"github.com/mark3labs/mcp-go/mcp"
+
+	"github.com/hairglasses-studio/mcpkit/registry"
 )
 
 // AssertToolResult checks that the result contains the expected text content.
@@ -38,7 +40,7 @@ func AssertError(t testing.TB, result *mcp.CallToolResult, code string) {
 	if result == nil {
 		t.Fatal("result is nil")
 	}
-	if !result.IsError {
+	if !registry.IsResultError(result) {
 		t.Fatal("expected error result, got success")
 	}
 	if code != "" {
@@ -56,7 +58,7 @@ func AssertNotError(t testing.TB, result *mcp.CallToolResult) {
 	if result == nil {
 		t.Fatal("result is nil")
 	}
-	if result.IsError {
+	if registry.IsResultError(result) {
 		text := ExtractText(t, result)
 		t.Fatalf("expected success result, got error: %s", text)
 	}
@@ -91,9 +93,9 @@ func ExtractText(t testing.TB, result *mcp.CallToolResult) string {
 	if len(result.Content) == 0 {
 		t.Fatal("result has no content")
 	}
-	tc, ok := result.Content[0].(mcp.TextContent)
+	text, ok := registry.ExtractTextContent(result.Content[0])
 	if !ok {
 		t.Fatalf("first content is not TextContent, got %T", result.Content[0])
 	}
-	return tc.Text
+	return text
 }

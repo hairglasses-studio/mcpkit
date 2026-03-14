@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	"github.com/mark3labs/mcp-go/mcp"
+
+	"github.com/hairglasses-studio/mcpkit/registry"
 )
 
 // StructuredResult creates a tool result with both structured content and
@@ -19,10 +21,7 @@ func StructuredResult(data any) *mcp.CallToolResult {
 
 	return &mcp.CallToolResult{
 		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-				Text: string(bytes),
-			},
+			registry.MakeTextContent(string(bytes)),
 		},
 		StructuredContent: data,
 	}
