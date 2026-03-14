@@ -1,13 +1,9 @@
-//go:build !official_sdk
-
 package registry
 
 import (
 	"context"
 	"errors"
 	"testing"
-
-	"github.com/mark3labs/mcp-go/mcp"
 )
 
 // testModule implements ToolModule for testing.
@@ -22,12 +18,12 @@ func (m *testModule) Tools() []ToolDefinition { return m.tools }
 
 func newTestTool(name, category string, handler ToolHandlerFunc) ToolDefinition {
 	if handler == nil {
-		handler = func(_ context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-			return mcp.NewToolResultText("ok"), nil
+		handler = func(_ context.Context, _ CallToolRequest) (*CallToolResult, error) {
+			return MakeTextResult("ok"), nil
 		}
 	}
 	return ToolDefinition{
-		Tool:     mcp.Tool{Name: name, Description: "test tool " + name},
+		Tool:     Tool{Name: name, Description: "test tool " + name},
 		Handler:  handler,
 		Category: category,
 	}
@@ -176,8 +172,8 @@ func TestRegistryGetToolStats(t *testing.T) {
 			newTestTool("read_list", "test", nil),
 			newTestTool("write_create", "test", nil),
 			{
-				Tool:       mcp.Tool{Name: "deprecated_tool"},
-				Handler:    func(_ context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) { return nil, nil },
+				Tool:       Tool{Name: "deprecated_tool"},
+				Handler:    func(_ context.Context, _ CallToolRequest) (*CallToolResult, error) { return nil, nil },
 				Category:   "test",
 				Deprecated: true,
 			},
@@ -199,7 +195,7 @@ func TestRegistryGetToolStats(t *testing.T) {
 func TestRegistryMiddleware(t *testing.T) {
 	called := false
 	middleware := func(name string, td ToolDefinition, next ToolHandlerFunc) ToolHandlerFunc {
-		return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		return func(ctx context.Context, req CallToolRequest) (*CallToolResult, error) {
 			called = true
 			return next(ctx, req)
 		}
@@ -219,7 +215,7 @@ func TestRegistryMiddleware(t *testing.T) {
 	td, _ := r.GetTool("my_tool")
 	wrapped := r.wrapHandler("my_tool", td)
 
-	result, err := wrapped(context.Background(), mcp.CallToolRequest{})
+	result, err := wrapped(context.Background(), makeEmptyCallToolRequest())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -237,7 +233,7 @@ func TestRegistryPanicRecovery(t *testing.T) {
 	r.RegisterModule(&testModule{
 		name: "test",
 		tools: []ToolDefinition{
-			newTestTool("panic_tool", "test", func(_ context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			newTestTool("panic_tool", "test", func(_ context.Context, _ CallToolRequest) (*CallToolResult, error) {
 				panic("test panic")
 			}),
 		},
@@ -246,7 +242,7 @@ func TestRegistryPanicRecovery(t *testing.T) {
 	td, _ := r.GetTool("panic_tool")
 	wrapped := r.wrapHandler("panic_tool", td)
 
-	result, err := wrapped(context.Background(), mcp.CallToolRequest{})
+	result, err := wrapped(context.Background(), makeEmptyCallToolRequest())
 	if err == nil {
 		t.Fatal("expected error from panic")
 	}
@@ -268,8 +264,8 @@ func TestRegistryTruncation(t *testing.T) {
 	r.RegisterModule(&testModule{
 		name: "test",
 		tools: []ToolDefinition{
-			newTestTool("large_tool", "test", func(_ context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-				return mcp.NewToolResultText(string(largeText)), nil
+			newTestTool("large_tool", "test", func(_ context.Context, _ CallToolRequest) (*CallToolResult, error) {
+				return MakeTextResult(string(largeText)), nil
 			}),
 		},
 	})
@@ -277,13 +273,16 @@ func TestRegistryTruncation(t *testing.T) {
 	td, _ := r.GetTool("large_tool")
 	wrapped := r.wrapHandler("large_tool", td)
 
-	result, err := wrapped(context.Background(), mcp.CallToolRequest{})
+	result, err := wrapped(context.Background(), makeEmptyCallToolRequest())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	tc := result.Content[0].(mcp.TextContent)
-	if len(tc.Text) <= 100 {
+	text, ok := ExtractTextContent(result.Content[0])
+	if !ok {
+		t.Fatal("first content is not TextContent")
+	}
+	if len(text) <= 100 {
 		t.Error("expected truncated response to be longer than max (includes suffix)")
 	}
 }
@@ -295,14 +294,14 @@ func TestRegistrySearchTools(t *testing.T) {
 		name: "discord",
 		tools: []ToolDefinition{
 			{
-				Tool:     mcp.Tool{Name: "discord_list_channels", Description: "List Discord channels"},
-				Handler:  func(_ context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) { return nil, nil },
+				Tool:     Tool{Name: "discord_list_channels", Description: "List Discord channels"},
+				Handler:  func(_ context.Context, _ CallToolRequest) (*CallToolResult, error) { return nil, nil },
 				Category: "discord",
 				Tags:     []string{"messaging", "chat"},
 			},
 			{
-				Tool:     mcp.Tool{Name: "discord_send_message", Description: "Send a Discord message"},
-				Handler:  func(_ context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) { return nil, nil },
+				Tool:     Tool{Name: "discord_send_message", Description: "Send a Discord message"},
+				Handler:  func(_ context.Context, _ CallToolRequest) (*CallToolResult, error) { return nil, nil },
 				Category: "discord",
 				Tags:     []string{"messaging", "chat"},
 			},
@@ -343,33 +342,25 @@ func TestInferIsWrite(t *testing.T) {
 
 func TestApplyMCPAnnotations(t *testing.T) {
 	td := ToolDefinition{
-		Tool:    mcp.Tool{Name: "myapp_inventory_list"},
+		Tool:    Tool{Name: "myapp_inventory_list"},
 		IsWrite: false,
 	}
 
 	annotated := ApplyMCPAnnotations(td, "myapp_")
-	if annotated.Tool.Annotations.Title != "Inventory List" {
-		t.Errorf("title = %q, want 'Inventory List'", annotated.Tool.Annotations.Title)
+	if annotationTitle(annotated) != "Inventory List" {
+		t.Errorf("title = %q, want 'Inventory List'", annotationTitle(annotated))
 	}
-	if annotated.Tool.Annotations.ReadOnlyHint == nil || !*annotated.Tool.Annotations.ReadOnlyHint {
-		t.Error("expected ReadOnlyHint = true")
-	}
-	if annotated.Tool.Annotations.DestructiveHint == nil || *annotated.Tool.Annotations.DestructiveHint {
-		t.Error("expected DestructiveHint = false")
-	}
+	assertReadOnlyHint(t, annotated, true)
+	assertDestructiveHint(t, annotated, false)
 
 	// Write tool
 	tdWrite := ToolDefinition{
-		Tool:    mcp.Tool{Name: "myapp_inventory_delete"},
+		Tool:    Tool{Name: "myapp_inventory_delete"},
 		IsWrite: true,
 	}
 	annotated = ApplyMCPAnnotations(tdWrite, "myapp_")
-	if *annotated.Tool.Annotations.ReadOnlyHint {
-		t.Error("delete tool should not be read-only")
-	}
-	if !*annotated.Tool.Annotations.DestructiveHint {
-		t.Error("delete tool should be destructive")
-	}
+	assertReadOnlyHint(t, annotated, false)
+	assertDestructiveHint(t, annotated, true)
 }
 
 func TestRegistryHandlerError(t *testing.T) {
@@ -378,7 +369,7 @@ func TestRegistryHandlerError(t *testing.T) {
 	r.RegisterModule(&testModule{
 		name: "test",
 		tools: []ToolDefinition{
-			newTestTool("error_tool", "test", func(_ context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			newTestTool("error_tool", "test", func(_ context.Context, _ CallToolRequest) (*CallToolResult, error) {
 				return nil, errors.New("handler error")
 			}),
 		},
@@ -387,7 +378,7 @@ func TestRegistryHandlerError(t *testing.T) {
 	td, _ := r.GetTool("error_tool")
 	wrapped := r.wrapHandler("error_tool", td)
 
-	_, err := wrapped(context.Background(), mcp.CallToolRequest{})
+	_, err := wrapped(context.Background(), makeEmptyCallToolRequest())
 	if err == nil {
 		t.Fatal("expected error")
 	}
