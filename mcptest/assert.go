@@ -5,13 +5,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mark3labs/mcp-go/mcp"
-
 	"github.com/hairglasses-studio/mcpkit/registry"
 )
 
 // AssertToolResult checks that the result contains the expected text content.
-func AssertToolResult(t testing.TB, result *mcp.CallToolResult, expected string) {
+func AssertToolResult(t testing.TB, result *registry.CallToolResult, expected string) {
 	t.Helper()
 	if result == nil {
 		t.Fatal("result is nil")
@@ -23,7 +21,7 @@ func AssertToolResult(t testing.TB, result *mcp.CallToolResult, expected string)
 }
 
 // AssertToolResultContains checks that the result text contains a substring.
-func AssertToolResultContains(t testing.TB, result *mcp.CallToolResult, substr string) {
+func AssertToolResultContains(t testing.TB, result *registry.CallToolResult, substr string) {
 	t.Helper()
 	if result == nil {
 		t.Fatal("result is nil")
@@ -35,7 +33,7 @@ func AssertToolResultContains(t testing.TB, result *mcp.CallToolResult, substr s
 }
 
 // AssertError checks that the result is an error with the given code prefix.
-func AssertError(t testing.TB, result *mcp.CallToolResult, code string) {
+func AssertError(t testing.TB, result *registry.CallToolResult, code string) {
 	t.Helper()
 	if result == nil {
 		t.Fatal("result is nil")
@@ -53,7 +51,7 @@ func AssertError(t testing.TB, result *mcp.CallToolResult, code string) {
 }
 
 // AssertNotError checks that the result is not an error.
-func AssertNotError(t testing.TB, result *mcp.CallToolResult) {
+func AssertNotError(t testing.TB, result *registry.CallToolResult) {
 	t.Helper()
 	if result == nil {
 		t.Fatal("result is nil")
@@ -65,7 +63,7 @@ func AssertNotError(t testing.TB, result *mcp.CallToolResult) {
 }
 
 // AssertStructured unmarshals the structured content into the target and validates.
-func AssertStructured(t testing.TB, result *mcp.CallToolResult, target interface{}) {
+func AssertStructured(t testing.TB, result *registry.CallToolResult, target interface{}) {
 	t.Helper()
 	if result == nil {
 		t.Fatal("result is nil")
@@ -85,7 +83,7 @@ func AssertStructured(t testing.TB, result *mcp.CallToolResult, target interface
 }
 
 // ExtractText extracts the text from the first TextContent in a result.
-func ExtractText(t testing.TB, result *mcp.CallToolResult) string {
+func ExtractText(t testing.TB, result *registry.CallToolResult) string {
 	t.Helper()
 	if result == nil {
 		t.Fatal("result is nil")

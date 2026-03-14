@@ -1,10 +1,12 @@
-// compat.go — MCP SDK compatibility / migration adapter layer.
+//go:build !official_sdk
+
+// compat.go — MCP SDK compatibility / migration adapter layer (mcp-go variant).
 //
 // Current SDK:  github.com/mark3labs/mcp-go
 // Target SDK:   github.com/modelcontextprotocol/go-sdk (when stable)
 //
-// When the official SDK ships, update the type aliases and constructor vars
-// in THIS FILE. Tool modules that import types through mcpkit need zero changes.
+// When the official SDK ships, the official_sdk build tag activates compat_official.go
+// instead of this file. Tool modules that import types through mcpkit need zero changes.
 package registry
 
 import "github.com/mark3labs/mcp-go/mcp"

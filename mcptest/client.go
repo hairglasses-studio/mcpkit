@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/hairglasses-studio/mcpkit/registry"
 )
 
 // Client provides test helper methods for calling tools.
@@ -25,7 +25,7 @@ func NewClient(t testing.TB, s *Server) *Client {
 
 // CallTool calls a tool by name with the given arguments.
 // It fails the test if the tool is not found or returns an error.
-func (c *Client) CallTool(name string, args map[string]interface{}) *mcp.CallToolResult {
+func (c *Client) CallTool(name string, args map[string]interface{}) *registry.CallToolResult {
 	c.t.Helper()
 	result, err := c.CallToolE(name, args)
 	if err != nil {
@@ -35,13 +35,13 @@ func (c *Client) CallTool(name string, args map[string]interface{}) *mcp.CallToo
 }
 
 // CallToolE calls a tool by name, returning both result and error.
-func (c *Client) CallToolE(name string, args map[string]interface{}) (*mcp.CallToolResult, error) {
+func (c *Client) CallToolE(name string, args map[string]interface{}) (*registry.CallToolResult, error) {
 	c.t.Helper()
 	return c.tr.callTool(context.Background(), c.t, name, args)
 }
 
 // CallToolWithContext calls a tool with a custom context.
-func (c *Client) CallToolWithContext(ctx context.Context, name string, args map[string]interface{}) *mcp.CallToolResult {
+func (c *Client) CallToolWithContext(ctx context.Context, name string, args map[string]interface{}) *registry.CallToolResult {
 	c.t.Helper()
 	result, err := c.tr.callTool(ctx, c.t, name, args)
 	if err != nil {
