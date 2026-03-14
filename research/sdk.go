@@ -1,4 +1,3 @@
-//go:build !official_sdk
 
 package research
 
