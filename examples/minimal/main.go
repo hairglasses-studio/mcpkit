@@ -1,3 +1,5 @@
+//go:build !official_sdk
+
 // Command minimal demonstrates the simplest possible mcpkit MCP server.
 //
 // It registers a single tool using TypedHandler and serves over stdio.
