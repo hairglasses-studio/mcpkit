@@ -15,7 +15,8 @@ import (
 	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
-	"github.com/mark3labs/mcp-go/server"
+
+	"github.com/hairglasses-studio/mcpkit/registry"
 )
 
 // PromptHandlerFunc is the function signature for prompt handlers.
@@ -160,13 +161,13 @@ func (r *PromptRegistry) ModuleCount() int {
 
 // RegisterWithServer registers all prompts with an MCP server,
 // applying the configured middleware chain.
-func (r *PromptRegistry) RegisterWithServer(s *server.MCPServer) {
+func (r *PromptRegistry) RegisterWithServer(s *registry.MCPServer) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
 	for _, pd := range r.prompts {
 		wrapped := r.wrapHandler(pd.Prompt.Name, pd)
-		s.AddPrompt(pd.Prompt, server.PromptHandlerFunc(wrapped))
+		registry.AddPromptToServer(s, pd.Prompt, wrapped)
 	}
 }
 

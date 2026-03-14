@@ -3,8 +3,6 @@ package mcptest
 import (
 	"testing"
 
-	"github.com/mark3labs/mcp-go/server"
-
 	"github.com/hairglasses-studio/mcpkit/registry"
 )
 
@@ -12,7 +10,7 @@ import (
 type Server struct {
 	t        testing.TB
 	Registry *registry.ToolRegistry
-	MCP      *server.MCPServer
+	MCP      *registry.MCPServer
 }
 
 // Option configures a test Server.
@@ -26,7 +24,7 @@ func NewServer(t testing.TB, reg *registry.ToolRegistry, opts ...Option) *Server
 	s := &Server{
 		t:        t,
 		Registry: reg,
-		MCP:      server.NewMCPServer("mcptest", "0.0.0-test"),
+		MCP:      registry.NewMCPServer("mcptest", "0.0.0-test"),
 	}
 
 	for _, opt := range opts {

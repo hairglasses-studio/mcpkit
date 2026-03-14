@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
-	"github.com/mark3labs/mcp-go/server"
 )
 
 // ToolHandlerFunc is the function signature for tool handlers.
@@ -304,7 +303,7 @@ func (r *ToolRegistry) GetToolCatalog() map[string]map[string][]ToolDefinition {
 
 // RegisterWithServer registers all tools with an MCP server, applying
 // annotations, output schemas, and the configured middleware chain.
-func (r *ToolRegistry) RegisterWithServer(s *server.MCPServer) {
+func (r *ToolRegistry) RegisterWithServer(s *MCPServer) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -314,7 +313,7 @@ func (r *ToolRegistry) RegisterWithServer(s *server.MCPServer) {
 			annotated.Tool.OutputSchema = *annotated.OutputSchema
 		}
 		wrapped := r.wrapHandler(tool.Tool.Name, tool)
-		s.AddTool(annotated.Tool, server.ToolHandlerFunc(wrapped))
+		AddToolToServer(s, annotated.Tool, wrapped)
 	}
 }
 
