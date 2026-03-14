@@ -26,14 +26,14 @@ make check               # All three above
 | `sanitize` | Input sanitization for tool params | none |
 | `secrets` | Secret provider interface, env/file providers, sanitizer | none |
 | `client` | HTTP pool and client utilities | none |
-| `resources` | Resource registry, middleware chain, server integration for URI-based data | none |
-| `prompts` | Prompt registry, middleware chain, server integration for reusable templates | none |
+| `resources` | Resource registry, middleware chain, server integration for URI-based data | `registry` |
+| `prompts` | Prompt registry, middleware chain, server integration for reusable templates | `registry` |
 | `research` | MCP ecosystem monitoring and viability assessment tools | `registry`, `handler`, `client` |
 
 ## Dependency Layers
 
-- **Layer 1** (no internal deps): `registry`, `resources`, `prompts`, `health`, `sanitize`, `secrets`, `client`
-- **Layer 2** (depend on Layer 1): `handler`, `resilience`, `mcptest`, `auth`, `observability`, `research`
+- **Layer 1** (no internal deps): `registry`, `health`, `sanitize`, `secrets`, `client`
+- **Layer 2** (depend on Layer 1): `resources`, `prompts`, `handler`, `resilience`, `mcptest`, `auth`, `observability`, `research`
 - **Layer 3** (depend on Layer 2): `security`
 
 ## Coding Conventions
