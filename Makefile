@@ -20,6 +20,6 @@ build-official:
 	go build -tags official_sdk ./...
 
 test-official:
-	go test -tags official_sdk ./registry/ ./mcptest/ ./resilience/ ./security/ ./handler/ ./health/ ./sanitize/ ./auth/ ./client/ -count=1
+	go test -tags official_sdk ./... -count=1
 
 check-dual: check build-official

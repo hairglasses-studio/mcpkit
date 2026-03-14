@@ -47,3 +47,8 @@ func AddResourceTemplateToServer(s *MCPServer, tmpl mcp.ResourceTemplate, handle
 func AddPromptToServer(s *MCPServer, prompt mcp.Prompt, handler PromptHandlerFunc) {
 	s.AddPrompt(prompt, server.PromptHandlerFunc(handler))
 }
+
+// ServeStdio starts the MCP server on stdin/stdout.
+func ServeStdio(s *MCPServer) error {
+	return server.ServeStdio(s)
+}

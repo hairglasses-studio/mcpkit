@@ -1,5 +1,3 @@
-//go:build !official_sdk
-
 package tasks
 
 import (
@@ -7,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/hairglasses-studio/mcpkit/registry"
 )
 
 // DefaultTTL is the default time-to-live for tasks (10 minutes).
@@ -20,7 +18,7 @@ type Manager interface {
 	// Get returns a task by ID, or nil if not found.
 	Get(taskID string) *TaskEntry
 	// List returns all non-expired tasks.
-	List() []mcp.Task
+	List() []TaskInfo
 	// Cancel cancels a task by ID. Returns an error if not found or already terminal.
 	Cancel(taskID string) error
 	// Cleanup removes expired tasks. Call periodically or let middleware handle it.
@@ -48,11 +46,14 @@ func (m *InMemoryManager) Create(ttl time.Duration) *TaskEntry {
 	}
 
 	id := GenerateID()
-	ttlMs := ttl.Milliseconds()
-	task := mcp.NewTask(id, mcp.WithTaskTTL(ttlMs))
 
 	entry := &TaskEntry{
-		Task:      task,
+		Task: TaskInfo{
+			TaskId:        id,
+			Status:        registry.TaskStatusWorking,
+			StatusMessage: "working",
+			LastUpdatedAt: time.Now().UTC().Format(time.RFC3339),
+		},
 		ExpiresAt: time.Now().Add(ttl),
 	}
 
@@ -73,10 +74,10 @@ func (m *InMemoryManager) Get(taskID string) *TaskEntry {
 	return entry
 }
 
-func (m *InMemoryManager) List() []mcp.Task {
+func (m *InMemoryManager) List() []TaskInfo {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	var result []mcp.Task
+	var result []TaskInfo
 	for _, entry := range m.tasks {
 		if !entry.IsExpired() {
 			result = append(result, entry.Snapshot())
@@ -95,11 +96,11 @@ func (m *InMemoryManager) Cancel(taskID string) error {
 	}
 
 	snapshot := entry.Snapshot()
-	if snapshot.Status.IsTerminal() {
+	if snapshot.IsTerminal() {
 		return fmt.Errorf("task %s is already in terminal state: %s", taskID, snapshot.Status)
 	}
 
-	entry.Update(mcp.TaskStatusCancelled, "cancelled by client")
+	entry.Update(registry.TaskStatusCancelled, "cancelled by client")
 	if entry.CancelFn != nil {
 		entry.CancelFn()
 	}

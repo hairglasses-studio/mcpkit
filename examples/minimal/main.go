@@ -1,5 +1,3 @@
-//go:build !official_sdk
-
 // Command minimal demonstrates the simplest possible mcpkit MCP server.
 //
 // It registers a single tool using TypedHandler and serves over stdio.
@@ -17,7 +15,6 @@ import (
 
 	"github.com/hairglasses-studio/mcpkit/handler"
 	"github.com/hairglasses-studio/mcpkit/registry"
-	"github.com/mark3labs/mcp-go/server"
 )
 
 // --- Input/Output types ---
@@ -87,10 +84,10 @@ func main() {
 	reg := registry.NewToolRegistry()
 	reg.RegisterModule(&UtilModule{})
 
-	s := server.NewMCPServer("minimal-example", "1.0.0")
+	s := registry.NewMCPServer("minimal-example", "1.0.0")
 	reg.RegisterWithServer(s)
 
-	if err := server.ServeStdio(s); err != nil {
+	if err := registry.ServeStdio(s); err != nil {
 		log.Fatal(err)
 	}
 }
