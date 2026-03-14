@@ -86,10 +86,11 @@ type Config struct {
 
 // ToolRegistry manages tool registration and lookup.
 type ToolRegistry struct {
-	mu      sync.RWMutex
-	modules map[string]ToolModule
-	tools   map[string]ToolDefinition
-	config  Config
+	mu       sync.RWMutex
+	modules  map[string]ToolModule
+	tools    map[string]ToolDefinition
+	deferred map[string]bool // tools marked for deferred/lazy loading
+	config   Config
 }
 
 // NewToolRegistry creates a new tool registry with the given config.
@@ -105,9 +106,10 @@ func NewToolRegistry(config ...Config) *ToolRegistry {
 		cfg.MaxResponseSize = DefaultMaxResponseSize
 	}
 	return &ToolRegistry{
-		modules: make(map[string]ToolModule),
-		tools:   make(map[string]ToolDefinition),
-		config:  cfg,
+		modules:  make(map[string]ToolModule),
+		tools:    make(map[string]ToolDefinition),
+		deferred: make(map[string]bool),
+		config:   cfg,
 	}
 }
 
