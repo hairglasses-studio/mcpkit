@@ -250,3 +250,21 @@ See [ROADMAP.md](ROADMAP.md) for detailed phased plan and [RESEARCH.md](RESEARCH
 - ~~`registry/dynamic_test.go`~~ — RegisterFilteredWithServer
 - ~~`examples/http/main.go`~~ — StreamableHTTP server with health, lifecycle, logging middleware
 - ~~`examples/elicitation/main.go`~~ — ElicitForm, ElicitURL, ElicitFormSchema via stdio
+
+### Phase 29 — Package Documentation Completion (COMPLETE)
+- ~~13× `*/doc.go`~~ — Package documentation for remaining packages (dispatcher, extensions, finops, handoff, lifecycle, memory, orchestrator, ralph, rdcycle, research, roadmap, roots, skills)
+- All 33 packages now have `doc.go` files with Go-convention package comments
+
+### Phase 30 — Coverage Hardening: All Packages to 90%+ (COMPLETE)
+- ~~`auth/*_test.go`~~ — 85.9% → 90.6%: OAuth/DPoP/workload identity/JWT edge cases (37 tests)
+- ~~`eval/*_test.go`~~ — 85.7% → 96.4%: scorer errors, runner nil paths, suite loading (11 tests)
+- ~~`ralph/*_test.go`~~ — 85.7% → 95.4%: DAG enforcement, YAML parse, module lifecycle, workflow loop
+- ~~`research/*_test.go`~~ — 86.1% → 97.2%: GitHub API errors, diff edges, assess/summary branches
+- ~~`gateway/*_test.go`~~ — 87.6% → 96.0%: dynamic upstream lifecycle, health loop, resilience (13 tests)
+- ~~`mcptest/*_test.go`~~ — 87.4% → 90.0%: recorder, snapshot, benchmark edges
+- ~~`secrets/providers/*_test.go`~~ — 87.9% → 96.4%: env/file provider edge cases (13 tests)
+- ~~`handler/*_test.go`~~ — 88.5% → 96.6%: content annotations, type checks, schema generation
+- ~~`rdcycle/*_test.go`~~ — 88.6% → 90.8%: improve recommendations, git helpers, workflow graph
+- ~~`observability/*_test.go`~~ — 89.3% → 91.0%: Prometheus health endpoint
+- ~~`roadmap/*_test.go`~~ — 89.6% → 94.5%: handler path overrides, gap analysis tiers
+- All 35 non-example packages now at 90%+ coverage (min 90.0%, max 100.0%)
