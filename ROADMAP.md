@@ -86,6 +86,20 @@ All Tier 3 items delivered: discovery, DPoP, gateway, ralph enhancements, worklo
 - ~~Handoff middleware~~ (`handoff/middleware.go`) — DelegateMiddleware, WrapDelegate, Config.WithMiddleware — **DONE**
 - ~~Workflow middleware~~ (`workflow/middleware.go`) — NodeMiddleware, WrapNodeFunc, EngineConfig.NodeMiddleware — **DONE**
 
+### Phase 11: DX Sprint — COMPLETE
+
+- ~~README overhaul~~ — complete rewrite reflecting 30+ packages, 100% spec coverage — **DONE**
+- ~~Godoc examples~~ — 14 `example_test.go` files with 28 runnable `Example*` functions — **DONE**
+- ~~Package doc comments~~ — added to orchestrator, workflow, dispatcher, extensions, health, mcptest, ralph, roots, sampling, skills, gateway — **DONE**
+
+### Phase 12: Observability Integration + Lifecycle — COMPLETE
+
+- ~~Gateway tracing~~ (`gateway/observability.go`) — TracingMiddleware with upstream/tool attributes — **DONE**
+- ~~Orchestrator tracing~~ (`orchestrator/observability.go`) — TracingMiddleware for stage spans — **DONE**
+- ~~Workflow tracing~~ (`workflow/observability.go`) — TracingMiddleware for node spans — **DONE**
+- ~~Server lifecycle~~ (`lifecycle/lifecycle.go`) — signal handling, graceful drain, LIFO shutdown hooks — **DONE**
+- ~~Health readiness~~ (`health/health.go`) — SetStatus/IsReady, 503 on draining — **DONE**
+
 ### Decision Points
 
 - **After Phase 5**: Evaluate A2A spec stability — if v1.0 ships, fast-track `a2a/`; otherwise prototype only
