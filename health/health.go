@@ -5,6 +5,7 @@ package health
 import (
 	"encoding/json"
 	"net/http"
+	"sync"
 	"time"
 )
 
@@ -19,10 +20,36 @@ type Status struct {
 
 // Checker provides health check data.
 type Checker struct {
+	mu        sync.RWMutex
 	startedAt time.Time
+	status    string
 	toolCount func() int
 	taskCount func() int
 	circuits  func() map[string]string
+}
+
+// SetStatus sets the overall lifecycle status (e.g., "healthy", "draining", "stopped").
+func (c *Checker) SetStatus(status string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.status = status
+}
+
+// Status returns the current lifecycle status. Returns "healthy" if not explicitly set.
+func (c *Checker) Status() string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if c.status == "" {
+		return "healthy"
+	}
+	return c.status
+}
+
+// IsReady reports whether the server is ready to serve traffic.
+// Returns false when status is "draining" or "stopped".
+func (c *Checker) IsReady() bool {
+	s := c.Status()
+	return s != "draining" && s != "stopped"
 }
 
 // Option configures a Checker.
@@ -84,6 +111,11 @@ func Handler(c *Checker) http.Handler {
 
 	mux.HandleFunc("/ready", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
+		if !c.IsReady() {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			json.NewEncoder(w).Encode(map[string]string{"status": "not_ready"})
+			return
+		}
 		json.NewEncoder(w).Encode(map[string]string{"status": "ready"})
 	})
 

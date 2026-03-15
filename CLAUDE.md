@@ -45,12 +45,13 @@ make check-dual          # Full check + official SDK build
 | `orchestrator` | Multi-agent execution patterns: fan-out, pipeline, select, stage middleware | none |
 | `workflow` | Cyclical graph engine with conditional branching, checkpoints, state machines, node middleware | `orchestrator`, `registry`, `sampling` |
 | `extensions` | MCP Extensions negotiation and capability handshake | none |
+| `lifecycle` | Production server lifecycle: signal handling, graceful drain, shutdown hooks | none |
 | `bootstrap` | Agent workspace init, context reports, capability matrix | `registry`, `resources`, `prompts`, `extensions` |
 
 ## Dependency Layers
 
 - **Layer 1** (no internal deps): `registry`, `health`, `sanitize`, `secrets`, `client`
-- **Layer 2** (depend on Layer 1): `resources`, `prompts`, `handler`, `resilience`, `mcptest`, `auth`, `observability`, `logging`, `sampling`, `roots`, `research`, `discovery`, `dispatcher`, `extensions`, `memory`, `finops`
+- **Layer 2** (depend on Layer 1): `resources`, `prompts`, `handler`, `resilience`, `mcptest`, `auth`, `observability`, `logging`, `sampling`, `roots`, `research`, `discovery`, `dispatcher`, `extensions`, `memory`, `finops`, `lifecycle`
 - **Layer 3** (depend on Layer 2): `security`, `gateway`, `ralph`, `skills`, `a2a`
 - **Layer 4** (depend on Layer 3): `orchestrator`, `handoff`, `workflow`, `bootstrap`
 
@@ -125,3 +126,15 @@ See [ROADMAP.md](ROADMAP.md) for detailed phased plan and [RESEARCH.md](RESEARCH
 - ~~`orchestrator/middleware.go`~~ — StageMiddleware, WrapStage, WrapStages
 - ~~`handoff/middleware.go`~~ — DelegateMiddleware, WrapDelegate, Config.WithMiddleware
 - ~~`workflow/middleware.go`~~ — NodeMiddleware, WrapNodeFunc, EngineConfig.NodeMiddleware
+
+### Phase 11 — DX Sprint (COMPLETE)
+- ~~README.md~~ — Complete rewrite (30+ packages, 100% spec coverage)
+- ~~14 example_test.go files~~ — 28 runnable Example* functions across all key packages
+- ~~Package doc comments~~ — Added to 10+ packages
+
+### Phase 12 — Observability Integration + Lifecycle (COMPLETE)
+- ~~`gateway/observability.go`~~ — TracingMiddleware with upstream/tool span attributes
+- ~~`orchestrator/observability.go`~~ — TracingMiddleware for stage spans
+- ~~`workflow/observability.go`~~ — TracingMiddleware for node spans
+- ~~`lifecycle/`~~ — Server lifecycle manager with signal handling, graceful drain, LIFO shutdown hooks
+- ~~`health/health.go`~~ — SetStatus, IsReady, 503 on draining for Kubernetes readiness
