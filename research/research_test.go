@@ -373,8 +373,8 @@ func TestModuleInterface(t *testing.T) {
 	}
 
 	tools := m.Tools()
-	if len(tools) != 5 {
-		t.Fatalf("tools count = %d, want 5", len(tools))
+	if len(tools) != 7 {
+		t.Fatalf("tools count = %d, want 7", len(tools))
 	}
 
 	expectedNames := []string{
@@ -383,6 +383,8 @@ func TestModuleInterface(t *testing.T) {
 		"research_ecosystem",
 		"research_assess",
 		"research_summary",
+		"research_github_activity",
+		"research_diff_analysis",
 	}
 
 	for i, expected := range expectedNames {
@@ -411,6 +413,8 @@ func TestRegistryIntegration(t *testing.T) {
 		"research_ecosystem",
 		"research_assess",
 		"research_summary",
+		"research_github_activity",
+		"research_diff_analysis",
 	}
 
 	for _, name := range expectedTools {
@@ -420,8 +424,8 @@ func TestRegistryIntegration(t *testing.T) {
 	}
 
 	toolNames := srv.ToolNames()
-	if len(toolNames) != 5 {
-		t.Errorf("tool count = %d, want 5", len(toolNames))
+	if len(toolNames) != 7 {
+		t.Errorf("tool count = %d, want 7", len(toolNames))
 	}
 }
 
