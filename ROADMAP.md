@@ -134,6 +134,22 @@ All Tier 3 items delivered: discovery, DPoP, gateway, ralph enhancements, worklo
 - ~~Dispatcher unit tests~~ — `groups_test.go`, `job_test.go`, `middleware_test.go`, `queue_test.go` for internal coverage — **DONE**
 - ~~Sampling unit tests~~ — `middleware_test.go`, `helpers_test.go` for internal coverage — **DONE**
 
+### Phase 18: Core Package Test Coverage — COMPLETE
+
+- ~~Registry tests~~ — `search_test.go` (14), `dynamic_test.go` (21), `deferred_test.go` (14), `annotations_test.go` (12) — **DONE**
+- ~~Workflow tests~~ — `engine_test.go` (17), `checkpoint_test.go`, `hooks_test.go` — **DONE**
+- ~~Auth tests~~ — `pkce_test.go`, `context_test.go`, `metadata_test.go`, `config_test.go` — **DONE**
+- ~~Discovery examples~~ — `example_test.go` (5 Example functions) — **DONE**
+- ~~mcptest tests~~ — `assert_test.go`, `recorder_test.go` — **DONE**
+
+### Phase 19: Remaining Test Coverage — COMPLETE
+
+- ~~Discovery tests~~ — `client_test.go` (13), `publisher_test.go` (12) — httptest mocks, caching, error mapping — **DONE**
+- ~~Handler tests~~ — `result_test.go` (22), `structured_test.go` (18) — all result builders — **DONE**
+- ~~Memory tests~~ — `store_mem_test.go` (19) — full InMemoryStore lifecycle, concurrent safety — **DONE**
+- ~~FinOps tests~~ — `tracker_test.go` (9), `estimate_test.go` (12) — tracker lifecycle, estimation — **DONE**
+- ~~Resilience tests~~ — `middleware_test.go` (9) — rate limit + circuit breaker middleware — **DONE**
+
 ### Decision Points
 
 - **After Phase 5**: Evaluate A2A spec stability — if v1.0 ships, fast-track `a2a/`; otherwise prototype only
