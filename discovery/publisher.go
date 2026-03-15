@@ -119,6 +119,34 @@ func (p *Publisher) doJSON(ctx context.Context, method, reqURL string, payload a
 	return result, nil
 }
 
+// Publish is a convenience function that creates a Publisher and registers the
+// provided ServerMetadata in one call. It is equivalent to:
+//
+//	p, err := NewPublisher(PublisherConfig{BaseURL: registryURL, Token: token})
+//	if err != nil { return ServerMetadata{}, err }
+//	return p.Register(ctx, meta)
+func Publish(ctx context.Context, registryURL, token string, meta ServerMetadata) (ServerMetadata, error) {
+	p, err := NewPublisher(PublisherConfig{BaseURL: registryURL, Token: token})
+	if err != nil {
+		return ServerMetadata{}, err
+	}
+	return p.Register(ctx, meta)
+}
+
+// Unpublish is a convenience function that creates a Publisher and removes the
+// server with the given ID from the registry in one call. It is equivalent to:
+//
+//	p, err := NewPublisher(PublisherConfig{BaseURL: registryURL, Token: token})
+//	if err != nil { return err }
+//	return p.Deregister(ctx, serverID)
+func Unpublish(ctx context.Context, registryURL, token string, serverID string) error {
+	p, err := NewPublisher(PublisherConfig{BaseURL: registryURL, Token: token})
+	if err != nil {
+		return err
+	}
+	return p.Deregister(ctx, serverID)
+}
+
 // MetadataFromRegistry builds a ServerMetadata from a ToolRegistry and the
 // provided server-level fields. It extracts tool names and descriptions from
 // all registered tools in the registry.

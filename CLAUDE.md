@@ -20,7 +20,7 @@ make check-dual          # Full check + official SDK build
 | `registry` | Tool registration, middleware chain, server integration, tool integrity verification | none |
 | `handler` | TypedHandler generics, param extraction, result builders, elicitation | `registry` |
 | `resilience` | CircuitBreaker, RateLimiter, CacheEntry generics, middleware | `registry` |
-| `mcptest` | Test server/client, assertion helpers, HTTP pool | `registry` |
+| `mcptest` | Test server/client, assertion helpers, HTTP pool, session replay, snapshot testing, benchmark helpers | `registry` |
 | `auth` | JWT/JWKS validation, OAuth discovery + client flow, Bearer middleware, DPoP proof validation + HTTP middleware, workload identity (GCP/AWS), context identity | `registry`, `client` |
 | `security` | RBAC, audit logging middleware, tenant context propagation | `registry`, `auth` |
 | `health` | Health check endpoint and checker registry | none |
@@ -28,7 +28,7 @@ make check-dual          # Full check + official SDK build
 | `sanitize` | Input/output sanitization, secret/PII redaction, URI validation | none |
 | `secrets` | Secret provider interface, env/file providers, sanitizer | none |
 | `client` | HTTP pool and client utilities | none |
-| `discovery` | MCP Registry client for server discovery and publishing | `registry`, `client` |
+| `discovery` | MCP Registry client for server discovery and publishing, multi-registry metadata extraction | `registry`, `client`, `resources`, `prompts` |
 | `resources` | Resource registry, middleware chain, server integration for URI-based data, URI validation middleware | `registry` |
 | `prompts` | Prompt registry, middleware chain, server integration for reusable templates | `registry` |
 | `logging` | slog.Handler bridge to MCP clients, tool invocation logging middleware | `registry` |
@@ -38,7 +38,7 @@ make check-dual          # Full check + official SDK build
 | `gateway` | Multi-server aggregation with namespaced tool routing | `registry`, `client` |
 | `dispatcher` | Priority worker pool with concurrency groups, middleware integration | `registry` |
 | `ralph` | Autonomous loop runner for iterative task execution (Ralph Loop pattern) | `registry`, `handler`, `sampling`, `finops` |
-| `finops` | Token accounting, budget policies, usage tracking middleware | `registry` |
+| `finops` | Token accounting, budget policies, usage tracking middleware, dollar-cost estimation, scoped budgets, time-windowed tracking | `registry` |
 | `memory` | Agent memory registry with pluggable storage backends | `registry` |
 | `skills` | Context-aware lazy tool loading with skill bundles and triggers | `registry` |
 | `handoff` | Agent delegation protocol with manager/agent-as-tool patterns | `registry`, `sampling`, `finops` |
@@ -110,3 +110,12 @@ See [ROADMAP.md](ROADMAP.md) for detailed phased plan and [RESEARCH.md](RESEARCH
 - ~~`registry/integrity.go`~~ — Tool integrity verification (SHA-256 fingerprinting, tamper detection)
 - ~~`resources/uri_middleware.go`~~ — URI validation middleware for resource handlers
 - ~~`security/tenant.go`~~ — Tenant context propagation for multi-tenant servers
+
+### Phase 9 — Testing Infrastructure + FinOps v2 (COMPLETE)
+- ~~`mcptest/replay.go`~~ — Session record/replay for regression testing
+- ~~`mcptest/snapshot.go`~~ — Golden file snapshot assertions
+- ~~`mcptest/benchmark.go`~~ — Tool benchmark helpers (sequential, parallel, suite)
+- ~~`finops/cost.go`~~ — Dollar-cost estimation with model pricing
+- ~~`finops/scope.go`~~ — Per-tenant/user/session scoped budget tracking
+- ~~`finops/window.go`~~ — Time-windowed tracking with lazy rotation
+- ~~`discovery/metadata.go`~~ — MetadataFromConfig with resources + prompts extraction
