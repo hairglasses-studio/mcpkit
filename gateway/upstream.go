@@ -27,6 +27,10 @@ type UpstreamConfig struct {
 
 	// UnhealthyThreshold is how many consecutive ping failures before marking unhealthy. Default: 3.
 	UnhealthyThreshold int
+
+	// Policy configures per-upstream resilience (circuit breaker, rate limit, timeout).
+	// Zero value means no resilience wrapping.
+	Policy UpstreamPolicy
 }
 
 func (c *UpstreamConfig) applyDefaults() {
@@ -40,16 +44,18 @@ func (c *UpstreamConfig) applyDefaults() {
 
 // UpstreamInfo provides status information about an upstream.
 type UpstreamInfo struct {
-	Name      string
-	URL       string
-	Healthy   bool
-	ToolCount int
+	Name         string
+	URL          string
+	Healthy      bool
+	ToolCount    int
+	CircuitState string // empty when no circuit breaker is configured
 }
 
 // upstream manages a connection to a single upstream MCP server.
 type upstream struct {
-	config UpstreamConfig
-	client *client.Client
+	config     UpstreamConfig
+	client     *client.Client
+	resilience *upstreamResilience
 
 	mu    sync.RWMutex
 	tools []mcp.Tool

@@ -68,7 +68,10 @@ func (g *Gateway) AddUpstream(ctx context.Context, config UpstreamConfig) (int, 
 	}
 	g.mu.Unlock()
 
-	u := &upstream{config: config}
+	u := &upstream{
+		config:     config,
+		resilience: newUpstreamResilience(config.Name, config.Policy),
+	}
 	if err := u.connect(ctx); err != nil {
 		return 0, fmt.Errorf("connecting to upstream %s: %w", config.Name, err)
 	}
@@ -96,9 +99,13 @@ func (g *Gateway) AddUpstream(ctx context.Context, config UpstreamConfig) (int, 
 		nsTool := tool
 		nsTool.Name = nsName
 
+		handler := g.makeProxyHandler(config.Name, tool.Name)
+		if u.resilience != nil {
+			handler = u.resilience.wrapHandler(config.Name, handler)
+		}
 		g.reg.AddTool(registry.ToolDefinition{
 			Tool:    nsTool,
-			Handler: g.makeProxyHandler(config.Name, tool.Name),
+			Handler: handler,
 		})
 	}
 	g.mu.Unlock()
@@ -163,10 +170,11 @@ func (g *Gateway) UpstreamStatus(name string) (UpstreamInfo, error) {
 	u.mu.RUnlock()
 
 	return UpstreamInfo{
-		Name:      name,
-		URL:       u.config.URL,
-		Healthy:   u.healthy.Load(),
-		ToolCount: toolCount,
+		Name:         name,
+		URL:          u.config.URL,
+		Healthy:      u.healthy.Load(),
+		ToolCount:    toolCount,
+		CircuitState: u.resilience.circuitState(),
 	}, nil
 }
 

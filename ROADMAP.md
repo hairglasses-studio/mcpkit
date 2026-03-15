@@ -79,6 +79,13 @@ All Tier 3 items delivered: discovery, DPoP, gateway, ralph enhancements, worklo
 - ~~Metadata enhancement~~ (`discovery/metadata.go`) — MetadataFromConfig with resources + prompts extraction — **DONE**
 - ~~Publish convenience~~ (`discovery/publisher.go`) — Publish/Unpublish one-call wrappers — **DONE**
 
+### Phase 10: Production Hardening — COMPLETE
+
+- ~~Gateway resilience~~ (`gateway/resilience.go`) — per-upstream circuit breaker, rate limiter, call timeout via UpstreamPolicy — **DONE**
+- ~~Orchestrator middleware~~ (`orchestrator/middleware.go`) — StageMiddleware, WrapStage, WrapStages — **DONE**
+- ~~Handoff middleware~~ (`handoff/middleware.go`) — DelegateMiddleware, WrapDelegate, Config.WithMiddleware — **DONE**
+- ~~Workflow middleware~~ (`workflow/middleware.go`) — NodeMiddleware, WrapNodeFunc, EngineConfig.NodeMiddleware — **DONE**
+
 ### Decision Points
 
 - **After Phase 5**: Evaluate A2A spec stability — if v1.0 ships, fast-track `a2a/`; otherwise prototype only
