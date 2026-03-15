@@ -1,25 +1,14 @@
 //go:build !official_sdk
 
-// Command full demonstrates a production-grade mcpkit MCP server with all features.
-//
-// Features shown:
-//   - TypedHandler tools with structured input/output
-//   - Resources and resource templates
-//   - Prompt templates with arguments
-//   - Resilience middleware (circuit breaker, rate limiting)
-//   - Security middleware (RBAC, audit logging)
-//   - Health check endpoints
-//   - Middleware chain composition
-//
-// Usage:
-//
-//	go run ./examples/full
+// Command full demonstrates a production-grade mcpkit MCP server with the full
+// middleware stack: lifecycle, observability, finops, sanitize, security, and resilience.
 package main
 
 import (
 	"context"
 	"fmt"
 	"log"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -27,11 +16,17 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 
 	"github.com/hairglasses-studio/mcpkit/auth"
+	"github.com/hairglasses-studio/mcpkit/finops"
 	"github.com/hairglasses-studio/mcpkit/handler"
+	"github.com/hairglasses-studio/mcpkit/health"
+	"github.com/hairglasses-studio/mcpkit/lifecycle"
+	"github.com/hairglasses-studio/mcpkit/logging"
+	"github.com/hairglasses-studio/mcpkit/observability"
 	"github.com/hairglasses-studio/mcpkit/prompts"
 	"github.com/hairglasses-studio/mcpkit/registry"
 	"github.com/hairglasses-studio/mcpkit/resilience"
 	"github.com/hairglasses-studio/mcpkit/resources"
+	"github.com/hairglasses-studio/mcpkit/sanitize"
 	"github.com/hairglasses-studio/mcpkit/security"
 )
 
@@ -77,15 +72,12 @@ func (m *NotesModule) Tools() []registry.ToolDefinition {
 			if limit == 0 {
 				limit = 10
 			}
-
-			// Simulated search
 			allNotes := []string{
 				"Getting Started with Go",
 				"MCP Protocol Overview",
 				"Building MCP Servers",
 				"Go Concurrency Patterns",
 			}
-
 			var results []string
 			for _, note := range allNotes {
 				if strings.Contains(strings.ToLower(note), strings.ToLower(input.Query)) {
@@ -95,7 +87,6 @@ func (m *NotesModule) Tools() []registry.ToolDefinition {
 					}
 				}
 			}
-
 			return SearchResult{Results: results, Total: len(results)}, nil
 		},
 	)
@@ -191,7 +182,7 @@ func (m *WorkflowPromptModule) Prompts() []prompts.PromptDefinition {
 		{
 			Prompt: mcp.NewPrompt("summarize_notes",
 				mcp.WithPromptDescription("Summarize notes matching a search query"),
-				mcp.WithArgument("query", mcp.RequiredArgument(), mcp.ArgumentDescription("Search query for notes to summarize")),
+				mcp.WithArgument("query", mcp.RequiredArgument(), mcp.ArgumentDescription("Search query")),
 				mcp.WithArgument("style", mcp.ArgumentDescription("Summary style: brief or detailed (default: brief)")),
 			),
 			Handler: func(_ context.Context, req mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
@@ -200,12 +191,11 @@ func (m *WorkflowPromptModule) Prompts() []prompts.PromptDefinition {
 				if style == "" {
 					style = "brief"
 				}
-
 				return &mcp.GetPromptResult{
 					Description: "Summarize notes matching: " + query,
 					Messages: []mcp.PromptMessage{
 						mcp.NewPromptMessage(mcp.RoleUser, mcp.NewTextContent(
-							fmt.Sprintf("Search for notes about %q and provide a %s summary of the key points.", query, style),
+							fmt.Sprintf("Search for notes about %q and provide a %s summary.", query, style),
 						)),
 					},
 				}, nil
@@ -221,6 +211,30 @@ func (m *WorkflowPromptModule) Prompts() []prompts.PromptDefinition {
 // ---------------------------------------------------------------------------
 
 func main() {
+	ctx := context.Background()
+	logger := slog.Default()
+
+	// --- Observability ---
+	obs, obsShutdown, err := observability.Init(ctx, observability.Config{
+		ServiceName:    "full-example",
+		ServiceVersion: "2.0.0",
+		EnableMetrics:  true,
+		PrometheusPort: "9091",
+	})
+	if err != nil {
+		log.Fatalf("observability init: %v", err)
+	}
+
+	// --- FinOps ---
+	tracker := finops.NewTracker(finops.Config{
+		TokenBudget: 1_000_000,
+	})
+
+	// --- Health ---
+	checker := health.NewChecker(
+		health.WithToolCount(func() int { return 2 }),
+	)
+
 	// --- Resilience ---
 	cbReg := resilience.NewCircuitBreakerRegistry(nil)
 	rlReg := resilience.NewRateLimitRegistry()
@@ -228,19 +242,21 @@ func main() {
 	// --- Security ---
 	auditLog := security.NewAuditLogger(security.AuditLoggerConfig{})
 	rbac := security.NewRBAC(security.RBACConfig{})
+	userFunc := func(ctx context.Context) string { return auth.Subject(ctx) }
 
-	userFunc := func(ctx context.Context) string {
-		return auth.Subject(ctx)
-	}
-
-	// --- Tool registry with middleware ---
+	// --- Tool registry with full middleware stack ---
+	// Order (outermost first): observability → logging → finops → sanitize → security → resilience
 	reg := registry.NewToolRegistry(registry.Config{
 		DefaultTimeout: 30 * time.Second,
 		Middleware: []registry.Middleware{
-			resilience.CircuitBreakerMiddleware(cbReg),
-			resilience.RateLimitMiddleware(rlReg),
+			obs.Middleware(),
+			logging.Middleware(logger),
+			finops.Middleware(tracker),
+			sanitize.OutputMiddleware(sanitize.OutputPolicy{RedactSecrets: true}),
 			security.AuditMiddleware(auditLog, userFunc),
 			security.RBACMiddleware(rbac, auditLog, userFunc),
+			resilience.CircuitBreakerMiddleware(cbReg),
+			resilience.RateLimitMiddleware(rlReg),
 		},
 	})
 	reg.RegisterModule(&NotesModule{})
@@ -254,19 +270,35 @@ func main() {
 	promptReg.RegisterModule(&WorkflowPromptModule{})
 
 	// --- Wire to MCP server ---
-	s := server.NewMCPServer("full-example", "1.0.0",
+	s := server.NewMCPServer("full-example", "2.0.0",
 		server.WithToolCapabilities(true),
 		server.WithResourceCapabilities(false, true),
 		server.WithPromptCapabilities(true),
 		server.WithRecovery(),
 	)
-
 	reg.RegisterWithServer(s)
 	resReg.RegisterWithServer(s)
 	promptReg.RegisterWithServer(s)
 
+	// --- Lifecycle manager ---
+	lm := lifecycle.New(lifecycle.Config{
+		OnHealthy: func() {
+			checker.SetStatus("healthy")
+			log.Println("server healthy")
+		},
+		OnDraining: func() {
+			checker.SetStatus("draining")
+			log.Println("server draining")
+		},
+	})
+	lm.OnShutdown(func(ctx context.Context) error {
+		return obsShutdown(ctx)
+	})
+
 	log.Println("full-example server starting on stdio")
-	if err := server.ServeStdio(s); err != nil {
+	if err := lm.Run(ctx, func(ctx context.Context) error {
+		return server.ServeStdio(s)
+	}); err != nil {
 		log.Fatal(err)
 	}
 }

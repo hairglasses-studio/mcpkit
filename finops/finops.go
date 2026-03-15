@@ -109,6 +109,14 @@ func Middleware(tracker *Tracker) registry.Middleware {
 			}
 			tracker.Record(entry)
 
+			// Populate holder for observability bridge if present.
+			if holder, ok := TokenUsageHolderFromContext(ctx); ok {
+				holder.Store(TokenUsage{
+					InputTokens:  inputTokens,
+					OutputTokens: outputTokens,
+				})
+			}
+
 			// Record dollar cost if CostPolicy is configured.
 			if cp := tracker.config.CostPolicy; cp != nil {
 				cost := cp.EstimateCost("", inputTokens, outputTokens)
