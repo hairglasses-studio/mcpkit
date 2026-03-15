@@ -39,6 +39,11 @@ func (m *Module) Tools() []registry.ToolDefinition {
 		m.planTool(),
 		m.verifyTool(),
 		m.artifactsTool(),
+		m.commitTool(),
+		m.reportTool(),
+		m.scheduleTool(),
+		m.notesTool(),
+		m.improveTool(),
 	}
 }
 

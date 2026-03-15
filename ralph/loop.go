@@ -94,10 +94,16 @@ func (l *Loop) Run(ctx context.Context) error {
 		messages := []sampling.SamplingMessage{
 			sampling.TextMessage("user", prompt),
 		}
-		req := sampling.CompletionRequest(messages,
+		opts := []sampling.RequestOption{
 			sampling.WithMaxTokens(l.config.MaxTokens),
 			sampling.WithSystemPrompt(systemPrompt),
-		)
+		}
+		if l.config.ModelSelector != nil {
+			if model := l.config.ModelSelector(iteration, progressCopy.CompletedIDs); model != "" {
+				opts = append(opts, sampling.WithModel(model))
+			}
+		}
+		req := sampling.CompletionRequest(messages, opts...)
 
 		result, err := l.config.Sampler.CreateMessage(ctx, req)
 		if err != nil {

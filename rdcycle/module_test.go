@@ -33,8 +33,8 @@ func TestModule_Tools_Count(t *testing.T) {
 	t.Parallel()
 	m := NewModule(CycleConfig{})
 	tools := m.Tools()
-	if len(tools) != 4 {
-		t.Errorf("Tools len: want 4, got %d", len(tools))
+	if len(tools) != 9 {
+		t.Errorf("Tools len: want 9, got %d", len(tools))
 	}
 }
 
@@ -48,6 +48,11 @@ func TestModule_Tools_Names(t *testing.T) {
 		"rdcycle_plan":      false,
 		"rdcycle_verify":    false,
 		"rdcycle_artifacts": false,
+		"rdcycle_commit":    false,
+		"rdcycle_report":    false,
+		"rdcycle_schedule":  false,
+		"rdcycle_notes":     false,
+		"rdcycle_improve":   false,
 	}
 	for _, td := range tools {
 		want[td.Tool.Name] = true
@@ -107,8 +112,8 @@ func TestModule_RegisterWithRegistry(t *testing.T) {
 	m := NewModule(CycleConfig{})
 	reg.RegisterModule(m)
 
-	if reg.ToolCount() != 4 {
-		t.Errorf("ToolCount: want 4, got %d", reg.ToolCount())
+	if reg.ToolCount() != 9 {
+		t.Errorf("ToolCount: want 9, got %d", reg.ToolCount())
 	}
 	if reg.ModuleCount() != 1 {
 		t.Errorf("ModuleCount: want 1, got %d", reg.ModuleCount())

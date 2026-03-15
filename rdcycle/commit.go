@@ -37,6 +37,8 @@ func (m *Module) commitTool() registry.ToolDefinition {
 		desc,
 		m.handleCommit,
 	)
+	td.Category = "rdcycle"
+	td.Timeout = 30 * time.Second
 	td.IsWrite = true
 	return td
 }
