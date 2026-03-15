@@ -52,3 +52,18 @@ func AddPromptToServer(s *MCPServer, prompt mcp.Prompt, handler PromptHandlerFun
 func ServeStdio(s *MCPServer) error {
 	return server.ServeStdio(s)
 }
+
+// RemoveToolsFromServer removes tools from the MCP server by name.
+func RemoveToolsFromServer(s *MCPServer, names ...string) {
+	s.DeleteTools(names...)
+}
+
+// RemoveResourcesFromServer removes resources from the MCP server by URI.
+func RemoveResourcesFromServer(s *MCPServer, uris ...string) {
+	s.DeleteResources(uris...)
+}
+
+// RemovePromptsFromServer removes prompts from the MCP server by name.
+func RemovePromptsFromServer(s *MCPServer, names ...string) {
+	s.DeletePrompts(names...)
+}
