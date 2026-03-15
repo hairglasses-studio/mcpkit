@@ -5,10 +5,12 @@ Last updated: 2026-03-15.
 ## Status Summary
 
 - **Spec coverage**: 100% (all MCP 2025-11-25 features implemented)
-- **Tier 1**: Complete (resources, prompts, examples pending, SDK migration path pending, streamable HTTP tests pending)
-- **Tier 2**: Complete (dispatcher, OAuth, sampling, logging, observability tests pending)
-- **Tier 3**: Complete (discovery, DPoP, gateway, ralph, workload identity)
-- **Tier 4**: New — ecosystem leadership items (see below)
+- **Tier 1**: Complete
+- **Tier 2**: Complete
+- **Tier 3**: Complete
+- **Tier 4**: Complete (A2A deferred — spec not stable)
+- **Test coverage**: All 35 non-example packages at 90%+ (min 90.0%, max 100.0%)
+- **Documentation**: All 33 packages have doc.go, 28+ example_test.go files
 
 See [RESEARCH.md](RESEARCH.md) for detailed analysis and evidence.
 
