@@ -64,16 +64,8 @@ func (d *DynamicRegistry) RemovePrompt(name string) bool {
 }
 
 // RegisterWithServer registers all prompts with an MCP server
-// and sets up change notification to re-sync on changes.
+// and sets up diff-based change notification to add/remove prompts on changes.
 func (d *DynamicRegistry) RegisterWithServer(s *registry.MCPServer) {
 	d.PromptRegistry.RegisterWithServer(s)
-
-	d.OnChange(func() {
-		d.mu.RLock()
-		defer d.mu.RUnlock()
-		for _, pd := range d.prompts {
-			wrapped := d.wrapHandler(pd.Prompt.Name, pd)
-			registry.AddPromptToServer(s, pd.Prompt, wrapped)
-		}
-	})
+	WirePromptListChanged(d, s)
 }

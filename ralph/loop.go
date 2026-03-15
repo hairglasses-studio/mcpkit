@@ -4,18 +4,27 @@ package ralph
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
 
+	"github.com/hairglasses-studio/mcpkit/finops"
 	"github.com/hairglasses-studio/mcpkit/registry"
 	"github.com/hairglasses-studio/mcpkit/sampling"
 )
 
 // Run executes the autonomous loop until completion, stop, or max iterations.
 func (l *Loop) Run(ctx context.Context) error {
-	spec, err := LoadSpec(l.config.SpecFile)
+	var spec Spec
+	var err error
+	if len(l.config.TemplateVars) > 0 {
+		spec, err = RenderSpec(l.config.SpecFile, l.config.TemplateVars)
+	} else {
+		spec, err = LoadSpec(l.config.SpecFile)
+	}
 	if err != nil {
 		return err
 	}
@@ -25,6 +34,13 @@ func (l *Loop) Run(ctx context.Context) error {
 	if err != nil {
 		l.mu.Unlock()
 		return err
+	}
+	if l.config.ForceRestart {
+		l.progress = Progress{}
+	}
+	if l.progress.Status == StatusCompleted {
+		l.mu.Unlock()
+		return nil
 	}
 	l.progress.SpecFile = l.config.SpecFile
 	l.progress.Status = StatusRunning
@@ -58,8 +74,14 @@ func (l *Loop) Run(ctx context.Context) error {
 		progressCopy := l.progress
 		l.mu.Unlock()
 
+		l.config.Hooks.callIterationStart(iteration)
+
 		// Re-read spec each iteration (clean context principle).
-		spec, err = LoadSpec(l.config.SpecFile)
+		if len(l.config.TemplateVars) > 0 {
+			spec, err = RenderSpec(l.config.SpecFile, l.config.TemplateVars)
+		} else {
+			spec, err = LoadSpec(l.config.SpecFile)
+		}
 		if err != nil {
 			l.setStatus(StatusFailed)
 			return err
@@ -111,45 +133,65 @@ func (l *Loop) Run(ctx context.Context) error {
 			return nil
 		}
 
-		// Execute tool.
-		if decision.ToolName == "" {
+		// Resolve tool calls (multi-tool or single-tool shim).
+		calls := decision.ResolvedToolCalls()
+		if len(calls) == 0 {
 			l.recordIteration(iteration, decision.TaskID, nil, "no tool specified in decision")
+			l.recordCost(iteration, prompt, responseText, nil, nil)
 			continue
 		}
 
-		td, found := l.config.ToolRegistry.GetTool(decision.ToolName)
-		if !found {
-			l.recordIteration(iteration, decision.TaskID, []string{decision.ToolName}, fmt.Sprintf("tool %q not found", decision.ToolName))
-			continue
-		}
+		// Execute each tool call sequentially.
+		var toolNames []string
+		var resultParts []string
+		var toolResults []*registry.CallToolResult
 
-		toolReq := makeCallToolRequest(decision.ToolName, decision.Arguments)
-		toolResult, err := td.Handler(ctx, toolReq)
+		for _, call := range calls {
+			td, found := l.config.ToolRegistry.GetTool(call.Name)
+			if !found {
+				l.config.Hooks.callError(iteration, fmt.Errorf("tool %q not found", call.Name))
+				toolNames = append(toolNames, call.Name)
+				resultParts = append(resultParts, fmt.Sprintf("tool %q not found", call.Name))
+				toolResults = append(toolResults, nil)
+				continue
+			}
 
-		var resultText string
-		if err != nil {
-			resultText = fmt.Sprintf("tool error: %v", err)
-		} else if toolResult != nil && len(toolResult.Content) > 0 {
-			if text, ok := registry.ExtractTextContent(toolResult.Content[0]); ok {
-				resultText = text
+			toolReq := makeCallToolRequest(call.Name, call.Arguments)
+			toolResult, err := td.Handler(ctx, toolReq)
+
+			toolNames = append(toolNames, call.Name)
+			toolResults = append(toolResults, toolResult)
+
+			if err != nil {
+				l.config.Hooks.callError(iteration, err)
+				resultParts = append(resultParts, fmt.Sprintf("tool error: %v", err))
+			} else if toolResult != nil && len(toolResult.Content) > 0 {
+				if text, ok := registry.ExtractTextContent(toolResult.Content[0]); ok {
+					if toolResult.IsError {
+						resultParts = append(resultParts, "tool error: "+text)
+					} else {
+						resultParts = append(resultParts, text)
+					}
+				} else {
+					resultParts = append(resultParts, "tool returned non-text content")
+				}
 			} else {
-				resultText = "tool returned non-text content"
+				resultParts = append(resultParts, "tool returned empty result")
 			}
-			if toolResult.IsError {
-				resultText = "tool error: " + resultText
-			}
-		} else {
-			resultText = "tool returned empty result"
 		}
+
+		combinedResult := strings.Join(resultParts, "\n")
 
 		// Mark task done if requested.
 		if decision.MarkDone && decision.TaskID != "" {
 			l.mu.Lock()
 			l.progress.CompletedIDs = appendUnique(l.progress.CompletedIDs, decision.TaskID)
 			l.mu.Unlock()
+			l.config.Hooks.callTaskComplete(decision.TaskID)
 		}
 
-		l.recordIteration(iteration, decision.TaskID, []string{decision.ToolName}, resultText)
+		l.recordIteration(iteration, decision.TaskID, toolNames, combinedResult)
+		l.recordCost(iteration, prompt, responseText, calls, toolResults)
 	}
 }
 
@@ -172,7 +214,6 @@ func (l *Loop) setStatus(s Status) {
 
 func (l *Loop) recordIteration(iteration int, taskID string, toolCalls []string, result string) {
 	l.mu.Lock()
-	defer l.mu.Unlock()
 	entry := IterationLog{
 		Iteration: iteration,
 		TaskID:    taskID,
@@ -183,6 +224,8 @@ func (l *Loop) recordIteration(iteration int, taskID string, toolCalls []string,
 	l.progress.Log = append(l.progress.Log, entry)
 	l.progress.UpdatedAt = time.Now()
 	SaveProgress(l.config.ProgressFile, l.progress)
+	l.mu.Unlock()
+	l.config.Hooks.callIterationEnd(entry)
 }
 
 func appendUnique(slice []string, item string) []string {
@@ -192,4 +235,47 @@ func appendUnique(slice []string, item string) []string {
 		}
 	}
 	return append(slice, item)
+}
+
+// recordCost records token usage for a completed iteration when a CostTracker is configured.
+func (l *Loop) recordCost(iteration int, prompt, response string, calls []ToolCall, results []*registry.CallToolResult) {
+	if l.config.CostTracker == nil {
+		return
+	}
+	estimate := l.config.EstimateFunc
+	if estimate == nil {
+		estimate = func(text string) int { return len(text) / 4 }
+	}
+
+	// Record sampling usage (prompt + response together as ralph/sampling entry).
+	l.config.CostTracker.Record(finops.UsageEntry{
+		ToolName:     "ralph/sampling",
+		Category:     "sampling",
+		InputTokens:  estimate(prompt),
+		OutputTokens: estimate(response),
+		Timestamp:    time.Now(),
+	})
+
+	// Record per-tool usage.
+	for i, call := range calls {
+		inputTokens := 0
+		outputTokens := 0
+		if call.Arguments != nil {
+			if argBytes, err := json.Marshal(call.Arguments); err == nil {
+				inputTokens = estimate(string(argBytes))
+			}
+		}
+		if i < len(results) && results[i] != nil {
+			outputTokens = finops.EstimateFromResult(results[i], estimate)
+		}
+		l.config.CostTracker.Record(finops.UsageEntry{
+			ToolName:     call.Name,
+			Category:     "tool",
+			InputTokens:  inputTokens,
+			OutputTokens: outputTokens,
+			Timestamp:    time.Now(),
+		})
+	}
+
+	l.config.Hooks.callCostUpdate(iteration, l.config.CostTracker.Summary())
 }
