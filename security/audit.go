@@ -48,6 +48,9 @@ type AuditLoggerConfig struct {
 
 	// QueueSize is the channel buffer for async writes. Default: 100.
 	QueueSize int
+
+	// Exporters are additional sinks that receive every audit event synchronously.
+	Exporters []AuditExporter
 }
 
 // AuditLogger handles audit event logging.
@@ -58,6 +61,7 @@ type AuditLogger struct {
 	logFile    string
 	writeQueue chan AuditEvent
 	stopCh     chan struct{}
+	exporters  []AuditExporter
 }
 
 // NewAuditLogger creates a new audit logger.
@@ -69,12 +73,16 @@ func NewAuditLogger(config AuditLoggerConfig) *AuditLogger {
 		config.QueueSize = 100
 	}
 
+	exporters := make([]AuditExporter, len(config.Exporters))
+	copy(exporters, config.Exporters)
+
 	logger := &AuditLogger{
 		events:     make([]AuditEvent, 0, config.MaxEvents),
 		maxEvents:  config.MaxEvents,
 		logFile:    config.LogFile,
 		writeQueue: make(chan AuditEvent, config.QueueSize),
 		stopCh:     make(chan struct{}),
+		exporters:  exporters,
 	}
 
 	if config.LogFile != "" {
@@ -103,6 +111,10 @@ func (l *AuditLogger) Log(event AuditEvent) {
 		case l.writeQueue <- event:
 		default:
 		}
+	}
+
+	for _, exp := range l.exporters {
+		_ = exp.Export(event)
 	}
 }
 
@@ -242,9 +254,12 @@ func (l *AuditLogger) GetStats() AuditStats {
 	return stats
 }
 
-// Close stops the background writer.
+// Close stops the background writer and closes all exporters.
 func (l *AuditLogger) Close() {
 	close(l.stopCh)
+	for _, exp := range l.exporters {
+		_ = exp.Close()
+	}
 }
 
 func (l *AuditLogger) backgroundWriter() {

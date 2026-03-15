@@ -22,13 +22,13 @@ make check-dual          # Full check + official SDK build
 | `resilience` | CircuitBreaker, RateLimiter, CacheEntry generics, middleware | `registry` |
 | `mcptest` | Test server/client, assertion helpers, HTTP pool, session replay, snapshot testing, benchmark helpers | `registry` |
 | `auth` | JWT/JWKS validation, OAuth discovery + client flow, Bearer middleware, DPoP proof validation + HTTP middleware, workload identity (GCP/AWS), context identity | `registry`, `client` |
-| `security` | RBAC, audit logging middleware, tenant context propagation | `registry`, `auth` |
+| `security` | RBAC, audit logging middleware, audit export (JSONL/stream), tenant context propagation | `registry`, `auth` |
 | `health` | Health check endpoint and checker registry | none |
 | `observability` | OpenTelemetry tracing/metrics middleware | `registry` |
 | `sanitize` | Input/output sanitization, secret/PII redaction, URI validation | none |
 | `secrets` | Secret provider interface, env/file providers, sanitizer | none |
 | `client` | HTTP pool and client utilities | none |
-| `discovery` | MCP Registry client for server discovery and publishing, multi-registry metadata extraction | `registry`, `client`, `resources`, `prompts` |
+| `discovery` | MCP Registry client for server discovery and publishing, multi-registry metadata extraction, server card HTTP handler | `registry`, `client`, `resources`, `prompts` |
 | `resources` | Resource registry, middleware chain, server integration for URI-based data, URI validation middleware | `registry` |
 | `prompts` | Prompt registry, middleware chain, server integration for reusable templates | `registry` |
 | `logging` | slog.Handler bridge to MCP clients, tool invocation logging middleware | `registry` |
@@ -47,11 +47,12 @@ make check-dual          # Full check + official SDK build
 | `extensions` | MCP Extensions negotiation and capability handshake | none |
 | `lifecycle` | Production server lifecycle: signal handling, graceful drain, shutdown hooks | none |
 | `bootstrap` | Agent workspace init, context reports, capability matrix | `registry`, `resources`, `prompts`, `extensions` |
+| `eval` | Evaluation framework: cases, scorers (exact/contains/regex/jsonpath/custom/not-empty/latency), JSON suite loading, runner | `registry` |
 
 ## Dependency Layers
 
 - **Layer 1** (no internal deps): `registry`, `health`, `sanitize`, `secrets`, `client`
-- **Layer 2** (depend on Layer 1): `resources`, `prompts`, `handler`, `resilience`, `mcptest`, `auth`, `observability`, `logging`, `sampling`, `roots`, `research`, `discovery`, `dispatcher`, `extensions`, `memory`, `finops`, `lifecycle`
+- **Layer 2** (depend on Layer 1): `resources`, `prompts`, `handler`, `resilience`, `mcptest`, `auth`, `observability`, `logging`, `sampling`, `roots`, `research`, `discovery`, `dispatcher`, `extensions`, `memory`, `finops`, `lifecycle`, `eval`
 - **Layer 3** (depend on Layer 2): `security`, `gateway`, `ralph`, `skills`, `a2a`
 - **Layer 4** (depend on Layer 3): `orchestrator`, `handoff`, `workflow`, `bootstrap`
 
@@ -145,3 +146,22 @@ See [ROADMAP.md](ROADMAP.md) for detailed phased plan and [RESEARCH.md](RESEARCH
 - ~~`handoff/observability.go`~~ — TracingMiddleware for delegation spans (agent, status, duration)
 - ~~`ralph/observability.go`~~ — TracingHooks for iteration spans (iteration, task_id, status)
 - ~~`examples/full/main.go`~~ — Full middleware stack demo (lifecycle, observability, finops, sanitize, logging)
+
+### Phase 14 — Server Cards, Tool Signing, Eval Framework (COMPLETE)
+- ~~`discovery/wellknown.go`~~ — ServerCardHandler + StaticServerCardHandler for `.well-known/mcp.json`
+- ~~`registry/registry.go`~~ — `Version` field on ToolDefinition; `discovery/discovery.go` — Version on ToolSummary
+- ~~`registry/signing.go`~~ — Ed25519 SignTool/VerifyToolSignature, SignatureStore, SignatureVerificationMiddleware
+- ~~`eval/`~~ — Evaluation framework: Case, Suite, Summary, 6 built-in Scorers, Run/RunT runner
+
+### Phase 15 — Audit Export, Eval Hardening, Godoc Examples (COMPLETE)
+- ~~`security/export.go`~~ — AuditExporter interface, JSONLExporter, StreamExporter with FilterFunc (T5-4)
+- ~~`eval/loader.go`~~ — LoadSuiteJSON for JSON suite loading
+- ~~`eval/scorers.go`~~ — NotEmpty scorer, ResultScorer interface, Latency scorer
+- ~~Godoc examples~~ — eval, registry/signing, discovery/wellknown example_test.go files
+
+### Phase 16 — Security Middleware Tests, Eval Completeness, Godoc Examples Batch 2 (COMPLETE)
+- ~~`security/middleware_test.go`~~ — 8 tests for AuditMiddleware and RBACMiddleware
+- ~~`security/example_test.go`~~ — ExampleNewRBAC, ExampleAuditMiddleware, ExampleNewAuditLogger_withExporter
+- ~~`eval/scorers.go`~~ — ErrorRate ResultScorer (passes on non-error, fails on error)
+- ~~`eval/runner_test.go`~~ — End-to-end TestRun_WithResultScorers exercising both Scorer and ResultScorer
+- ~~Godoc examples~~ — auth, observability, sanitize, health, lifecycle, logging example_test.go files
