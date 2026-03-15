@@ -60,3 +60,18 @@ func ServeStdio(s *MCPServer) error {
 	<-ctx.Done()
 	return ctx.Err()
 }
+
+// RemoveToolsFromServer removes tools from the MCP server by name.
+func RemoveToolsFromServer(s *MCPServer, names ...string) {
+	s.RemoveTools(names...)
+}
+
+// RemoveResourcesFromServer removes resources from the MCP server by URI.
+func RemoveResourcesFromServer(s *MCPServer, uris ...string) {
+	s.RemoveResources(uris...)
+}
+
+// RemovePromptsFromServer removes prompts from the MCP server by name.
+func RemovePromptsFromServer(s *MCPServer, names ...string) {
+	s.RemovePrompts(names...)
+}

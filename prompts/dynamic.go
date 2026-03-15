@@ -2,7 +2,11 @@
 
 package prompts
 
-import "sync"
+import (
+	"sync"
+
+	"github.com/hairglasses-studio/mcpkit/registry"
+)
 
 // ChangeNotifier is called when a prompt is added or removed.
 type ChangeNotifier func()
@@ -57,4 +61,19 @@ func (d *DynamicRegistry) RemovePrompt(name string) bool {
 		d.notify()
 	}
 	return ok
+}
+
+// RegisterWithServer registers all prompts with an MCP server
+// and sets up change notification to re-sync on changes.
+func (d *DynamicRegistry) RegisterWithServer(s *registry.MCPServer) {
+	d.PromptRegistry.RegisterWithServer(s)
+
+	d.OnChange(func() {
+		d.mu.RLock()
+		defer d.mu.RUnlock()
+		for _, pd := range d.prompts {
+			wrapped := d.wrapHandler(pd.Prompt.Name, pd)
+			registry.AddPromptToServer(s, pd.Prompt, wrapped)
+		}
+	})
 }
