@@ -17,19 +17,19 @@ make check-dual          # Full check + official SDK build
 
 | Package | Purpose | Internal Deps |
 |---------|---------|---------------|
-| `registry` | Tool registration, middleware chain, server integration | none |
+| `registry` | Tool registration, middleware chain, server integration, tool integrity verification | none |
 | `handler` | TypedHandler generics, param extraction, result builders, elicitation | `registry` |
 | `resilience` | CircuitBreaker, RateLimiter, CacheEntry generics, middleware | `registry` |
 | `mcptest` | Test server/client, assertion helpers, HTTP pool | `registry` |
 | `auth` | JWT/JWKS validation, OAuth discovery + client flow, Bearer middleware, DPoP proof validation + HTTP middleware, workload identity (GCP/AWS), context identity | `registry`, `client` |
-| `security` | RBAC, audit logging middleware | `registry`, `auth` |
+| `security` | RBAC, audit logging middleware, tenant context propagation | `registry`, `auth` |
 | `health` | Health check endpoint and checker registry | none |
 | `observability` | OpenTelemetry tracing/metrics middleware | `registry` |
-| `sanitize` | Input sanitization for tool params | none |
+| `sanitize` | Input/output sanitization, secret/PII redaction, URI validation | none |
 | `secrets` | Secret provider interface, env/file providers, sanitizer | none |
 | `client` | HTTP pool and client utilities | none |
 | `discovery` | MCP Registry client for server discovery and publishing | `registry`, `client` |
-| `resources` | Resource registry, middleware chain, server integration for URI-based data | `registry` |
+| `resources` | Resource registry, middleware chain, server integration for URI-based data, URI validation middleware | `registry` |
 | `prompts` | Prompt registry, middleware chain, server integration for reusable templates | `registry` |
 | `logging` | slog.Handler bridge to MCP clients, tool invocation logging middleware | `registry` |
 | `sampling` | Sampling client interface, context injection middleware, request builders | `registry` |
@@ -103,3 +103,10 @@ See [ROADMAP.md](ROADMAP.md) for detailed phased plan and [RESEARCH.md](RESEARCH
 - ~~`extensions/`~~ — MCP Extensions negotiation and capability handshake
 - ~~`bootstrap/`~~ — Agent workspace init, context reports
 - ~~`auth/workload.go`~~ — Workload identity (GCP/AWS IAM)
+
+### Phase 8 — Security Hardening (COMPLETE)
+- ~~`sanitize/output.go`~~ — Output sanitization middleware (secret/PII/injection redaction)
+- ~~`sanitize/uri.go`~~ — URI validation (path traversal, SSRF protection)
+- ~~`registry/integrity.go`~~ — Tool integrity verification (SHA-256 fingerprinting, tamper detection)
+- ~~`resources/uri_middleware.go`~~ — URI validation middleware for resource handlers
+- ~~`security/tenant.go`~~ — Tenant context propagation for multi-tenant servers

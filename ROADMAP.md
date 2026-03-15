@@ -61,6 +61,13 @@ All Tier 3 items delivered: discovery, DPoP, gateway, ralph enhancements, worklo
 - ~~`bootstrap/` package~~ (context reports, capability matrix, formatting) — **DONE**
 - ~~`auth/workload.go`~~ (workload identity — GCP metadata + AWS IMDSv2) — **DONE**
 
+### Phase 8: Security Hardening — COMPLETE
+
+- ~~Output sanitization middleware~~ (`sanitize/output.go`, `sanitize/patterns.go`) — secret/PII/injection redaction — **DONE**
+- ~~URI validation~~ (`sanitize/uri.go`, `resources/uri_middleware.go`) — path traversal + SSRF protection — **DONE**
+- ~~Tool integrity verification~~ (`registry/integrity.go`) — SHA-256 fingerprinting, tamper detection — **DONE**
+- ~~Tenant context propagation~~ (`security/tenant.go`) — multi-tenant identity middleware — **DONE**
+
 ### Decision Points
 
 - **After Phase 5**: Evaluate A2A spec stability — if v1.0 ships, fast-track `a2a/`; otherwise prototype only
