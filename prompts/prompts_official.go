@@ -1,6 +1,5 @@
 //go:build official_sdk
 
-// Package prompts provides a registry for MCP prompt templates.
 package prompts
 
 import (

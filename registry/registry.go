@@ -1,7 +1,3 @@
-// Package registry provides the core tool registry and interfaces for MCP servers.
-//
-// It manages tool registration, lookup, search, and middleware-based handler wrapping.
-// Tool modules implement the ToolModule interface and register via RegisterModule.
 package registry
 
 import (

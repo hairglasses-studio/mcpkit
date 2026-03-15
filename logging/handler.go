@@ -1,6 +1,3 @@
-// Package logging provides an slog.Handler that forwards structured log
-// messages to MCP clients as LoggingMessageNotifications, plus middleware
-// for automatic tool invocation logging.
 package logging
 
 import (

@@ -89,6 +89,62 @@ func TestHandleCommit_Success(t *testing.T) {
 	}
 }
 
+func TestHandleCommit_RefuseMaster(t *testing.T) {
+	t.Parallel()
+	dir := setupTestRepo(t, "master")
+	m := NewModule(CycleConfig{GitRoot: dir})
+
+	os.WriteFile(filepath.Join(dir, "test.txt"), []byte("test"), 0644)
+
+	_, err := m.handleCommit(context.Background(), CommitInput{
+		Files:   []string{"test.txt"},
+		Message: "should fail",
+	})
+	if err == nil {
+		t.Error("expected error when committing to master")
+	}
+}
+
+func TestHandleCommit_WithBranchCheckout(t *testing.T) {
+	t.Parallel()
+	dir := setupTestRepo(t, "main")
+	m := NewModule(CycleConfig{GitRoot: dir})
+
+	testFile := filepath.Join(dir, "new_feature.txt")
+	os.WriteFile(testFile, []byte("feature content"), 0644)
+
+	out, err := m.handleCommit(context.Background(), CommitInput{
+		Files:   []string{"new_feature.txt"},
+		Message: "add feature",
+		Branch:  "feature-branch",
+	})
+	if err != nil {
+		t.Fatalf("handleCommit with branch: %v", err)
+	}
+	if !out.Committed {
+		t.Error("expected committed=true")
+	}
+	if out.Branch != "feature-branch" {
+		t.Errorf("branch = %q; want feature-branch", out.Branch)
+	}
+}
+
+func TestHandleCommit_DefaultGitRoot(t *testing.T) {
+	t.Parallel()
+	// When GitRoot is empty, the default "." is used.
+	// This just tests that the code handles an empty GitRoot gracefully
+	// (it will try to run git in ".").
+	m := NewModule(CycleConfig{GitRoot: ""})
+	_, err := m.handleCommit(context.Background(), CommitInput{
+		Files:   []string{"nonexistent.go"},
+		Message: "test",
+	})
+	// We expect an error because we can't stage a nonexistent file,
+	// but it should NOT panic. The exact error depends on git state.
+	// Just ensure no panic.
+	_ = err
+}
+
 // setupTestRepo creates a temporary git repo on the given branch.
 func setupTestRepo(t *testing.T, branch string) string {
 	t.Helper()

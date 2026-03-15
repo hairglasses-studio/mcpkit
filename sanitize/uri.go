@@ -1,4 +1,3 @@
-// Package sanitize provides input validation for user-supplied MCP parameters.
 package sanitize
 
 import (

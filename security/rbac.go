@@ -1,4 +1,3 @@
-// Package security provides RBAC and audit logging for MCP servers.
 package security
 
 import (

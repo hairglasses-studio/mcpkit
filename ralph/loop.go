@@ -132,6 +132,26 @@ func (l *Loop) Run(ctx context.Context) error {
 			continue
 		}
 
+		// Reject decisions targeting blocked tasks (dependencies not met).
+		if decision.TaskID != "" {
+			completed := make(map[string]bool)
+			for _, id := range progressCopy.CompletedIDs {
+				completed[id] = true
+			}
+			if !completed[decision.TaskID] {
+				readyIDs := ReadyTasks(spec.Tasks, completed)
+				readySet := make(map[string]bool)
+				for _, id := range readyIDs {
+					readySet[id] = true
+				}
+				if !readySet[decision.TaskID] {
+					l.recordIteration(iteration, decision.TaskID, nil,
+						fmt.Sprintf("task %q is blocked (dependencies not met)", decision.TaskID))
+					continue
+				}
+			}
+		}
+
 		// Complete?
 		if decision.Complete {
 			l.recordIteration(iteration, "", nil, "loop completed")
@@ -188,12 +208,30 @@ func (l *Loop) Run(ctx context.Context) error {
 
 		combinedResult := strings.Join(resultParts, "\n")
 
-		// Mark task done if requested.
+		// Mark task done if requested, but only when the task is ready (not blocked).
 		if decision.MarkDone && decision.TaskID != "" {
 			l.mu.Lock()
-			l.progress.CompletedIDs = appendUnique(l.progress.CompletedIDs, decision.TaskID)
-			l.mu.Unlock()
-			l.config.Hooks.callTaskComplete(decision.TaskID)
+			doneSet := make(map[string]bool)
+			for _, id := range l.progress.CompletedIDs {
+				doneSet[id] = true
+			}
+			allowMark := doneSet[decision.TaskID]
+			if !allowMark {
+				readyNow := ReadyTasks(spec.Tasks, doneSet)
+				for _, id := range readyNow {
+					if id == decision.TaskID {
+						allowMark = true
+						break
+					}
+				}
+			}
+			if allowMark {
+				l.progress.CompletedIDs = appendUnique(l.progress.CompletedIDs, decision.TaskID)
+				l.mu.Unlock()
+				l.config.Hooks.callTaskComplete(decision.TaskID)
+			} else {
+				l.mu.Unlock()
+			}
 		}
 
 		l.recordIteration(iteration, decision.TaskID, toolNames, combinedResult)

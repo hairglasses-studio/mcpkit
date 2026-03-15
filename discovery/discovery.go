@@ -1,7 +1,3 @@
-// Package discovery provides MCP Registry integration for server discovery and publishing.
-//
-// It supports querying the MCP Registry API for server metadata, caching results with
-// configurable TTL, and publishing server metadata to the registry.
 package discovery
 
 import (
