@@ -7,7 +7,8 @@ Built on [github.com/mark3labs/mcp-go](https://github.com/mark3labs/mcp-go), mcp
 ## Features
 
 - **100% MCP 2025-11-25 spec coverage** — tools, resources, prompts, sampling, logging, elicitation, structured output, async tasks
-- **30+ packages across 4 dependency layers** — use only what you need; all packages are independently importable
+- **35+ packages across 4 dependency layers** — use only what you need; all packages are independently importable
+- **90%+ test coverage across all packages** — comprehensive coverage with `-race` detection
 - **Dual-SDK support** — works with mcp-go today; `//go:build official_sdk` tags enable migration to the official Go SDK without rewriting tool code
 - **Typed handlers** — `TypedHandler[In, Out]` generates schemas from Go structs, populates `structuredContent`, and eliminates manual JSON wiring
 - **Middleware chain** — composable middleware applied per-tool or globally; standard signature across all packages
@@ -100,13 +101,17 @@ func main() {
 | `orchestrator` | Multi-agent execution patterns: fan-out, pipeline, select, stage middleware | none |
 | `workflow` | Cyclical graph engine with conditional branching, checkpoints, state machines, node middleware | `orchestrator`, `registry`, `sampling` |
 | `extensions` | MCP Extensions negotiation and capability handshake | none |
+| `lifecycle` | Production server lifecycle: signal handling, graceful drain, shutdown hooks | none |
 | `bootstrap` | Agent workspace init, context reports, capability matrix | `registry`, `resources`, `prompts`, `extensions` |
+| `eval` | Evaluation framework: cases, scorers, JSON suite loading, runner | `registry` |
+| `roadmap` | Machine-readable roadmap management, gap analysis, query functions | `registry`, `handler` |
+| `rdcycle` | R&D cycle orchestration tools: scan, plan, verify, commit, report | `registry`, `handler`, `research`, `roadmap`, `workflow`, `finops` |
 
 ## Dependency Layers
 
 - **Layer 1** (no internal deps): `registry`, `health`, `sanitize`, `secrets`, `client`
-- **Layer 2** (depend on Layer 1): `resources`, `prompts`, `handler`, `resilience`, `mcptest`, `auth`, `observability`, `logging`, `sampling`, `roots`, `research`, `discovery`, `dispatcher`, `extensions`, `memory`, `finops`
-- **Layer 3** (depend on Layer 2): `security`, `gateway`, `ralph`, `skills`
+- **Layer 2** (depend on Layer 1): `resources`, `prompts`, `handler`, `resilience`, `mcptest`, `auth`, `observability`, `logging`, `sampling`, `roots`, `research`, `discovery`, `dispatcher`, `extensions`, `memory`, `finops`, `lifecycle`, `eval`, `roadmap`
+- **Layer 3** (depend on Layer 2): `security`, `gateway`, `ralph`, `skills`, `rdcycle`
 - **Layer 4** (depend on Layer 3): `orchestrator`, `handoff`, `workflow`, `bootstrap`
 
 Lower layers never import upper layers. All packages in a layer can be used independently.
