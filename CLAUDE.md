@@ -35,15 +35,15 @@ make check-dual          # Full check + official SDK build
 | `sampling` | Sampling client interface, context injection middleware, request builders | `registry` |
 | `roots` | Client workspace root discovery, caching, context helpers | `registry` |
 | `research` | MCP ecosystem monitoring and viability assessment tools | `registry`, `handler`, `client` |
-| `gateway` | Multi-server aggregation with namespaced tool routing | `registry`, `client` |
+| `gateway` | Multi-server aggregation with namespaced tool routing, per-upstream resilience (circuit breaker, rate limit, timeout) | `registry`, `client`, `resilience` |
 | `dispatcher` | Priority worker pool with concurrency groups, middleware integration | `registry` |
 | `ralph` | Autonomous loop runner for iterative task execution (Ralph Loop pattern) | `registry`, `handler`, `sampling`, `finops` |
 | `finops` | Token accounting, budget policies, usage tracking middleware, dollar-cost estimation, scoped budgets, time-windowed tracking | `registry` |
 | `memory` | Agent memory registry with pluggable storage backends | `registry` |
 | `skills` | Context-aware lazy tool loading with skill bundles and triggers | `registry` |
-| `handoff` | Agent delegation protocol with manager/agent-as-tool patterns | `registry`, `sampling`, `finops` |
-| `orchestrator` | Multi-agent execution patterns: fan-out, pipeline, select | none |
-| `workflow` | Cyclical graph engine with conditional branching, checkpoints, and state machines | `orchestrator`, `registry`, `sampling` |
+| `handoff` | Agent delegation protocol with manager/agent-as-tool patterns, delegate middleware | `registry`, `sampling`, `finops` |
+| `orchestrator` | Multi-agent execution patterns: fan-out, pipeline, select, stage middleware | none |
+| `workflow` | Cyclical graph engine with conditional branching, checkpoints, state machines, node middleware | `orchestrator`, `registry`, `sampling` |
 | `extensions` | MCP Extensions negotiation and capability handshake | none |
 | `bootstrap` | Agent workspace init, context reports, capability matrix | `registry`, `resources`, `prompts`, `extensions` |
 
@@ -119,3 +119,9 @@ See [ROADMAP.md](ROADMAP.md) for detailed phased plan and [RESEARCH.md](RESEARCH
 - ~~`finops/scope.go`~~ — Per-tenant/user/session scoped budget tracking
 - ~~`finops/window.go`~~ — Time-windowed tracking with lazy rotation
 - ~~`discovery/metadata.go`~~ — MetadataFromConfig with resources + prompts extraction
+
+### Phase 10 — Production Hardening (COMPLETE)
+- ~~`gateway/resilience.go`~~ — Per-upstream circuit breaker, rate limiter, call timeout
+- ~~`orchestrator/middleware.go`~~ — StageMiddleware, WrapStage, WrapStages
+- ~~`handoff/middleware.go`~~ — DelegateMiddleware, WrapDelegate, Config.WithMiddleware
+- ~~`workflow/middleware.go`~~ — NodeMiddleware, WrapNodeFunc, EngineConfig.NodeMiddleware
