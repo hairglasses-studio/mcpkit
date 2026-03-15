@@ -226,6 +226,115 @@ func TestHandler_NestedGroups(t *testing.T) {
 	}
 }
 
+func TestHandler_WithAttrs_Nil(t *testing.T) {
+	sender := &mockSender{}
+	h := NewHandler(sender)
+	// WithAttrs(nil) should return the same handler (identity).
+	h2 := h.WithAttrs(nil)
+	if h2 != h {
+		t.Error("WithAttrs(nil) should return the same handler")
+	}
+}
+
+func TestHandler_WithGroup_Empty(t *testing.T) {
+	sender := &mockSender{}
+	h := NewHandler(sender)
+	// WithGroup("") should return the same handler (identity).
+	h2 := h.WithGroup("")
+	if h2 != h {
+		t.Error("WithGroup(\"\") should return the same handler")
+	}
+}
+
+func TestAddAttr_KindGroup_NamedKey(t *testing.T) {
+	sender := &mockSender{}
+	h := NewHandler(sender)
+	logger := slog.New(h)
+
+	// Log with a named group attr (KindGroup with a key).
+	logger.Info("group test",
+		slog.Group("meta", slog.String("version", "1.2.3"), slog.Int("port", 8080)),
+	)
+
+	entries := sender.getEntries()
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(entries))
+	}
+	data := entries[0].Data.(map[string]any)
+	meta, ok := data["meta"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected meta group in data, got %v", data)
+	}
+	if meta["version"] != "1.2.3" {
+		t.Errorf("version = %v, want 1.2.3", meta["version"])
+	}
+}
+
+func TestAddAttr_KindGroup_InlineEmptyKey(t *testing.T) {
+	sender := &mockSender{}
+	h := NewHandler(sender)
+	logger := slog.New(h)
+
+	// An inline group (empty key) merges attrs into the parent map.
+	logger.Info("inline group",
+		slog.Group("", slog.String("inlined_key", "inlined_val")),
+	)
+
+	entries := sender.getEntries()
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(entries))
+	}
+	data := entries[0].Data.(map[string]any)
+	if data["inlined_key"] != "inlined_val" {
+		t.Errorf("inlined_key = %v, want inlined_val", data["inlined_key"])
+	}
+}
+
+func TestAddAttr_ZeroValue_Skipped(t *testing.T) {
+	sender := &mockSender{}
+	h := NewHandler(sender)
+
+	// Build a record with a zero-value attr (empty Attr{}) which should be skipped.
+	r := slog.NewRecord(time.Now(), slog.LevelInfo, "zero attr test", 0)
+	r.AddAttrs(slog.Attr{}) // zero-value attr — key="" value=zero
+
+	if err := h.Handle(context.Background(), r); err != nil {
+		t.Fatalf("Handle: %v", err)
+	}
+
+	entries := sender.getEntries()
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(entries))
+	}
+	data := entries[0].Data.(map[string]any)
+	// The zero attr should not add any key (other than "message").
+	if _, ok := data[""]; ok {
+		t.Error("zero-value attr should not add empty key to data map")
+	}
+}
+
+func TestAddAttr_KindGroup_EmptyGroup_NotAdded(t *testing.T) {
+	sender := &mockSender{}
+	h := NewHandler(sender)
+
+	// A group with no attrs should not add anything to the map.
+	r := slog.NewRecord(time.Now(), slog.LevelInfo, "empty group", 0)
+	r.AddAttrs(slog.Group("emptygroup")) // group with no attrs
+
+	if err := h.Handle(context.Background(), r); err != nil {
+		t.Fatalf("Handle: %v", err)
+	}
+
+	entries := sender.getEntries()
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(entries))
+	}
+	data := entries[0].Data.(map[string]any)
+	if _, ok := data["emptygroup"]; ok {
+		t.Error("empty group should not be added to the data map")
+	}
+}
+
 func TestSlogToMCPLevel(t *testing.T) {
 	tests := []struct {
 		level slog.Level

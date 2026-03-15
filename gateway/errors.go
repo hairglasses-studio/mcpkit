@@ -1,5 +1,3 @@
-// Package gateway aggregates tools from multiple upstream MCP servers into
-// a single DynamicRegistry with namespaced tool routing.
 package gateway
 
 import "errors"

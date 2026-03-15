@@ -1,5 +1,3 @@
-// Package health provides an HTTP health check endpoint and checker registry
-// for exposing server liveness and readiness status.
 package health
 
 import (

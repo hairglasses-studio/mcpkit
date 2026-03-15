@@ -232,3 +232,21 @@ See [ROADMAP.md](ROADMAP.md) for detailed phased plan and [RESEARCH.md](RESEARCH
 - ~~`mcptest/replay_test.go`~~ — 75.2% → 87.4% coverage: resultsMatch, resultToMap, SaveSession/LoadSession, Replay mismatches
 - ~~`mcptest/snapshot_test.go`~~ — normaliseResult, timestamp stripping, structured content branches
 - ~~`roots/server_test.go`~~ — 78.0% → 94.0% coverage: ServerRootsClient all branches, CachedClient error propagation, nil Middleware
+
+### Phase 27 — Ralph Production Hardening: DAG Enforcement + YAML Specs (COMPLETE)
+- ~~`ralph/loop.go`~~ — Server-side DAG enforcement: reject decisions targeting blocked tasks, guard MarkDone
+- ~~`ralph/yaml.go`~~ — YAML spec support: LoadSpecYAML, ParseSpecYAML
+- ~~`ralph/ralph.go`~~ — YAML struct tags, LoadSpec extension dispatch for .yaml/.yml
+- ~~`ralph/template.go`~~ — YAML-aware RenderSpec with format detection
+- ~~`roots/server_official.go`~~ — TODO cleanup: proper doc comment explaining official SDK limitation
+- ~~`examples/gateway/main.go`~~ — Gateway example: DynamicUpstreamRegistry, per-upstream resilience, stdio
+
+### Phase 28 — Package Documentation + Coverage Hardening + Examples (COMPLETE)
+- ~~19× `*/doc.go`~~ — Package documentation for all major packages (registry, handler, resilience, auth, security, gateway, workflow, observability, mcptest, resources, prompts, logging, sampling, client, health, sanitize, secrets, eval, discovery)
+- ~~`rdcycle/*_test.go`~~ — 81.6% → 88.6% coverage: schedule lessons-learned/self_improve, commit branch/refuse-master, report action items, notes defaults
+- ~~`logging/handler_test.go`~~ — 83.5% → 98.7% coverage: addAttr KindGroup/inline/zero-value, WithAttrs(nil), WithGroup("")
+- ~~`registry/compat_test.go`~~ — 84.9% → 94.4% coverage: ExtractResourceText, ExtractArguments, GetToolTaskSupport, HasTaskParams, ExtractTaskTTL, MakeStructuredResult
+- ~~`registry/registry_test.go`~~ — SetMiddleware, ListToolsByRuntimeGroup, GetRuntimeGroupStats, GetToolCatalog
+- ~~`registry/dynamic_test.go`~~ — RegisterFilteredWithServer
+- ~~`examples/http/main.go`~~ — StreamableHTTP server with health, lifecycle, logging middleware
+- ~~`examples/elicitation/main.go`~~ — ElicitForm, ElicitURL, ElicitFormSchema via stdio

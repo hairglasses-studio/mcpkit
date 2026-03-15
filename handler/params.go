@@ -1,4 +1,3 @@
-// Package handler provides helper functions for MCP tool handlers.
 package handler
 
 import "github.com/hairglasses-studio/mcpkit/registry"

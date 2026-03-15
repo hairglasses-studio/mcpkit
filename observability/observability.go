@@ -1,5 +1,3 @@
-// Package observability provides configurable OpenTelemetry tracing and metrics
-// for MCP servers. Service name, version, and endpoints are all caller-configured.
 package observability
 
 import (

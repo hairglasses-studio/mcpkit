@@ -1,5 +1,3 @@
-// Package sanitize provides input validation for user-supplied MCP parameters
-// that get interpolated into shell commands or external API calls.
 package sanitize
 
 import (

@@ -29,38 +29,38 @@ const (
 
 // Spec defines an autonomous task specification loaded from disk.
 type Spec struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Completion  string `json:"completion"`
-	Tasks       []Task `json:"tasks"`
+	Name        string `json:"name"        yaml:"name"`
+	Description string `json:"description" yaml:"description"`
+	Completion  string `json:"completion"  yaml:"completion"`
+	Tasks       []Task `json:"tasks"       yaml:"tasks"`
 }
 
 // Task is a single unit of work within a Spec.
 type Task struct {
-	ID          string   `json:"id"`
-	Description string   `json:"description"`
-	Done        bool     `json:"done"`
-	DependsOn   []string `json:"depends_on,omitempty"`
+	ID          string   `json:"id"                    yaml:"id"`
+	Description string   `json:"description"           yaml:"description"`
+	Done        bool     `json:"done"                  yaml:"done"`
+	DependsOn   []string `json:"depends_on,omitempty"  yaml:"depends_on,omitempty"`
 }
 
 // Progress tracks the execution state of a loop run.
 type Progress struct {
-	SpecFile     string         `json:"spec_file"`
-	Iteration    int            `json:"iteration"`
-	CompletedIDs []string       `json:"completed_ids"`
-	Log          []IterationLog `json:"log"`
-	Status       Status         `json:"status"`
-	StartedAt    time.Time      `json:"started_at"`
-	UpdatedAt    time.Time      `json:"updated_at"`
+	SpecFile     string         `json:"spec_file"     yaml:"spec_file"`
+	Iteration    int            `json:"iteration"     yaml:"iteration"`
+	CompletedIDs []string       `json:"completed_ids" yaml:"completed_ids"`
+	Log          []IterationLog `json:"log"           yaml:"log"`
+	Status       Status         `json:"status"        yaml:"status"`
+	StartedAt    time.Time      `json:"started_at"    yaml:"started_at"`
+	UpdatedAt    time.Time      `json:"updated_at"    yaml:"updated_at"`
 }
 
 // IterationLog records what happened in a single loop iteration.
 type IterationLog struct {
-	Iteration int       `json:"iteration"`
-	TaskID    string    `json:"task_id,omitempty"`
-	ToolCalls []string  `json:"tool_calls,omitempty"`
-	Result    string    `json:"result"`
-	Timestamp time.Time `json:"timestamp"`
+	Iteration int       `json:"iteration"          yaml:"iteration"`
+	TaskID    string    `json:"task_id,omitempty"  yaml:"task_id,omitempty"`
+	ToolCalls []string  `json:"tool_calls,omitempty" yaml:"tool_calls,omitempty"`
+	Result    string    `json:"result"             yaml:"result"`
+	Timestamp time.Time `json:"timestamp"          yaml:"timestamp"`
 }
 
 // ToolCall represents a single tool invocation within a multi-tool decision.
@@ -171,8 +171,13 @@ func DefaultProgressFile(specFile string) string {
 	return strings.TrimSuffix(specFile, ext) + ".progress.json"
 }
 
-// LoadSpec reads and parses a Spec from a JSON file.
+// LoadSpec reads and parses a Spec from a JSON or YAML file.
+// Files ending in .yaml or .yml are parsed as YAML; all others are parsed as JSON.
 func LoadSpec(path string) (Spec, error) {
+	ext := strings.ToLower(filepath.Ext(path))
+	if ext == ".yaml" || ext == ".yml" {
+		return LoadSpecYAML(path)
+	}
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return Spec{}, fmt.Errorf("ralph: load spec: %w", err)

@@ -1,5 +1,3 @@
-// Package resilience provides fault-tolerance primitives: rate limiting,
-// circuit breaking, and TTL caching.
 package resilience
 
 import (

@@ -1,9 +1,5 @@
 //go:build !official_sdk
 
-// Package prompts provides a registry for MCP prompt templates.
-//
-// It mirrors the registry package pattern: thread-safe registration, middleware
-// chains, module-based organization, and server integration.
 package prompts
 
 import (

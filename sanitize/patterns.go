@@ -1,5 +1,3 @@
-// Package sanitize provides input validation and output sanitization for MCP tool parameters
-// and responses.
 package sanitize
 
 import "regexp"
