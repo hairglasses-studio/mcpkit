@@ -46,6 +46,7 @@ type ServerMetadata struct {
 type ToolSummary struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
+	Version     string `json:"version,omitempty"`
 }
 
 // ResourceSummary is a brief description of a resource offered by a server.

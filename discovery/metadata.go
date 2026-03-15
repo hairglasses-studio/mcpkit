@@ -63,6 +63,7 @@ func MetadataFromConfig(cfg MetadataConfig) ServerMetadata {
 			tools = append(tools, ToolSummary{
 				Name:        td.Tool.Name,
 				Description: td.Tool.Description,
+				Version:     td.Version,
 			})
 		}
 		meta.Tools = tools
