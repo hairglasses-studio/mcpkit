@@ -125,3 +125,67 @@ func TestEnvProvider_Priority(t *testing.T) {
 		t.Errorf("expected priority 50, got %d", p2.Priority())
 	}
 }
+
+func TestEnvProvider_IsAvailable(t *testing.T) {
+	p := NewEnvProvider()
+	// EnvProvider is always available (env vars are always accessible).
+	if !p.IsAvailable() {
+		t.Error("expected IsAvailable=true for EnvProvider")
+	}
+}
+
+func TestEnvProvider_Close(t *testing.T) {
+	p := NewEnvProvider()
+	if err := p.Close(); err != nil {
+		t.Errorf("expected nil error from Close, got %v", err)
+	}
+}
+
+func TestEnvProvider_List_NoPrefix(t *testing.T) {
+	// Without a prefix, List should return all env vars including ones we set.
+	t.Setenv("MCPKIT_NOPREFIX_LIST_TEST", "value")
+
+	p := NewEnvProvider()
+	keys, err := p.List(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	found := false
+	for _, k := range keys {
+		if k == "MCPKIT_NOPREFIX_LIST_TEST" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("expected MCPKIT_NOPREFIX_LIST_TEST in List result")
+	}
+}
+
+func TestEnvProvider_Exists_WithPrefix_UpperFallback(t *testing.T) {
+	t.Setenv("APP_MY_SECRET", "val")
+
+	p := NewEnvProvider(WithPrefix("APP_"))
+	// Key already has the prefix — should find it.
+	exists, err := p.Exists(context.Background(), "APP_MY_SECRET")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !exists {
+		t.Error("expected Exists=true when key already includes prefix")
+	}
+}
+
+func TestEnvProvider_Get_KeyAlreadyHasPrefix(t *testing.T) {
+	t.Setenv("APP_FULL_KEY", "fullvalue")
+
+	p := NewEnvProvider(WithPrefix("APP_"))
+	// When key already starts with the prefix, it should NOT prepend it again.
+	s, err := p.Get(context.Background(), "APP_FULL_KEY")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if s.Value != "fullvalue" {
+		t.Errorf("expected fullvalue, got %q", s.Value)
+	}
+}
