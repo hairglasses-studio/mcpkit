@@ -14,6 +14,7 @@ import (
 type UsageEntry struct {
 	ToolName     string        `json:"tool_name"`
 	Category     string        `json:"category"`
+	Model        string        `json:"model,omitempty"`
 	InputTokens  int           `json:"input_tokens"`
 	OutputTokens int           `json:"output_tokens"`
 	Duration     time.Duration `json:"duration_ns"`
@@ -47,6 +48,8 @@ type Config struct {
 	EstimateFunc func(text string) int
 	// OnBudgetExceeded is called when budget is hit. If nil, returns error result.
 	OnBudgetExceeded func(entry UsageEntry, summary UsageSummary)
+	// CostPolicy optionally enforces a dollar-cost budget. If nil, no cost budget is checked.
+	CostPolicy *CostPolicy
 }
 
 // Middleware returns a registry.Middleware that records token usage for every tool invocation.
@@ -96,14 +99,23 @@ func Middleware(tracker *Tracker) registry.Middleware {
 			}
 
 			// Record usage.
-			tracker.Record(UsageEntry{
+			entry := UsageEntry{
 				ToolName:     name,
 				Category:     category,
 				InputTokens:  inputTokens,
 				OutputTokens: outputTokens,
 				Duration:     duration,
 				Timestamp:    time.Now(),
-			})
+			}
+			tracker.Record(entry)
+
+			// Record dollar cost if CostPolicy is configured.
+			if cp := tracker.config.CostPolicy; cp != nil {
+				cost := cp.EstimateCost("", inputTokens, outputTokens)
+				if err2 := cp.RecordCost(cost); err2 != nil {
+					return registry.MakeErrorResult(err2.Error()), nil
+				}
+			}
 
 			return result, err
 		}
