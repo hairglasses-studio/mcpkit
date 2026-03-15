@@ -36,6 +36,13 @@ type (
 	GetPromptRequest = mcp.GetPromptRequest
 	GetPromptResult  = mcp.GetPromptResult
 	Role             = mcp.Role
+
+	// Sampling types
+	CreateMessageRequest = mcp.CreateMessageRequest
+	CreateMessageResult  = mcp.CreateMessageResult
+	SamplingMessage      = mcp.SamplingMessage
+	CreateMessageParams  = mcp.CreateMessageParams
+	ModelPreferences     = mcp.ModelPreferences
 )
 
 // Note: The official SDK does not have separate ToolInputSchema/ToolOutputSchema

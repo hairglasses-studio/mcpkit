@@ -33,12 +33,19 @@ type (
 	ReadResourceRequest  = mcp.ReadResourceRequest
 
 	// Prompt types
-	Prompt          = mcp.Prompt
-	PromptArgument  = mcp.PromptArgument
-	PromptMessage   = mcp.PromptMessage
+	Prompt           = mcp.Prompt
+	PromptArgument   = mcp.PromptArgument
+	PromptMessage    = mcp.PromptMessage
 	GetPromptRequest = mcp.GetPromptRequest
 	GetPromptResult  = mcp.GetPromptResult
 	Role             = mcp.Role
+
+	// Sampling types
+	CreateMessageRequest = mcp.CreateMessageRequest
+	CreateMessageResult  = mcp.CreateMessageResult
+	SamplingMessage      = mcp.SamplingMessage
+	CreateMessageParams  = mcp.CreateMessageParams
+	ModelPreferences     = mcp.ModelPreferences
 )
 
 var (
