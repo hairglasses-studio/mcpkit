@@ -35,7 +35,7 @@ make check-dual          # Full check + official SDK build
 | `sampling` | Sampling client interface, context injection middleware, request builders | `registry` |
 | `roots` | Client workspace root discovery, caching, context helpers | `registry` |
 | `research` | MCP ecosystem monitoring and viability assessment tools, GitHub activity monitoring, diff analysis | `registry`, `handler`, `client` |
-| `gateway` | Multi-server aggregation with namespaced tool routing, per-upstream resilience (circuit breaker, rate limit, timeout) | `registry`, `client`, `resilience` |
+| `gateway` | Multi-server aggregation with namespaced tool routing, per-upstream resilience (circuit breaker, rate limit, timeout), dynamic upstream registration | `registry`, `client`, `resilience` |
 | `dispatcher` | Priority worker pool with concurrency groups, middleware integration | `registry` |
 | `ralph` | Autonomous loop runner for iterative task execution (Ralph Loop pattern), workflow-backed loop | `registry`, `handler`, `sampling`, `finops`, `workflow` |
 | `finops` | Token accounting, budget policies, usage tracking middleware, dollar-cost estimation, scoped budgets, time-windowed tracking | `registry` |
@@ -43,7 +43,7 @@ make check-dual          # Full check + official SDK build
 | `skills` | Context-aware lazy tool loading with skill bundles and triggers | `registry` |
 | `handoff` | Agent delegation protocol with manager/agent-as-tool patterns, delegate middleware | `registry`, `sampling`, `finops` |
 | `orchestrator` | Multi-agent execution patterns: fan-out, pipeline, select, stage middleware | none |
-| `workflow` | Cyclical graph engine with conditional branching, checkpoints, state machines, node middleware, fork nodes for parallel branches | `orchestrator`, `registry`, `sampling` |
+| `workflow` | Cyclical graph engine with conditional branching, checkpoints, state machines, node middleware, fork nodes for parallel branches, compensation/saga rollback | `orchestrator`, `registry`, `sampling` |
 | `extensions` | MCP Extensions negotiation and capability handshake | none |
 | `lifecycle` | Production server lifecycle: signal handling, graceful drain, shutdown hooks | none |
 | `bootstrap` | Agent workspace init, context reports, capability matrix | `registry`, `resources`, `prompts`, `extensions` |
@@ -204,3 +204,7 @@ See [ROADMAP.md](ROADMAP.md) for detailed phased plan and [RESEARCH.md](RESEARCH
 - ~~`rdcycle/schedule.go`~~ — rdcycle_schedule tool (next cycle spec generation)
 - ~~`ralph/workflow.go`~~ — WorkflowLoop bridging ralph lifecycle with workflow.Engine
 - ~~`examples/rdcycle/main.go`~~ — Full R&D cycle example: research+roadmap+rdcycle→workflow→WorkflowLoop
+
+### Phase 23 — Workflow Compensation + Dynamic Gateway (COMPLETE)
+- ~~`workflow/compensate.go`~~ — Saga/compensation pattern: CompensateFunc, CompensationStack (LIFO), AddCompensableNode, engine integration with CompensateOnFailure
+- ~~`gateway/dynamic.go`~~ — DynamicUpstreamRegistry: runtime add/remove upstreams, default policy, lifecycle hooks
