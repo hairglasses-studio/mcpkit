@@ -1,3 +1,5 @@
+// Package extensions provides MCP Extensions negotiation and capability
+// handshake so servers and clients can advertise optional feature support.
 package extensions
 
 import (
