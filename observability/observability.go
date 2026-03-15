@@ -263,12 +263,18 @@ func (p *Provider) EndToolExecution(ctx context.Context, toolName, category stri
 }
 
 // StartSpan starts a new trace span for a tool invocation.
+// The span includes GenAI semantic convention attributes identifying the
+// system as "mcp" and the operation as "tool_call".
 func (p *Provider) StartSpan(ctx context.Context, toolName string) (context.Context, trace.Span) {
 	if p == nil || p.tracer == nil {
 		return ctx, nil
 	}
 	return p.tracer.Start(ctx, toolName,
-		trace.WithAttributes(attribute.String("tool.name", toolName)),
+		trace.WithAttributes(
+			attribute.String("tool.name", toolName),
+			AttrGenAISystem.String("mcp"),
+			AttrGenAIOperationName.String("tool_call"),
+		),
 	)
 }
 

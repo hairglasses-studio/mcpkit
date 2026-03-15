@@ -138,3 +138,10 @@ See [ROADMAP.md](ROADMAP.md) for detailed phased plan and [RESEARCH.md](RESEARCH
 - ~~`workflow/observability.go`~~ — TracingMiddleware for node spans
 - ~~`lifecycle/`~~ — Server lifecycle manager with signal handling, graceful drain, LIFO shutdown hooks
 - ~~`health/health.go`~~ — SetStatus, IsReady, 503 on draining for Kubernetes readiness
+
+### Phase 13 — Integration Completeness (COMPLETE)
+- ~~`finops/context.go`~~ — TokenUsageHolder mutable bridge for finops→observability span attributes
+- ~~`observability/middleware.go`~~ — Reads from TokenUsageHolder (inner finops) with context fallback
+- ~~`handoff/observability.go`~~ — TracingMiddleware for delegation spans (agent, status, duration)
+- ~~`ralph/observability.go`~~ — TracingHooks for iteration spans (iteration, task_id, status)
+- ~~`examples/full/main.go`~~ — Full middleware stack demo (lifecycle, observability, finops, sanitize, logging)
