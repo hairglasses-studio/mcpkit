@@ -1,10 +1,5 @@
 //go:build !official_sdk
 
-// Package eval provides an evaluation framework for scoring MCP tool accuracy.
-//
-// It defines test cases, scorers, and a runner that invokes tools against a
-// registry and produces a scored summary. Use it to measure tool quality in
-// CI or exploratory testing.
 package eval
 
 import "time"

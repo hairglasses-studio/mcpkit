@@ -362,6 +362,53 @@ func TestDynamicRegistry_RuntimeGroupMapper(t *testing.T) {
 	}
 }
 
+func TestRegisterFilteredWithServer(t *testing.T) {
+	r := NewToolRegistry()
+
+	r.RegisterModule(&testModule{
+		name: "test",
+		tools: []ToolDefinition{
+			{
+				Tool:     Tool{Name: "cat_a_tool", Description: "catA tool", InputSchema: ToolInputSchema{Type: "object"}},
+				Handler:  func(_ context.Context, _ CallToolRequest) (*CallToolResult, error) { return MakeTextResult("ok"), nil },
+				Category: "catA",
+			},
+			{
+				Tool:     Tool{Name: "cat_b_tool", Description: "catB tool", InputSchema: ToolInputSchema{Type: "object"}},
+				Handler:  func(_ context.Context, _ CallToolRequest) (*CallToolResult, error) { return MakeTextResult("ok"), nil },
+				Category: "catB",
+			},
+		},
+	})
+
+	s := NewMCPServer("test", "0.0.0")
+	// Only register catA tools.
+	r.RegisterFilteredWithServer(s, ByCategory("catA"))
+	// No panic means success. We can't inspect the server's tool list directly
+	// without MCP client, but we can verify no error occurs.
+}
+
+func TestRegisterFilteredWithServer_WithOutputSchema(t *testing.T) {
+	r := NewToolRegistry()
+
+	outputSchema := &ToolOutputSchema{}
+	r.RegisterModule(&testModule{
+		name: "test",
+		tools: []ToolDefinition{
+			{
+				Tool:         Tool{Name: "schema_tool", Description: "tool with output schema", InputSchema: ToolInputSchema{Type: "object"}},
+				Handler:      func(_ context.Context, _ CallToolRequest) (*CallToolResult, error) { return MakeTextResult("ok"), nil },
+				Category:     "cat",
+				OutputSchema: outputSchema,
+			},
+		},
+	})
+
+	s := NewMCPServer("test", "0.0.0")
+	// Should not panic even with an OutputSchema set.
+	r.RegisterFilteredWithServer(s, func(_ ToolDefinition) bool { return true })
+}
+
 func TestNotDeferred_Filter(t *testing.T) {
 	deferred := map[string]bool{
 		"tool_lazy": true,

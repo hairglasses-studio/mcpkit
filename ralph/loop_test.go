@@ -796,6 +796,197 @@ func TestLoop_WithTemplateVars(t *testing.T) {
 	}
 }
 
+func TestLoop_SkipsBlockedTask(t *testing.T) {
+	dir := t.TempDir()
+	// t2 depends on t1, so t2 is blocked until t1 is completed.
+	spec := Spec{
+		Name: "dag-test", Description: "DAG enforcement", Completion: "done",
+		Tasks: []Task{
+			{ID: "t1", Description: "first task"},
+			{ID: "t2", Description: "second task", DependsOn: []string{"t1"}},
+		},
+	}
+	specFile := writeSpec(t, dir, spec)
+
+	// LLM tries to target t2 first (blocked), then gives up.
+	sampler := &scriptedSampler{
+		responses: []string{
+			`{"complete": false, "task_id": "t2", "tool_name": "echo", "arguments": {"message": "blocked"}, "reasoning": "try blocked"}`,
+			`{"complete": true, "reasoning": "done"}`,
+		},
+	}
+
+	reg := registry.NewToolRegistry()
+	echoTool(reg)
+
+	var echoCallCount int
+	origReg := registry.NewToolRegistry()
+	origReg.RegisterModule(&countingEchoModule{counter: &echoCallCount})
+
+	loop, err := NewLoop(Config{
+		SpecFile:     specFile,
+		ToolRegistry: origReg,
+		Sampler:      sampler,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := loop.Run(context.Background()); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	// The tool should NOT have been executed for the blocked task.
+	if echoCallCount != 0 {
+		t.Errorf("echo called %d times, want 0 (task was blocked)", echoCallCount)
+	}
+
+	// The iteration log should record the blocked message.
+	status := loop.Status()
+	found := false
+	for _, entry := range status.Log {
+		if strings.Contains(entry.Result, "blocked") && entry.TaskID == "t2" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected blocked log entry for t2, got log: %v", status.Log)
+	}
+}
+
+func TestLoop_AllowsReadyTask(t *testing.T) {
+	dir := t.TempDir()
+	// t1 has no dependencies — it is immediately ready.
+	spec := Spec{
+		Name: "dag-ready", Description: "ready task", Completion: "done",
+		Tasks: []Task{
+			{ID: "t1", Description: "first task"},
+			{ID: "t2", Description: "second task", DependsOn: []string{"t1"}},
+		},
+	}
+	specFile := writeSpec(t, dir, spec)
+
+	sampler := &scriptedSampler{
+		responses: []string{
+			`{"complete": false, "task_id": "t1", "tool_name": "echo", "arguments": {"message": "ready"}, "mark_done": true}`,
+			`{"complete": true, "reasoning": "done"}`,
+		},
+	}
+
+	reg := registry.NewToolRegistry()
+	echoTool(reg)
+
+	loop, err := NewLoop(Config{
+		SpecFile:     specFile,
+		ToolRegistry: reg,
+		Sampler:      sampler,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := loop.Run(context.Background()); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	status := loop.Status()
+	if status.Status != StatusCompleted {
+		t.Errorf("Status = %q, want %q", status.Status, StatusCompleted)
+	}
+	// t1 should be completed (it was ready and mark_done=true).
+	found := false
+	for _, id := range status.CompletedIDs {
+		if id == "t1" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("t1 not in CompletedIDs = %v", status.CompletedIDs)
+	}
+	// Verify echo actually ran (iteration log has tool call).
+	var hasEcho bool
+	for _, entry := range status.Log {
+		for _, tc := range entry.ToolCalls {
+			if tc == "echo" {
+				hasEcho = true
+			}
+		}
+	}
+	if !hasEcho {
+		t.Error("expected echo tool call in iteration log")
+	}
+}
+
+func TestLoop_PreventMarkDoneOnBlockedTask(t *testing.T) {
+	dir := t.TempDir()
+	// t2 depends on t1 — blocked.
+	spec := Spec{
+		Name: "dag-markdone", Description: "mark done guard", Completion: "done",
+		Tasks: []Task{
+			{ID: "t1", Description: "first task"},
+			{ID: "t2", Description: "second task", DependsOn: []string{"t1"}},
+		},
+	}
+	specFile := writeSpec(t, dir, spec)
+
+	// Sampler tries to mark blocked t2 as done.
+	sampler := &scriptedSampler{
+		responses: []string{
+			`{"complete": false, "task_id": "t2", "tool_name": "echo", "arguments": {"message": "sneak"}, "mark_done": true, "reasoning": "try mark blocked"}`,
+			`{"complete": true, "reasoning": "give up"}`,
+		},
+	}
+
+	reg := registry.NewToolRegistry()
+	echoTool(reg)
+
+	loop, err := NewLoop(Config{
+		SpecFile:     specFile,
+		ToolRegistry: reg,
+		Sampler:      sampler,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := loop.Run(context.Background()); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	status := loop.Status()
+	for _, id := range status.CompletedIDs {
+		if id == "t2" {
+			t.Errorf("t2 should not appear in CompletedIDs (it was blocked), got: %v", status.CompletedIDs)
+		}
+	}
+}
+
+// countingEchoModule is a variant of echoModule that increments a counter on each call.
+type countingEchoModule struct {
+	counter *int
+}
+
+func (m *countingEchoModule) Name() string        { return "echo" }
+func (m *countingEchoModule) Description() string { return "Counting echo" }
+func (m *countingEchoModule) Tools() []registry.ToolDefinition {
+	return []registry.ToolDefinition{
+		{
+			Tool: registry.Tool{
+				Name:        "echo",
+				Description: "Echoes the message back",
+			},
+			Handler: func(_ context.Context, req registry.CallToolRequest) (*registry.CallToolResult, error) {
+				*m.counter++
+				args := registry.ExtractArguments(req)
+				msg, _ := args["message"].(string)
+				return registry.MakeTextResult("echo: " + msg), nil
+			},
+		},
+	}
+}
+
 func TestLoop_CostTrackingHook(t *testing.T) {
 	dir := t.TempDir()
 	spec := Spec{

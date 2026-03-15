@@ -1,5 +1,3 @@
-// Package mcptest provides a test server, assertion helpers, session replay,
-// snapshot testing, and benchmark utilities for MCP tool integration tests.
 package mcptest
 
 import (

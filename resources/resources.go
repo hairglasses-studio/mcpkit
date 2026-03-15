@@ -1,9 +1,5 @@
 //go:build !official_sdk
 
-// Package resources provides a registry for MCP resources and resource templates.
-//
-// It mirrors the registry package pattern: thread-safe registration, middleware
-// chains, module-based organization, and server integration.
 package resources
 
 import (

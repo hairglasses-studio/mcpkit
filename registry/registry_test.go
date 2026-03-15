@@ -363,6 +363,167 @@ func TestApplyMCPAnnotations(t *testing.T) {
 	assertDestructiveHint(t, annotated, true)
 }
 
+func TestRegistrySetMiddleware(t *testing.T) {
+	r := NewToolRegistry()
+
+	called := false
+	mw := func(name string, td ToolDefinition, next ToolHandlerFunc) ToolHandlerFunc {
+		return func(ctx context.Context, req CallToolRequest) (*CallToolResult, error) {
+			called = true
+			return next(ctx, req)
+		}
+	}
+
+	r.RegisterModule(&testModule{
+		name: "test",
+		tools: []ToolDefinition{
+			newTestTool("mw_tool", "test", nil),
+		},
+	})
+
+	// Set middleware after registration.
+	r.SetMiddleware([]Middleware{mw})
+
+	td, _ := r.GetTool("mw_tool")
+	wrapped := r.wrapHandler("mw_tool", td)
+
+	_, err := wrapped(context.Background(), makeEmptyCallToolRequest())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !called {
+		t.Error("middleware set via SetMiddleware was not called")
+	}
+}
+
+func TestRegistryListToolsByRuntimeGroup(t *testing.T) {
+	r := NewToolRegistry()
+
+	r.RegisterModule(&testModule{
+		name: "test",
+		tools: []ToolDefinition{
+			{
+				Tool:         Tool{Name: "group1_tool_a"},
+				Handler:      func(_ context.Context, _ CallToolRequest) (*CallToolResult, error) { return MakeTextResult("ok"), nil },
+				Category:     "cat",
+				RuntimeGroup: "group1",
+			},
+			{
+				Tool:         Tool{Name: "group1_tool_b"},
+				Handler:      func(_ context.Context, _ CallToolRequest) (*CallToolResult, error) { return MakeTextResult("ok"), nil },
+				Category:     "cat",
+				RuntimeGroup: "group1",
+			},
+			{
+				Tool:         Tool{Name: "group2_tool_c"},
+				Handler:      func(_ context.Context, _ CallToolRequest) (*CallToolResult, error) { return MakeTextResult("ok"), nil },
+				Category:     "cat",
+				RuntimeGroup: "group2",
+			},
+		},
+	})
+
+	group1 := r.ListToolsByRuntimeGroup("group1")
+	if len(group1) != 2 {
+		t.Errorf("expected 2 group1 tools, got %d", len(group1))
+	}
+
+	group2 := r.ListToolsByRuntimeGroup("group2")
+	if len(group2) != 1 {
+		t.Errorf("expected 1 group2 tool, got %d", len(group2))
+	}
+
+	missing := r.ListToolsByRuntimeGroup("nonexistent")
+	if len(missing) != 0 {
+		t.Errorf("expected 0 tools for nonexistent group, got %d", len(missing))
+	}
+}
+
+func TestRegistryGetRuntimeGroupStats(t *testing.T) {
+	r := NewToolRegistry()
+
+	r.RegisterModule(&testModule{
+		name: "test",
+		tools: []ToolDefinition{
+			{
+				Tool:         Tool{Name: "tool_a"},
+				Handler:      func(_ context.Context, _ CallToolRequest) (*CallToolResult, error) { return MakeTextResult("ok"), nil },
+				Category:     "cat",
+				RuntimeGroup: "groupA",
+			},
+			{
+				Tool:         Tool{Name: "tool_b"},
+				Handler:      func(_ context.Context, _ CallToolRequest) (*CallToolResult, error) { return MakeTextResult("ok"), nil },
+				Category:     "cat",
+				RuntimeGroup: "groupA",
+			},
+			{
+				Tool:     Tool{Name: "tool_c"},
+				Handler:  func(_ context.Context, _ CallToolRequest) (*CallToolResult, error) { return MakeTextResult("ok"), nil },
+				Category: "cat",
+				// RuntimeGroup empty — should be "unassigned"
+			},
+		},
+	})
+
+	stats := r.GetRuntimeGroupStats()
+	if stats["groupA"] != 2 {
+		t.Errorf("groupA count = %d, want 2", stats["groupA"])
+	}
+	if stats["unassigned"] != 1 {
+		t.Errorf("unassigned count = %d, want 1", stats["unassigned"])
+	}
+}
+
+func TestRegistryGetToolCatalog(t *testing.T) {
+	r := NewToolRegistry()
+
+	r.RegisterModule(&testModule{
+		name: "test",
+		tools: []ToolDefinition{
+			{
+				Tool:        Tool{Name: "cat_a_sub1_tool"},
+				Handler:     func(_ context.Context, _ CallToolRequest) (*CallToolResult, error) { return MakeTextResult("ok"), nil },
+				Category:    "catA",
+				Subcategory: "sub1",
+			},
+			{
+				Tool:     Tool{Name: "cat_a_general_tool"},
+				Handler:  func(_ context.Context, _ CallToolRequest) (*CallToolResult, error) { return MakeTextResult("ok"), nil },
+				Category: "catA",
+				// no subcategory — should go to "general"
+			},
+			{
+				Tool:        Tool{Name: "cat_b_sub2_tool"},
+				Handler:     func(_ context.Context, _ CallToolRequest) (*CallToolResult, error) { return MakeTextResult("ok"), nil },
+				Category:    "catB",
+				Subcategory: "sub2",
+			},
+		},
+	})
+
+	catalog := r.GetToolCatalog()
+
+	catA, ok := catalog["catA"]
+	if !ok {
+		t.Fatal("catA missing from catalog")
+	}
+	if len(catA["sub1"]) != 1 {
+		t.Errorf("catA/sub1 count = %d, want 1", len(catA["sub1"]))
+	}
+	if len(catA["general"]) != 1 {
+		t.Errorf("catA/general count = %d, want 1", len(catA["general"]))
+	}
+
+	catB, ok := catalog["catB"]
+	if !ok {
+		t.Fatal("catB missing from catalog")
+	}
+	if len(catB["sub2"]) != 1 {
+		t.Errorf("catB/sub2 count = %d, want 1", len(catB["sub2"]))
+	}
+}
+
 func TestRegistryHandlerError(t *testing.T) {
 	r := NewToolRegistry()
 

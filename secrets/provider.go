@@ -1,4 +1,3 @@
-// Package secrets provides a unified interface for managing secrets from multiple sources.
 package secrets
 
 import (

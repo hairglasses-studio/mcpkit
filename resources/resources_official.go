@@ -1,6 +1,5 @@
 //go:build official_sdk
 
-// Package resources provides a registry for MCP resources and resource templates.
 package resources
 
 import (

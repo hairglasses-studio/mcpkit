@@ -1,4 +1,3 @@
-// Package client provides client utilities for MCP tool modules.
 package client
 
 import "sync"
