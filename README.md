@@ -2,26 +2,29 @@
 
 The Go toolkit for production-grade MCP servers.
 
-Built on [mcp-go](https://github.com/mark3labs/mcp-go), mcpkit adds the middleware, type safety, and operational patterns needed to run MCP servers in production. It targets the [MCP 2025-11-25 spec](https://modelcontextprotocol.io/specification/2025-11-25) with 72% feature coverage and growing.
+Built on [github.com/mark3labs/mcp-go](https://github.com/mark3labs/mcp-go), mcpkit provides the middleware, type safety, and operational patterns needed to run MCP servers in production. It targets the [MCP 2025-11-25 spec](https://modelcontextprotocol.io/specification/2025-11-25) with 100% feature coverage.
 
 ## Features
 
-- **Typed Handlers** — Define tool inputs/outputs as Go structs. Schemas are generated automatically via `jsonschema` tags. No manual JSON wiring.
-- **Middleware Chain** — Composable middleware for auth, rate limiting, circuit breaking, observability, and more. Applied per-tool or globally.
-- **Registry & Search** — Thread-safe tool registry with category/tag organization and fuzzy search across names, descriptions, and metadata.
-- **Structured Output** — `TypedHandler[In, Out]` auto-generates `outputSchema` and populates both `structuredContent` and text content per the 2025-11-25 spec.
-- **Elicitation** — First-class support for requesting user input during tool execution via `ElicitForm`, `ElicitURL`, and `ElicitFormSchema`.
-- **Resilience** — Circuit breakers, rate limiters, and caching as generic middleware. Configure per-tool or per-group.
-- **Auth & Security** — JWT/API key validation, RBAC with role-based tool access, and audit logging middleware.
-- **Observability** — OpenTelemetry tracing and metrics middleware. Drop-in integration with any OTLP-compatible backend.
-- **SDK Abstraction** — `registry/compat.go` type aliases isolate your code from SDK changes. When the official Go SDK stabilizes, update one file.
-- **Test Infrastructure** — `mcptest` package with test servers, assertion helpers, and HTTP connection pooling for fast integration tests.
-
-## Installation
-
-```bash
-go get github.com/hairglasses-studio/mcpkit
-```
+- **100% MCP 2025-11-25 spec coverage** — tools, resources, prompts, sampling, logging, elicitation, structured output, async tasks
+- **30+ packages across 4 dependency layers** — use only what you need; all packages are independently importable
+- **Dual-SDK support** — works with mcp-go today; `//go:build official_sdk` tags enable migration to the official Go SDK without rewriting tool code
+- **Typed handlers** — `TypedHandler[In, Out]` generates schemas from Go structs, populates `structuredContent`, and eliminates manual JSON wiring
+- **Middleware chain** — composable middleware applied per-tool or globally; standard signature across all packages
+- **Production resilience** — circuit breakers, rate limiters, and caching via the `resilience` package
+- **Auth** — JWT/JWKS validation, OAuth 2.1 discovery and client flow, Bearer middleware, DPoP proof validation, workload identity (GCP/AWS)
+- **RBAC and audit logging** — role-based tool access control and structured audit trails via the `security` package
+- **Tenant isolation** — tenant context propagation middleware for multi-tenant servers
+- **Multi-agent orchestration** — fan-out, pipeline, and select patterns (`orchestrator`); manager/agent-as-tool delegation (`handoff`)
+- **Workflow engine** — cyclical graph execution with conditional branching, checkpoints, and state machines (`workflow`)
+- **Cost management** — token accounting, budget policies, dollar-cost estimation, scoped per-tenant/user/session budgets, time-windowed tracking (`finops`)
+- **Testing infrastructure** — test server/client, assertion helpers, session record/replay, golden file snapshots, benchmark helpers (`mcptest`)
+- **Input/output sanitization** — secret and PII redaction, injection filtering, URI validation with SSRF and path traversal protection (`sanitize`)
+- **Tool integrity** — SHA-256 fingerprinting and tamper detection for registered tools (`registry`)
+- **Gateway** — multi-server aggregation with namespaced tool routing and per-upstream resilience policies (`gateway`)
+- **Agent memory** — episodic/semantic/procedural memory tiers with pluggable storage backends (`memory`)
+- **Skills** — context-aware lazy tool loading with skill bundles and triggers (`skills`)
+- **Autonomous loops** — the Ralph Loop pattern for iterative, self-directing task execution (`ralph`)
 
 ## Quick Start
 
@@ -46,18 +49,15 @@ type GreetOutput struct {
 }
 
 func main() {
-    // Create a typed tool
     tool := handler.TypedHandler[GreetInput, GreetOutput](
-        "greet",
-        "Greet a user by name",
-        func(ctx context.Context, input GreetInput) (GreetOutput, error) {
-            return GreetOutput{Message: "Hello, " + input.Name + "!"}, nil
+        "greet", "Greet a user by name",
+        func(ctx context.Context, in GreetInput) (GreetOutput, error) {
+            return GreetOutput{Message: "Hello, " + in.Name + "!"}, nil
         },
     )
 
-    // Register and serve
     reg := registry.NewToolRegistry()
-    reg.RegisterModule(&singleToolModule{tool: tool})
+    reg.Register(tool)
 
     s := server.NewMCPServer("greeter", "1.0.0")
     reg.RegisterWithServer(s)
@@ -66,68 +66,61 @@ func main() {
         log.Fatal(err)
     }
 }
-
-type singleToolModule struct{ tool registry.ToolDefinition }
-
-func (m *singleToolModule) Name() string                  { return "greeter" }
-func (m *singleToolModule) Description() string           { return "Greeting tools" }
-func (m *singleToolModule) Tools() []registry.ToolDefinition { return []registry.ToolDefinition{m.tool} }
 ```
 
-## Packages
+## Package Map
 
-| Package | Purpose |
-|---------|---------|
-| `registry` | Tool registration, middleware chain, server integration, SDK compat layer |
-| `handler` | TypedHandler generics, param extraction, result builders, elicitation |
-| `resilience` | Circuit breaker, rate limiter, cache — all as composable middleware |
-| `mcptest` | Test server/client, assertion helpers, HTTP connection pool |
-| `auth` | JWT and API key validation middleware, context-based identity |
-| `security` | RBAC (role-based access control) and audit logging middleware |
-| `health` | Health check endpoint and checker registry |
-| `observability` | OpenTelemetry tracing and metrics middleware |
-| `sanitize` | Input sanitization for tool parameters |
-| `secrets` | Secret provider interface with env and file backends |
-| `client` | HTTP connection pool and client utilities |
+| Package | Purpose | Internal Deps |
+|---------|---------|---------------|
+| `registry` | Tool registration, middleware chain, server integration, tool integrity verification | none |
+| `handler` | TypedHandler generics, param extraction, result builders, elicitation | `registry` |
+| `resilience` | CircuitBreaker, RateLimiter, CacheEntry generics, middleware | `registry` |
+| `mcptest` | Test server/client, assertion helpers, HTTP pool, session replay, snapshot testing, benchmark helpers | `registry` |
+| `auth` | JWT/JWKS validation, OAuth discovery + client flow, Bearer middleware, DPoP proof validation + HTTP middleware, workload identity (GCP/AWS), context identity | `registry`, `client` |
+| `security` | RBAC, audit logging middleware, tenant context propagation | `registry`, `auth` |
+| `health` | Health check endpoint and checker registry | none |
+| `observability` | OpenTelemetry tracing/metrics middleware | `registry` |
+| `sanitize` | Input/output sanitization, secret/PII redaction, URI validation | none |
+| `secrets` | Secret provider interface, env/file providers, sanitizer | none |
+| `client` | HTTP pool and client utilities | none |
+| `discovery` | MCP Registry client for server discovery and publishing, multi-registry metadata extraction | `registry`, `client`, `resources`, `prompts` |
+| `resources` | Resource registry, middleware chain, server integration for URI-based data, URI validation middleware | `registry` |
+| `prompts` | Prompt registry, middleware chain, server integration for reusable templates | `registry` |
+| `logging` | slog.Handler bridge to MCP clients, tool invocation logging middleware | `registry` |
+| `sampling` | Sampling client interface, context injection middleware, request builders | `registry` |
+| `roots` | Client workspace root discovery, caching, context helpers | `registry` |
+| `research` | MCP ecosystem monitoring and viability assessment tools | `registry`, `handler`, `client` |
+| `gateway` | Multi-server aggregation with namespaced tool routing, per-upstream resilience (circuit breaker, rate limit, timeout) | `registry`, `client`, `resilience` |
+| `dispatcher` | Priority worker pool with concurrency groups, middleware integration | `registry` |
+| `ralph` | Autonomous loop runner for iterative task execution (Ralph Loop pattern) | `registry`, `handler`, `sampling`, `finops` |
+| `finops` | Token accounting, budget policies, usage tracking middleware, dollar-cost estimation, scoped budgets, time-windowed tracking | `registry` |
+| `memory` | Agent memory registry with pluggable storage backends | `registry` |
+| `skills` | Context-aware lazy tool loading with skill bundles and triggers | `registry` |
+| `handoff` | Agent delegation protocol with manager/agent-as-tool patterns, delegate middleware | `registry`, `sampling`, `finops` |
+| `orchestrator` | Multi-agent execution patterns: fan-out, pipeline, select, stage middleware | none |
+| `workflow` | Cyclical graph engine with conditional branching, checkpoints, state machines, node middleware | `orchestrator`, `registry`, `sampling` |
+| `extensions` | MCP Extensions negotiation and capability handshake | none |
+| `bootstrap` | Agent workspace init, context reports, capability matrix | `registry`, `resources`, `prompts`, `extensions` |
 
-## Architecture
+## Dependency Layers
 
-```
-Layer 3:  security
-              ↓
-Layer 2:  handler  resilience  mcptest  auth  observability
-              ↓         ↓         ↓       ↓        ↓
-Layer 1:  registry   health   sanitize  secrets  client
-```
+- **Layer 1** (no internal deps): `registry`, `health`, `sanitize`, `secrets`, `client`
+- **Layer 2** (depend on Layer 1): `resources`, `prompts`, `handler`, `resilience`, `mcptest`, `auth`, `observability`, `logging`, `sampling`, `roots`, `research`, `discovery`, `dispatcher`, `extensions`, `memory`, `finops`
+- **Layer 3** (depend on Layer 2): `security`, `gateway`, `ralph`, `skills`
+- **Layer 4** (depend on Layer 3): `orchestrator`, `handoff`, `workflow`, `bootstrap`
 
 Lower layers never import upper layers. All packages in a layer can be used independently.
 
-## Feature Matrix
+## Commands
 
-| Feature | Status | Spec Version |
-|---------|--------|-------------|
-| Tools (registration, middleware, search) | Implemented | Draft |
-| Tool Annotations | Implemented | 2025-03-26 |
-| Structured Output (outputSchema) | Implemented | 2025-11-25 |
-| Elicitation | Implemented | 2025-11-25 |
-| Tasks (async operations) | Implemented | 2025-11-25 |
-| Deferred Tool Loading | Implemented | 2025-11-25 |
-| OAuth 2.1 | Partial | 2025-03-26 |
-| Streamable HTTP | Delegated (mcp-go) | 2025-03-26 |
-| Resources | Planned | Draft |
-| Prompts | Planned | Draft |
-| Sampling | Planned | Draft |
-| Logging | Planned | Draft |
-
-See [RESEARCH.md](RESEARCH.md) for the full roadmap with 17 items across 3 priority tiers.
-
-## Links
-
-- [MCP Specification (2025-11-25)](https://modelcontextprotocol.io/specification/2025-11-25)
-- [MCP Roadmap](https://modelcontextprotocol.io/development/roadmap)
-- [mcp-go](https://github.com/mark3labs/mcp-go) — underlying Go SDK
-- [Official Go SDK](https://github.com/modelcontextprotocol/go-sdk) — future migration target
-- [FastMCP](https://gofastmcp.com) — Python framework (comparison reference)
+```bash
+go build ./...           # Build all packages
+go vet ./...             # Static analysis
+go test ./... -count=1   # Run all tests (no cache)
+make check               # All three above
+make build-official      # Verify official SDK build
+make check-dual          # Full check + official SDK build
+```
 
 ## License
 
