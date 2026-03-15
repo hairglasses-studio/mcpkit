@@ -33,6 +33,11 @@ type EngineConfig struct {
 	Hooks              Hooks
 	// NodeMiddleware is applied to every node function before execution.
 	NodeMiddleware []NodeMiddleware
+	// CompensateOnFailure enables the saga/compensation pattern. When true, if a
+	// node returns an error the engine will call Compensate on the
+	// CompensationStack (populated by AddCompensableNode) in LIFO order before
+	// returning the failed RunResult.
+	CompensateOnFailure bool
 }
 
 // Engine executes workflow graphs step-by-step.
@@ -64,6 +69,13 @@ func (e *Engine) Run(ctx context.Context, runID string, initial State) (*RunResu
 	start := time.Now()
 	state := initial.Clone()
 	currentNode := e.graph.start
+
+	// Set up compensation stack if saga pattern is enabled.
+	var compensationStack *CompensationStack
+	if e.config.CompensateOnFailure {
+		compensationStack = NewCompensationStack()
+		ctx = withCompensationStack(ctx, compensationStack)
+	}
 
 	for step := 0; step < e.config.MaxSteps; step++ {
 		if ctx.Err() != nil {
@@ -103,6 +115,9 @@ func (e *Engine) Run(ctx context.Context, runID string, initial State) (*RunResu
 
 		if err != nil {
 			e.config.Hooks.callNodeError(currentNode, err)
+			if compensationStack != nil {
+				e.runCompensation(ctx, compensationStack)
+			}
 			return &RunResult{
 				RunID:      runID,
 				Status:     RunStatusFailed,
@@ -221,6 +236,13 @@ func (e *Engine) Resume(ctx context.Context, runID string) (*RunResult, error) {
 	state := cp.State
 	currentNode := nextNode
 
+	// Set up compensation stack if saga pattern is enabled.
+	var resumeCompensationStack *CompensationStack
+	if e.config.CompensateOnFailure {
+		resumeCompensationStack = NewCompensationStack()
+		ctx = withCompensationStack(ctx, resumeCompensationStack)
+	}
+
 	for step := cp.Step; step < e.config.MaxSteps; step++ {
 		if ctx.Err() != nil {
 			return &RunResult{
@@ -258,6 +280,9 @@ func (e *Engine) Resume(ctx context.Context, runID string) (*RunResult, error) {
 
 		if nodeErr != nil {
 			e.config.Hooks.callNodeError(currentNode, nodeErr)
+			if resumeCompensationStack != nil {
+				e.runCompensation(ctx, resumeCompensationStack)
+			}
 			return &RunResult{
 				RunID:      runID,
 				Status:     RunStatusFailed,
@@ -319,6 +344,22 @@ func (e *Engine) Resume(ctx context.Context, runID string) (*RunResult, error) {
 		Duration:   time.Since(start),
 		Error:      fmt.Sprintf("max steps (%d) exceeded", e.config.MaxSteps),
 	}, nil
+}
+
+// runCompensation iterates the CompensationStack in LIFO order, firing hooks
+// and collecting errors. Errors are not propagated — compensation is best-effort.
+func (e *Engine) runCompensation(ctx context.Context, stack *CompensationStack) {
+	stack.mu.Lock()
+	records := make([]CompensationRecord, len(stack.records))
+	copy(records, stack.records)
+	stack.mu.Unlock()
+
+	for i := len(records) - 1; i >= 0; i-- {
+		r := records[i]
+		e.config.Hooks.callCompensationStart(r.NodeName)
+		err := r.Compensate(ctx, r.State)
+		e.config.Hooks.callCompensationEnd(r.NodeName, err)
+	}
 }
 
 // resolveNext determines the next node from edges.
