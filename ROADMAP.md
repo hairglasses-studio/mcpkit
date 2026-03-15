@@ -68,6 +68,17 @@ All Tier 3 items delivered: discovery, DPoP, gateway, ralph enhancements, worklo
 - ~~Tool integrity verification~~ (`registry/integrity.go`) — SHA-256 fingerprinting, tamper detection — **DONE**
 - ~~Tenant context propagation~~ (`security/tenant.go`) — multi-tenant identity middleware — **DONE**
 
+### Phase 9: Testing Infrastructure + FinOps v2 — COMPLETE
+
+- ~~Session replay~~ (`mcptest/replay.go`) — record/save/load/replay MCP sessions — **DONE**
+- ~~Snapshot testing~~ (`mcptest/snapshot.go`) — golden file assertions with UPDATE_SNAPSHOTS — **DONE**
+- ~~Benchmark helpers~~ (`mcptest/benchmark.go`) — BenchmarkTool, BenchmarkToolParallel, BenchmarkSuite — **DONE**
+- ~~Dollar-cost estimation~~ (`finops/cost.go`) — ModelPricing, CostPolicy, dollar budgets — **DONE**
+- ~~Scoped budgets~~ (`finops/scope.go`) — per-tenant/user/session budget tracking — **DONE**
+- ~~Time-windowed tracking~~ (`finops/window.go`) — lazy rotation, hourly/daily/weekly/monthly windows — **DONE**
+- ~~Metadata enhancement~~ (`discovery/metadata.go`) — MetadataFromConfig with resources + prompts extraction — **DONE**
+- ~~Publish convenience~~ (`discovery/publisher.go`) — Publish/Unpublish one-call wrappers — **DONE**
+
 ### Decision Points
 
 - **After Phase 5**: Evaluate A2A spec stability — if v1.0 ships, fast-track `a2a/`; otherwise prototype only
