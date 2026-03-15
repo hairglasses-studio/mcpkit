@@ -73,3 +73,44 @@ func TestMockSamplingClient_NilResponse(t *testing.T) {
 		t.Errorf("expected nil result, got %v", result)
 	}
 }
+
+func TestNewMockSamplingClientFunc(t *testing.T) {
+	t.Parallel()
+
+	want := &registry.CreateMessageResult{Model: "custom-model"}
+	mock := NewMockSamplingClientFunc(func(ctx context.Context, req registry.CreateMessageRequest) (*registry.CreateMessageResult, error) {
+		return want, nil
+	})
+
+	got, err := mock.CreateMessage(context.Background(), registry.CreateMessageRequest{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != want {
+		t.Errorf("expected %v, got %v", want, got)
+	}
+	mock.AssertCallCount(t, 1)
+	mock.AssertCalled(t)
+}
+
+func TestMockSamplingClient_AssertCallCount_Fail(t *testing.T) {
+	mock := NewMockSamplingClient(nil)
+	// No calls made — asserting 1 call should fail.
+	failed := false
+	mockT := &mockTB{TB: t, onError: func() { failed = true }}
+	mock.AssertCallCount(mockT, 1)
+	if !failed {
+		t.Error("AssertCallCount should have failed when call count doesn't match")
+	}
+}
+
+func TestMockSamplingClient_AssertCalled_Fail(t *testing.T) {
+	mock := NewMockSamplingClient(nil)
+	// No calls made — AssertCalled should fail.
+	failed := false
+	mockT := &mockTB{TB: t, onError: func() { failed = true }}
+	mock.AssertCalled(mockT)
+	if !failed {
+		t.Error("AssertCalled should have failed when no calls were made")
+	}
+}
