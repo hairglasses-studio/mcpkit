@@ -170,3 +170,17 @@ See [ROADMAP.md](ROADMAP.md) for detailed phased plan and [RESEARCH.md](RESEARCH
 - ~~Godoc examples batch 3~~ — dispatcher, ralph, roots, sampling, secrets, bootstrap, client, extensions, research example_test.go files
 - ~~Dispatcher unit tests~~ — groups_test.go, job_test.go, middleware_test.go, queue_test.go
 - ~~Sampling unit tests~~ — middleware_test.go, helpers_test.go
+
+### Phase 18 — Core Package Test Coverage (COMPLETE)
+- ~~Registry tests~~ — search_test.go (14), dynamic_test.go (21), deferred_test.go (14), annotations_test.go (12)
+- ~~Workflow tests~~ — engine_test.go (17), checkpoint_test.go, hooks_test.go
+- ~~Auth tests~~ — pkce_test.go, context_test.go, metadata_test.go, config_test.go
+- ~~Discovery examples~~ — example_test.go (5 Example functions)
+- ~~mcptest tests~~ — assert_test.go, recorder_test.go
+
+### Phase 19 — Remaining Test Coverage (COMPLETE)
+- ~~Discovery tests~~ — client_test.go (13), publisher_test.go (12) — httptest mocks, caching, error mapping
+- ~~Handler tests~~ — result_test.go (22), structured_test.go (18) — all result builders covered
+- ~~Memory tests~~ — store_mem_test.go (19) — full InMemoryStore lifecycle, concurrent safety
+- ~~FinOps tests~~ — tracker_test.go (9), estimate_test.go (12) — tracker lifecycle, estimation formulas
+- ~~Resilience tests~~ — middleware_test.go (9) — rate limit + circuit breaker middleware
