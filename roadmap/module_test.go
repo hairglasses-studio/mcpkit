@@ -319,3 +319,118 @@ func TestHandleNextPhase_AllComplete(t *testing.T) {
 		t.Error("expected nil Phase when all phases complete")
 	}
 }
+
+// TestHandleUpdate_PathOverride verifies the path parameter overrides the module default.
+func TestHandleUpdate_PathOverride(t *testing.T) {
+	path := writeTempRoadmap(t)
+	m := NewModule() // default path would fail
+	ctx := context.Background()
+
+	out, err := m.handleUpdate(ctx, UpdateInput{ItemID: "2C", Status: ItemStatusComplete, Path: path})
+	if err != nil {
+		t.Fatalf("handleUpdate with path: %v", err)
+	}
+	if !out.Updated {
+		t.Errorf("Updated = false, want true; message: %s", out.Message)
+	}
+}
+
+// TestHandleUpdate_MissingFile verifies an error is returned when the file does not exist.
+func TestHandleUpdate_MissingFile(t *testing.T) {
+	m := NewModule(Config{RoadmapPath: "/nonexistent/roadmap.json"})
+	ctx := context.Background()
+
+	_, err := m.handleUpdate(ctx, UpdateInput{ItemID: "2C", Status: ItemStatusComplete})
+	if err == nil {
+		t.Error("expected error for missing file")
+	}
+}
+
+// TestHandleGaps_PathOverride verifies the path parameter overrides the module default.
+func TestHandleGaps_PathOverride(t *testing.T) {
+	path := writeTempRoadmap(t)
+	m := NewModule() // default path would fail
+	ctx := context.Background()
+
+	out, err := m.handleGaps(ctx, GapsInput{Path: path})
+	if err != nil {
+		t.Fatalf("handleGaps with path: %v", err)
+	}
+	if out.Count != 3 {
+		t.Errorf("gap count = %d, want 3", out.Count)
+	}
+}
+
+// TestHandleGaps_MissingFile verifies an error is returned when the file does not exist.
+func TestHandleGaps_MissingFile(t *testing.T) {
+	m := NewModule(Config{RoadmapPath: "/nonexistent/roadmap.json"})
+	ctx := context.Background()
+
+	_, err := m.handleGaps(ctx, GapsInput{})
+	if err == nil {
+		t.Error("expected error for missing file")
+	}
+}
+
+// TestHandleNextPhase_PathOverride verifies the path parameter overrides the module default.
+func TestHandleNextPhase_PathOverride(t *testing.T) {
+	path := writeTempRoadmap(t)
+	m := NewModule() // default path would fail
+	ctx := context.Background()
+
+	out, err := m.handleNextPhase(ctx, NextPhaseInput{Path: path})
+	if err != nil {
+		t.Fatalf("handleNextPhase with path: %v", err)
+	}
+	if !out.Found {
+		t.Error("expected Found=true")
+	}
+}
+
+// TestHandleNextPhase_MissingFile verifies an error is returned when the file does not exist.
+func TestHandleNextPhase_MissingFile(t *testing.T) {
+	m := NewModule(Config{RoadmapPath: "/nonexistent/roadmap.json"})
+	ctx := context.Background()
+
+	_, err := m.handleNextPhase(ctx, NextPhaseInput{})
+	if err == nil {
+		t.Error("expected error for missing file")
+	}
+}
+
+// TestGapAnalysis_TierPlannedItems verifies planned items in tiers are included.
+func TestGapAnalysis_TierPlannedItems(t *testing.T) {
+	t.Parallel()
+
+	rm := &Roadmap{
+		Tiers: []Tier{
+			{
+				ID:   "T1",
+				Name: "Layer 1",
+				Items: []WorkItem{
+					{ID: "T1-1", Description: "planned tier item", Status: ItemStatusPlanned},
+					{ID: "T1-2", Description: "complete tier item", Status: ItemStatusComplete},
+				},
+			},
+		},
+	}
+	gaps := GapAnalysis(rm)
+	if len(gaps) != 1 {
+		t.Fatalf("gap count = %d, want 1", len(gaps))
+	}
+	if gaps[0].ID != "T1-1" {
+		t.Errorf("gap ID = %q, want T1-1", gaps[0].ID)
+	}
+}
+
+// TestSaveRoadmap_UnwritableDir verifies SaveRoadmap returns an error when it cannot create a temp file.
+func TestSaveRoadmap_UnwritableDir(t *testing.T) {
+	t.Parallel()
+
+	// /nonexistent dir does not exist so CreateTemp will fail.
+	rm := sampleRoadmap()
+	err := SaveRoadmap("/nonexistent/dir/roadmap.json", rm)
+	if err == nil {
+		t.Error("expected error saving to non-existent directory")
+	}
+}

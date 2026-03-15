@@ -229,3 +229,91 @@ func TestFileProvider_Priority(t *testing.T) {
 		t.Errorf("expected priority 50, got %d", p2.Priority())
 	}
 }
+
+func TestFileProvider_Close(t *testing.T) {
+	p := NewFileProvider()
+	if err := p.Close(); err != nil {
+		t.Errorf("expected nil error from Close, got %v", err)
+	}
+}
+
+func TestFileProvider_IsAvailable_True(t *testing.T) {
+	dir := t.TempDir()
+	path := writeTempEnvFile(t, dir, ".env", "KEY=val\n")
+	p := NewFileProvider(WithFiles(path))
+	if !p.IsAvailable() {
+		t.Error("expected IsAvailable=true when file exists")
+	}
+}
+
+func TestFileProvider_IsAvailable_False(t *testing.T) {
+	p := NewFileProvider(WithFiles("/tmp/mcpkit_definitely_nonexistent_xyzabc.env"))
+	if p.IsAvailable() {
+		t.Error("expected IsAvailable=false when no files exist")
+	}
+}
+
+func TestFileProvider_loadFiles_SkipsNonExistentWithoutError(t *testing.T) {
+	// Non-existent files should not produce an error (IsNotExist is swallowed).
+	p := NewFileProvider(WithFiles("/tmp/mcpkit_nonexistent_load_test.env"))
+	err := p.loadFiles()
+	if err != nil {
+		t.Errorf("expected nil error for missing file, got %v", err)
+	}
+}
+
+func TestFileProvider_loadFile_SkipsLinesWithoutEquals(t *testing.T) {
+	// A line with no '=' should be silently ignored.
+	dir := t.TempDir()
+	content := "NOEQUALSSIGN\nVALID=yes\n"
+	path := writeTempEnvFile(t, dir, ".env", content)
+	p := NewFileProvider(WithFiles(path))
+
+	keys, err := p.List(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	for _, k := range keys {
+		if k == "NOEQUALSSIGN" {
+			t.Errorf("line without '=' should have been skipped, but key %q appeared", k)
+		}
+	}
+
+	s, err := p.Get(context.Background(), "VALID")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if s.Value != "yes" {
+		t.Errorf("expected yes, got %q", s.Value)
+	}
+}
+
+func TestFileProvider_Get_CaseInsensitive(t *testing.T) {
+	dir := t.TempDir()
+	path := writeTempEnvFile(t, dir, ".env", "UPPER_KEY=casevalue\n")
+	p := NewFileProvider(WithFiles(path))
+
+	// lowercase lookup of an uppercase key should find it via ToUpper fallback.
+	s, err := p.Get(context.Background(), "upper_key")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if s.Value != "casevalue" {
+		t.Errorf("expected casevalue, got %q", s.Value)
+	}
+}
+
+func TestFileProvider_DefaultFilesUsedWhenNoneProvided(t *testing.T) {
+	// When no WithFiles option is given, NewFileProvider should populate a default
+	// list (.env, .env.local, .env.secrets).  We just verify it doesn't panic and
+	// returns without error (files simply won't exist in the test environment).
+	p := NewFileProvider()
+	if len(p.files) == 0 {
+		t.Error("expected default files to be set when none provided")
+	}
+	// loadFiles with default files that don't exist should not return an error.
+	err := p.loadFiles()
+	if err != nil {
+		t.Errorf("unexpected error from loadFiles with default nonexistent files: %v", err)
+	}
+}
