@@ -4,3 +4,7 @@
 # Compiled binaries
 /minimal
 /full
+/examples/http/http
+/examples/gateway/gateway
+/examples/elicitation/elicitation
+/examples/rdcycle/rdcycle
