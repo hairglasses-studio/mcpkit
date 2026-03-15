@@ -31,6 +31,8 @@ type EngineConfig struct {
 	DefaultNodeTimeout time.Duration
 	CheckpointStore    CheckpointStore
 	Hooks              Hooks
+	// NodeMiddleware is applied to every node function before execution.
+	NodeMiddleware []NodeMiddleware
 }
 
 // Engine executes workflow graphs step-by-step.
@@ -91,8 +93,12 @@ func (e *Engine) Run(ctx context.Context, runID string, initial State) (*RunResu
 		if timeout <= 0 {
 			timeout = e.config.DefaultNodeTimeout
 		}
+		fn := n.fn
+		if len(e.config.NodeMiddleware) > 0 {
+			fn = WrapNodeFunc(fn, currentNode, e.config.NodeMiddleware...)
+		}
 		nodeCtx, cancel := context.WithTimeout(ctx, timeout)
-		newState, err := n.fn(nodeCtx, state.Clone())
+		newState, err := fn(nodeCtx, state.Clone())
 		cancel()
 
 		if err != nil {
@@ -242,8 +248,12 @@ func (e *Engine) Resume(ctx context.Context, runID string) (*RunResult, error) {
 		if timeout <= 0 {
 			timeout = e.config.DefaultNodeTimeout
 		}
+		fn := nd.fn
+		if len(e.config.NodeMiddleware) > 0 {
+			fn = WrapNodeFunc(fn, currentNode, e.config.NodeMiddleware...)
+		}
 		nodeCtx, cancel := context.WithTimeout(ctx, timeout)
-		newState, nodeErr := nd.fn(nodeCtx, state.Clone())
+		newState, nodeErr := fn(nodeCtx, state.Clone())
 		cancel()
 
 		if nodeErr != nil {
