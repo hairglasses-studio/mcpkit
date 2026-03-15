@@ -78,24 +78,11 @@ func (d *DynamicRegistry) RegisterModule(module ToolModule) {
 }
 
 // RegisterWithServer registers all tools with an MCP server and sets up
-// the change notifier to emit tools/list_changed notifications.
+// the change notifier to emit tools/list_changed notifications via diff-based
+// add/remove using WireToolListChanged.
 func (d *DynamicRegistry) RegisterWithServer(s *MCPServer) {
 	d.ToolRegistry.RegisterWithServer(s)
-
-	// Register change notifier that sends tools/list_changed
-	d.OnChange(func() {
-		// Re-register all tools when changes occur
-		d.mu.RLock()
-		defer d.mu.RUnlock()
-		for _, tool := range d.tools {
-			annotated := ApplyMCPAnnotations(tool, d.config.ToolNamePrefix)
-			if annotated.OutputSchema != nil {
-				annotated.Tool.OutputSchema = *annotated.OutputSchema
-			}
-			wrapped := d.wrapHandler(tool.Tool.Name, tool)
-			AddToolToServer(s, annotated.Tool, wrapped)
-		}
-	})
+	WireToolListChanged(d, s)
 }
 
 // ToolFilter is a function that determines whether a tool should be visible

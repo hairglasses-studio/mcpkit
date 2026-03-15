@@ -157,8 +157,9 @@ mcpkit occupies a unique niche: **production-grade Go middleware layer**. While 
 | gateway | ~300 | Yes | Beta |
 
 | ralph | ~300 | Yes | Beta |
+| memory | ~250 | Yes | Beta |
 
-**Total: ~20 packages** (auth grew significantly with OAuth client, DPoP, and PKCE additions).
+**Total: ~21 packages** (auth grew significantly with OAuth client, DPoP, and PKCE additions).
 
 ### Quality Signals
 - Thread-safe registries (sync.RWMutex throughout)
@@ -190,7 +191,7 @@ mcpkit occupies a unique niche: **production-grade Go middleware layer**. While 
 
 <bootstrap-opportunities>
 
-## Roadmap: 17 Items in 3 Tiers
+## Roadmap: 34 Items in 4 Tiers
 
 ### Tier 1 — Must-Have (spec completeness + adoption)
 
@@ -206,7 +207,7 @@ mcpkit occupies a unique niche: **production-grade Go middleware layer**. While 
 
 | # | Item | Evidence | Effort |
 |---|------|----------|--------|
-| 6 | **Dispatcher package** | jobb's dispatcher pattern is proven. Generic task routing with priority queues, concurrency limits. | Medium |
+| 6 | **Dispatcher package** ✓ | Priority worker pool with concurrency groups, heap-based priority queue, registry middleware integration. | Complete |
 | 7 | **OAuth token exchange** ✓ | Full OAuth 2.1 + PKCE implemented: auth.OAuthClient, OAuthTransport, PKCE helpers. Complete flow for remote MCP servers. | Complete |
 | 8 | **Sampling support** ✓ | MCP sampling lets servers request LLM completions. Middleware for sampling request/response. Implemented in sampling/. | Complete |
 | 9 | **Logging endpoint** ✓ | MCP logging primitive. slog handler bridge + tool invocation logging middleware. Implemented in logging/. | Complete |
@@ -223,14 +224,28 @@ mcpkit occupies a unique niche: **production-grade Go middleware layer**. While 
 | 15 | **Extensions framework** | MCP roadmap mentions protocol extensions. Plugin system for custom capabilities. | High |
 | 16 | **Gateway pattern** ✓ | Multi-server aggregation with namespaced tool routing. gateway/ package. | Complete |
 | 17 | **Playbooks / Ralph Loop** ✓ | Autonomous loop runner for iterative task execution. JSON spec → LLM decisions → tool dispatch → progress tracking. ralph/ package. | Complete |
-| 18 | **Ralph: Multi-tool decisions** | Allow LLM to request multiple tool calls per iteration for parallel execution. | Low |
-| 19 | **Ralph: Spec validation** | Schema validation for spec files, required field checks, task ID uniqueness enforcement. | Low |
+| 18 | **Ralph: Multi-tool decisions** ✓ | Allow LLM to request multiple tool calls per iteration for parallel execution. | Complete |
+| 19 | **Ralph: Spec validation** ✓ | Schema validation for spec files, required field checks, task ID uniqueness enforcement. | Complete |
 | 20 | **Ralph: Resumable loops** | Resume from progress file after process restart, re-attach to in-flight state. | Medium |
-| 21 | **Ralph: Event hooks** | User-defined callbacks on iteration start/end, task completion, and errors. | Low |
+| 21 | **Ralph: Event hooks** ✓ | User-defined callbacks on iteration start/end, task completion, and errors. | Complete |
 | 22 | **Ralph: Conditional tasks** | Task dependencies and prerequisite chains (DAG-based execution ordering). | Medium |
 | 23 | **Ralph: Streaming progress** | SSE/websocket push of iteration status to connected clients. | Medium |
-| 24 | **Ralph: Cost tracking** | Token usage accounting per iteration and cumulative per loop run. | Low |
+| 24 | **Ralph: Cost tracking** ✓ | Token usage accounting per iteration and cumulative per loop run. | Complete |
 | 25 | **Ralph: Spec templates** | YAML support, variable interpolation, spec composition from fragments. | Medium |
+
+### Tier 4 — Ecosystem Leadership (agent bootstrapping + multi-agent)
+
+| # | Item | Evidence | Effort |
+|---|------|----------|--------|
+| 26 | **A2A Protocol Bridge** | Google A2A v0.3 (Linux Foundation) — Agent Cards, task lifecycle, push notifications, gRPC transport. Emerging standard for agent-to-agent communication. | High (3wk) |
+| 27 | **Multi-Agent Orchestrator** | Go-native patterns: fan-out/fan-in, pipeline, swarm mesh, hierarchical delegation. Required for complex multi-agent workflows. | High (3wk) |
+| 28 | **Agent Memory Registry** ✓ | Episodic/semantic/procedural memory tiers, pluggable storage backends. Enables stateful agents across sessions. | Complete |
+| 29 | **Workflow Engine** | Cyclical graph execution, state machines, conditional branching, YAML definitions. Goes beyond linear ralph loops. | High (3wk) |
+| 30 | **Extensions Framework** | MCP spec roadmap mentions protocol extensions. Capability handshake, version-gated features, negotiation. | Medium (2wk) |
+| 31 | **Agent Handoff Protocol** | Manager/agent-as-tool + peer handoff patterns (inspired by OpenAI Agents SDK). Agent delegation without tight coupling. | Medium (2wk) |
+| 32 | **Skills & Context-Aware Loading** | Skill bundles with lazy loading. ~95% context reduction for large tool sets. Critical for scaling beyond 100+ tools. | Medium (10d) |
+| 33 | **FinOps / Cost Tracking** ✓ | Token accounting per tool/sampling/agent/workflow. Budget policies, Prometheus export. Cross-cutting concern for production agents. | Complete (core) |
+| 34 | **Agent Bootstrap Framework** | Workspace init, context reports, capability matrix, multi-session state. First-run experience for agent developers. | Medium (10d) |
 
 </bootstrap-opportunities>
 
@@ -265,9 +280,31 @@ mcpkit occupies a unique niche: **production-grade Go middleware layer**. While 
 - [x] Gateway pattern (gateway/)
 - [x] Ralph Loop (autonomous task execution) — ralph/
 
+### Phase 5: Ralph Evolution + Foundations (Weeks 9-11)
+- [x] Ralph: multi-tool decisions, cost tracking ~~, event hooks, spec validation~~
+- [ ] Ralph: DAG execution, resumable loops, streaming progress, spec templates
+- [ ] Extensions package (extensions/) — MCP protocol extensions framework
+- [x] Memory package (memory/) — agent memory registry with storage backends
+- [x] FinOps package (finops/) — token accounting and budget middleware
+
+### Phase 6: Multi-Agent + A2A (Weeks 12-15)
+- [ ] A2A package (a2a/) — Google A2A v0.3 protocol bridge
+- [ ] Orchestrator package (orchestrator/) — fan-out, pipeline, swarm patterns
+- [ ] Handoff package (handoff/) — manager + peer agent delegation
+- [ ] Skills package (skills/) — context-aware lazy tool loading
+
+### Phase 7: Workflow Engine + Bootstrap (Weeks 16-18)
+- [ ] Workflow package (workflow/) — cyclical graph engine, state machines
+- [ ] Bootstrap package (bootstrap/) — agent workspace init, context reports
+- [ ] Workload identity (auth/workload.go) — GCP/AWS IAM for server-to-server
+- [ ] Integration tests + CLAUDE.md updates
+
 ### Decision Points
 - **After Phase 1**: Evaluate official go-sdk maturity — if v2.0 ships, prioritize migration over mcp-go upgrades
 - **After Phase 2**: Assess adoption metrics — if hg-mcp migration succeeds, invest in Tier 3; otherwise, focus on developer experience
 - **After Phase 3**: Re-evaluate WebMCP and Extensions based on spec evolution
+- **After Phase 5**: Evaluate A2A spec stability — if v1.0 ships, fast-track a2a/; otherwise prototype only
+- **After Phase 6**: Assess orchestrator patterns against real-world usage from hg-mcp/jobb migrations
+- **After Phase 7**: Re-evaluate WebMCP bridge and Chrome integration based on adoption signals
 
 </implementation-sequence>

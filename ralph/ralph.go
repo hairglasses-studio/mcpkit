@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hairglasses-studio/mcpkit/finops"
 	"github.com/hairglasses-studio/mcpkit/registry"
 	"github.com/hairglasses-studio/mcpkit/sampling"
 )
@@ -34,9 +35,10 @@ type Spec struct {
 
 // Task is a single unit of work within a Spec.
 type Task struct {
-	ID          string `json:"id"`
-	Description string `json:"description"`
-	Done        bool   `json:"done"`
+	ID          string   `json:"id"`
+	Description string   `json:"description"`
+	Done        bool     `json:"done"`
+	DependsOn   []string `json:"depends_on,omitempty"`
 }
 
 // Progress tracks the execution state of a loop run.
@@ -59,14 +61,78 @@ type IterationLog struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
+// ToolCall represents a single tool invocation within a multi-tool decision.
+type ToolCall struct {
+	Name      string                 `json:"name"`
+	Arguments map[string]interface{} `json:"arguments,omitempty"`
+}
+
 // Decision is the JSON structure the LLM returns each iteration.
 type Decision struct {
 	Complete  bool                   `json:"complete"`
 	TaskID    string                 `json:"task_id,omitempty"`
 	ToolName  string                 `json:"tool_name,omitempty"`
 	Arguments map[string]interface{} `json:"arguments,omitempty"`
+	ToolCalls []ToolCall             `json:"tool_calls,omitempty"`
 	Reasoning string                 `json:"reasoning,omitempty"`
 	MarkDone  bool                   `json:"mark_done,omitempty"`
+}
+
+// ResolvedToolCalls returns the effective list of tool calls for this decision.
+// If ToolCalls is populated it is returned directly. If only ToolName is set,
+// it wraps the single tool into a one-element slice. Otherwise returns nil.
+func (d Decision) ResolvedToolCalls() []ToolCall {
+	if len(d.ToolCalls) > 0 {
+		return d.ToolCalls
+	}
+	if d.ToolName != "" {
+		return []ToolCall{{Name: d.ToolName, Arguments: d.Arguments}}
+	}
+	return nil
+}
+
+// Hooks provides optional callbacks for loop lifecycle events.
+type Hooks struct {
+	// OnIterationStart is called before each iteration. Receives iteration number.
+	OnIterationStart func(iteration int)
+	// OnIterationEnd is called after each iteration with the log entry.
+	OnIterationEnd func(entry IterationLog)
+	// OnTaskComplete is called when a task is marked done.
+	OnTaskComplete func(taskID string)
+	// OnError is called when an iteration encounters an error (tool not found, etc.)
+	OnError func(iteration int, err error)
+	// OnCostUpdate is called after each iteration when a CostTracker is configured.
+	OnCostUpdate func(iteration int, summary finops.UsageSummary)
+}
+
+func (h *Hooks) callIterationStart(iteration int) {
+	if h.OnIterationStart != nil {
+		h.OnIterationStart(iteration)
+	}
+}
+
+func (h *Hooks) callIterationEnd(entry IterationLog) {
+	if h.OnIterationEnd != nil {
+		h.OnIterationEnd(entry)
+	}
+}
+
+func (h *Hooks) callTaskComplete(taskID string) {
+	if h.OnTaskComplete != nil {
+		h.OnTaskComplete(taskID)
+	}
+}
+
+func (h *Hooks) callError(iteration int, err error) {
+	if h.OnError != nil {
+		h.OnError(iteration, err)
+	}
+}
+
+func (h *Hooks) callCostUpdate(iteration int, summary finops.UsageSummary) {
+	if h.OnCostUpdate != nil {
+		h.OnCostUpdate(iteration, summary)
+	}
 }
 
 // Config configures a Loop execution.
@@ -77,6 +143,11 @@ type Config struct {
 	ToolRegistry  *registry.ToolRegistry
 	Sampler       sampling.SamplingClient
 	MaxTokens     int
+	Hooks         Hooks
+	CostTracker   *finops.Tracker       // optional: records token usage per iteration
+	EstimateFunc  func(string) int      // optional: override token estimation (default: len/4)
+	ForceRestart  bool              // if true, ignore existing progress and start fresh
+	TemplateVars  map[string]string // optional: template variable substitution for spec file
 }
 
 // Loop is the autonomous iteration runner.
@@ -104,7 +175,45 @@ func LoadSpec(path string) (Spec, error) {
 	if err := json.Unmarshal(data, &spec); err != nil {
 		return Spec{}, fmt.Errorf("ralph: parse spec: %w", err)
 	}
+	if err := ValidateSpec(spec); err != nil {
+		return Spec{}, err
+	}
 	return spec, nil
+}
+
+// ValidateSpec checks a Spec for structural issues.
+// Returns nil if valid, or an error describing all problems found.
+func ValidateSpec(spec Spec) error {
+	var problems []string
+	if spec.Name == "" {
+		problems = append(problems, "name is required")
+	}
+	if spec.Description == "" {
+		problems = append(problems, "description is required")
+	}
+	if len(spec.Tasks) == 0 {
+		problems = append(problems, "at least one task is required")
+	}
+	seen := make(map[string]bool)
+	for i, task := range spec.Tasks {
+		if task.ID == "" {
+			problems = append(problems, fmt.Sprintf("task[%d]: id is required", i))
+		}
+		if task.Description == "" {
+			problems = append(problems, fmt.Sprintf("task[%d]: description is required", i))
+		}
+		if task.ID != "" && seen[task.ID] {
+			problems = append(problems, fmt.Sprintf("task[%d]: duplicate id %q", i, task.ID))
+		}
+		seen[task.ID] = true
+	}
+	if len(problems) > 0 {
+		return fmt.Errorf("ralph: invalid spec: %s", strings.Join(problems, "; "))
+	}
+	if err := ValidateDependencies(spec.Tasks); err != nil {
+		return err
+	}
+	return nil
 }
 
 // LoadProgress reads and parses Progress from a JSON file.

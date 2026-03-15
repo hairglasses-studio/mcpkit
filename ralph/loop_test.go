@@ -8,8 +8,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 
+	"github.com/hairglasses-studio/mcpkit/finops"
 	"github.com/hairglasses-studio/mcpkit/registry"
 	"github.com/hairglasses-studio/mcpkit/sampling"
 )
@@ -185,6 +188,175 @@ func TestLoop_Stop(t *testing.T) {
 	}
 }
 
+func TestLoop_Hooks_IterationStartEnd(t *testing.T) {
+	dir := t.TempDir()
+	spec := Spec{
+		Name: "test", Description: "test spec", Completion: "done",
+		Tasks: []Task{{ID: "t1", Description: "do it"}},
+	}
+	specFile := writeSpec(t, dir, spec)
+
+	sampler := &scriptedSampler{
+		responses: []string{
+			`{"complete": false, "task_id": "t1", "tool_name": "echo", "arguments": {"message": "hi"}, "mark_done": true}`,
+			`{"complete": true, "reasoning": "all done"}`,
+		},
+	}
+
+	reg := registry.NewToolRegistry()
+	echoTool(reg)
+
+	var startCalls []int
+	var endCalls []IterationLog
+
+	loop, err := NewLoop(Config{
+		SpecFile:     specFile,
+		ToolRegistry: reg,
+		Sampler:      sampler,
+		Hooks: Hooks{
+			OnIterationStart: func(iteration int) {
+				startCalls = append(startCalls, iteration)
+			},
+			OnIterationEnd: func(entry IterationLog) {
+				endCalls = append(endCalls, entry)
+			},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := loop.Run(context.Background()); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	if len(startCalls) != 2 {
+		t.Errorf("OnIterationStart called %d times, want 2", len(startCalls))
+	}
+	if len(startCalls) >= 2 && (startCalls[0] != 1 || startCalls[1] != 2) {
+		t.Errorf("OnIterationStart calls = %v, want [1, 2]", startCalls)
+	}
+	if len(endCalls) != 2 {
+		t.Errorf("OnIterationEnd called %d times, want 2", len(endCalls))
+	}
+}
+
+func TestLoop_Hooks_TaskComplete(t *testing.T) {
+	dir := t.TempDir()
+	spec := Spec{
+		Name: "test", Description: "test spec", Completion: "done",
+		Tasks: []Task{{ID: "t1", Description: "do it"}},
+	}
+	specFile := writeSpec(t, dir, spec)
+
+	sampler := &scriptedSampler{
+		responses: []string{
+			`{"complete": false, "task_id": "t1", "tool_name": "echo", "arguments": {"message": "hi"}, "mark_done": true}`,
+			`{"complete": true, "reasoning": "all done"}`,
+		},
+	}
+
+	reg := registry.NewToolRegistry()
+	echoTool(reg)
+
+	var completedTasks []string
+
+	loop, err := NewLoop(Config{
+		SpecFile:     specFile,
+		ToolRegistry: reg,
+		Sampler:      sampler,
+		Hooks: Hooks{
+			OnTaskComplete: func(taskID string) {
+				completedTasks = append(completedTasks, taskID)
+			},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := loop.Run(context.Background()); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	if len(completedTasks) != 1 || completedTasks[0] != "t1" {
+		t.Errorf("OnTaskComplete calls = %v, want [t1]", completedTasks)
+	}
+}
+
+func TestLoop_Hooks_OnError(t *testing.T) {
+	dir := t.TempDir()
+	spec := Spec{
+		Name: "test", Description: "test spec", Completion: "done",
+		Tasks: []Task{{ID: "t1", Description: "find tool"}},
+	}
+	specFile := writeSpec(t, dir, spec)
+
+	sampler := &scriptedSampler{
+		responses: []string{
+			`{"complete": false, "task_id": "t1", "tool_name": "nonexistent", "arguments": {}}`,
+			`{"complete": true, "reasoning": "give up"}`,
+		},
+	}
+
+	reg := registry.NewToolRegistry()
+
+	var errorCalls []int
+
+	loop, err := NewLoop(Config{
+		SpecFile:     specFile,
+		ToolRegistry: reg,
+		Sampler:      sampler,
+		Hooks: Hooks{
+			OnError: func(iteration int, err error) {
+				errorCalls = append(errorCalls, iteration)
+			},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := loop.Run(context.Background()); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	if len(errorCalls) != 1 || errorCalls[0] != 1 {
+		t.Errorf("OnError calls = %v, want [1]", errorCalls)
+	}
+}
+
+func TestLoop_Hooks_Nil(t *testing.T) {
+	dir := t.TempDir()
+	spec := Spec{
+		Name: "test", Description: "test spec", Completion: "done",
+		Tasks: []Task{{ID: "t1", Description: "do it"}},
+	}
+	specFile := writeSpec(t, dir, spec)
+
+	sampler := &scriptedSampler{
+		responses: []string{
+			`{"complete": true, "reasoning": "done"}`,
+		},
+	}
+
+	reg := registry.NewToolRegistry()
+
+	// No hooks set — verify no panics.
+	loop, err := NewLoop(Config{
+		SpecFile:     specFile,
+		ToolRegistry: reg,
+		Sampler:      sampler,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := loop.Run(context.Background()); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+}
+
 func TestLoop_ToolNotFound(t *testing.T) {
 	dir := t.TempDir()
 	spec := Spec{
@@ -228,5 +400,451 @@ func TestLoop_ToolNotFound(t *testing.T) {
 	}
 	if !found {
 		t.Error("expected tool-not-found log entry")
+	}
+}
+
+// greetModule provides an additional "greet" tool for multi-tool tests.
+type greetModule struct{}
+
+func (m *greetModule) Name() string        { return "greet" }
+func (m *greetModule) Description() string { return "Greet tools" }
+func (m *greetModule) Tools() []registry.ToolDefinition {
+	return []registry.ToolDefinition{
+		{
+			Tool: registry.Tool{
+				Name:        "greet",
+				Description: "Returns a greeting",
+			},
+			Handler: func(_ context.Context, req registry.CallToolRequest) (*registry.CallToolResult, error) {
+				args := registry.ExtractArguments(req)
+				name, _ := args["name"].(string)
+				return registry.MakeTextResult("hello: " + name), nil
+			},
+		},
+	}
+}
+
+func TestLoop_MultiToolDecision(t *testing.T) {
+	dir := t.TempDir()
+	spec := Spec{
+		Name: "test", Description: "multi-tool test", Completion: "done",
+		Tasks: []Task{{ID: "t1", Description: "call two tools"}},
+	}
+	specFile := writeSpec(t, dir, spec)
+
+	// Decision uses tool_calls array with two tools.
+	sampler := &scriptedSampler{
+		responses: []string{
+			`{"complete": false, "task_id": "t1", "tool_calls": [{"name": "echo", "arguments": {"message": "hi"}}, {"name": "greet", "arguments": {"name": "world"}}], "reasoning": "two tools", "mark_done": true}`,
+			`{"complete": true, "reasoning": "all done"}`,
+		},
+	}
+
+	reg := registry.NewToolRegistry()
+	echoTool(reg)
+	reg.RegisterModule(&greetModule{})
+
+	loop, err := NewLoop(Config{
+		SpecFile:     specFile,
+		ToolRegistry: reg,
+		Sampler:      sampler,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := loop.Run(context.Background()); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	status := loop.Status()
+	if status.Status != StatusCompleted {
+		t.Errorf("Status = %q, want %q", status.Status, StatusCompleted)
+	}
+
+	// Find the iteration log that has both tools.
+	var multiEntry *IterationLog
+	for i, entry := range status.Log {
+		if len(entry.ToolCalls) == 2 {
+			multiEntry = &status.Log[i]
+			break
+		}
+	}
+	if multiEntry == nil {
+		t.Fatal("expected an iteration log with 2 tool calls")
+	}
+	if multiEntry.ToolCalls[0] != "echo" || multiEntry.ToolCalls[1] != "greet" {
+		t.Errorf("ToolCalls = %v, want [echo greet]", multiEntry.ToolCalls)
+	}
+	if !strings.Contains(multiEntry.Result, "echo: hi") {
+		t.Errorf("Result should contain echo result, got: %q", multiEntry.Result)
+	}
+	if !strings.Contains(multiEntry.Result, "hello: world") {
+		t.Errorf("Result should contain greet result, got: %q", multiEntry.Result)
+	}
+}
+
+func TestLoop_MultiToolPartialFailure(t *testing.T) {
+	dir := t.TempDir()
+	spec := Spec{
+		Name: "test", Description: "partial failure test", Completion: "done",
+		Tasks: []Task{{ID: "t1", Description: "one good one bad"}},
+	}
+	specFile := writeSpec(t, dir, spec)
+
+	// One tool exists, one does not.
+	sampler := &scriptedSampler{
+		responses: []string{
+			`{"complete": false, "task_id": "t1", "tool_calls": [{"name": "echo", "arguments": {"message": "ok"}}, {"name": "missing", "arguments": {}}], "reasoning": "partial"}`,
+			`{"complete": true, "reasoning": "done"}`,
+		},
+	}
+
+	reg := registry.NewToolRegistry()
+	echoTool(reg)
+
+	var errorCalls int
+	loop, err := NewLoop(Config{
+		SpecFile:     specFile,
+		ToolRegistry: reg,
+		Sampler:      sampler,
+		Hooks: Hooks{
+			OnError: func(iteration int, err error) {
+				errorCalls++
+			},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := loop.Run(context.Background()); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	if errorCalls != 1 {
+		t.Errorf("OnError called %d times, want 1", errorCalls)
+	}
+
+	status := loop.Status()
+	// Find the iteration with 2 tool calls.
+	var partialEntry *IterationLog
+	for i, entry := range status.Log {
+		if len(entry.ToolCalls) == 2 {
+			partialEntry = &status.Log[i]
+			break
+		}
+	}
+	if partialEntry == nil {
+		t.Fatal("expected iteration log with 2 tool calls")
+	}
+	if !strings.Contains(partialEntry.Result, "echo: ok") {
+		t.Errorf("Result should contain echo result, got: %q", partialEntry.Result)
+	}
+	if !strings.Contains(partialEntry.Result, `"missing" not found`) {
+		t.Errorf("Result should contain not-found error, got: %q", partialEntry.Result)
+	}
+}
+
+func TestLoop_CostTracking(t *testing.T) {
+	dir := t.TempDir()
+	spec := Spec{
+		Name: "test", Description: "cost tracking test", Completion: "done",
+		Tasks: []Task{{ID: "t1", Description: "do something"}},
+	}
+	specFile := writeSpec(t, dir, spec)
+
+	sampler := &scriptedSampler{
+		responses: []string{
+			`{"complete": false, "task_id": "t1", "tool_name": "echo", "arguments": {"message": "hello"}, "mark_done": true}`,
+			`{"complete": true, "reasoning": "all done"}`,
+		},
+	}
+
+	reg := registry.NewToolRegistry()
+	echoTool(reg)
+
+	tracker := finops.NewTracker()
+	loop, err := NewLoop(Config{
+		SpecFile:     specFile,
+		ToolRegistry: reg,
+		Sampler:      sampler,
+		CostTracker:  tracker,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := loop.Run(context.Background()); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	summary := tracker.Summary()
+	if summary.TotalInvocations == 0 {
+		t.Error("expected non-zero invocations in cost tracker")
+	}
+	totalTokens := summary.TotalInputTokens + summary.TotalOutputTokens
+	if totalTokens == 0 {
+		t.Error("expected non-zero total tokens in cost tracker")
+	}
+	if _, ok := summary.ByTool["ralph/sampling"]; !ok {
+		t.Error("expected ralph/sampling entry in ByTool")
+	}
+	if _, ok := summary.ByTool["echo"]; !ok {
+		t.Error("expected echo entry in ByTool")
+	}
+}
+
+func TestLoop_ResumeFromProgress(t *testing.T) {
+	dir := t.TempDir()
+	spec := Spec{
+		Name: "test", Description: "resume test", Completion: "done",
+		Tasks: []Task{
+			{ID: "t1", Description: "first"},
+			{ID: "t2", Description: "second"},
+		},
+	}
+	specFile := writeSpec(t, dir, spec)
+
+	// Pre-write progress: iteration 1 done, t1 completed.
+	progressFile := filepath.Join(dir, "spec.progress.json")
+	progress := Progress{
+		SpecFile:     specFile,
+		Iteration:    1,
+		CompletedIDs: []string{"t1"},
+		Status:       StatusRunning,
+		StartedAt:    time.Now(),
+	}
+	data, _ := json.Marshal(progress)
+	os.WriteFile(progressFile, data, 0644)
+
+	sampler := &scriptedSampler{
+		responses: []string{
+			// Should resume at iteration 2 — work on t2.
+			`{"complete": false, "task_id": "t2", "tool_name": "echo", "arguments": {"message": "resumed"}, "mark_done": true}`,
+			`{"complete": true, "reasoning": "all done"}`,
+		},
+	}
+
+	reg := registry.NewToolRegistry()
+	echoTool(reg)
+
+	loop, err := NewLoop(Config{
+		SpecFile:     specFile,
+		ToolRegistry: reg,
+		Sampler:      sampler,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := loop.Run(context.Background()); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	status := loop.Status()
+	if status.Status != StatusCompleted {
+		t.Errorf("Status = %q, want %q", status.Status, StatusCompleted)
+	}
+	// Should have t1 from progress and t2 from this run.
+	if len(status.CompletedIDs) != 2 {
+		t.Errorf("CompletedIDs = %v, want 2 items", status.CompletedIDs)
+	}
+	// Iteration should be 3 (resumed from 1, ran 2 and 3).
+	if status.Iteration != 3 {
+		t.Errorf("Iteration = %d, want 3", status.Iteration)
+	}
+}
+
+func TestLoop_CompletedNoRerun(t *testing.T) {
+	dir := t.TempDir()
+	spec := Spec{
+		Name: "test", Description: "completed test", Completion: "done",
+		Tasks: []Task{{ID: "t1", Description: "do it"}},
+	}
+	specFile := writeSpec(t, dir, spec)
+
+	// Pre-write progress with StatusCompleted.
+	progressFile := filepath.Join(dir, "spec.progress.json")
+	progress := Progress{
+		SpecFile:     specFile,
+		Iteration:    2,
+		CompletedIDs: []string{"t1"},
+		Status:       StatusCompleted,
+		StartedAt:    time.Now(),
+	}
+	data, _ := json.Marshal(progress)
+	os.WriteFile(progressFile, data, 0644)
+
+	// Sampler should never be called.
+	sampler := &scriptedSampler{responses: []string{}}
+
+	reg := registry.NewToolRegistry()
+
+	loop, err := NewLoop(Config{
+		SpecFile:     specFile,
+		ToolRegistry: reg,
+		Sampler:      sampler,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = loop.Run(context.Background())
+	if err != nil {
+		t.Fatalf("Run should return nil for completed loop, got: %v", err)
+	}
+
+	// Sampler should not have been called.
+	if sampler.calls != 0 {
+		t.Errorf("Sampler called %d times, want 0", sampler.calls)
+	}
+}
+
+func TestLoop_ForceRestart(t *testing.T) {
+	dir := t.TempDir()
+	spec := Spec{
+		Name: "test", Description: "force restart test", Completion: "done",
+		Tasks: []Task{{ID: "t1", Description: "do it"}},
+	}
+	specFile := writeSpec(t, dir, spec)
+
+	// Pre-write progress with StatusCompleted.
+	progressFile := filepath.Join(dir, "spec.progress.json")
+	progress := Progress{
+		SpecFile:     specFile,
+		Iteration:    5,
+		CompletedIDs: []string{"t1"},
+		Status:       StatusCompleted,
+		StartedAt:    time.Now(),
+	}
+	data, _ := json.Marshal(progress)
+	os.WriteFile(progressFile, data, 0644)
+
+	sampler := &scriptedSampler{
+		responses: []string{
+			`{"complete": false, "task_id": "t1", "tool_name": "echo", "arguments": {"message": "fresh"}, "mark_done": true}`,
+			`{"complete": true, "reasoning": "done"}`,
+		},
+	}
+
+	reg := registry.NewToolRegistry()
+	echoTool(reg)
+
+	loop, err := NewLoop(Config{
+		SpecFile:     specFile,
+		ToolRegistry: reg,
+		Sampler:      sampler,
+		ForceRestart: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := loop.Run(context.Background()); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	status := loop.Status()
+	if status.Status != StatusCompleted {
+		t.Errorf("Status = %q, want %q", status.Status, StatusCompleted)
+	}
+	// Should start fresh — iteration count should be 2 (not 6+).
+	if status.Iteration != 2 {
+		t.Errorf("Iteration = %d, want 2 (fresh start)", status.Iteration)
+	}
+}
+
+func TestLoop_WithTemplateVars(t *testing.T) {
+	dir := t.TempDir()
+	tmplFile := filepath.Join(dir, "spec.json")
+	content := `{
+		"name": "deploy-{{.Service}}",
+		"description": "Deploy {{.Service}}",
+		"completion": "deployed",
+		"tasks": [{"id": "t1", "description": "Build {{.Service}}"}]
+	}`
+	os.WriteFile(tmplFile, []byte(content), 0644)
+
+	sampler := &scriptedSampler{
+		responses: []string{
+			`{"complete": false, "task_id": "t1", "tool_name": "echo", "arguments": {"message": "building"}, "mark_done": true}`,
+			`{"complete": true, "reasoning": "deployed"}`,
+		},
+	}
+
+	reg := registry.NewToolRegistry()
+	echoTool(reg)
+
+	loop, err := NewLoop(Config{
+		SpecFile:     tmplFile,
+		ToolRegistry: reg,
+		Sampler:      sampler,
+		TemplateVars: map[string]string{"Service": "api-gateway"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := loop.Run(context.Background()); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	status := loop.Status()
+	if status.Status != StatusCompleted {
+		t.Errorf("Status = %q, want %q", status.Status, StatusCompleted)
+	}
+}
+
+func TestLoop_CostTrackingHook(t *testing.T) {
+	dir := t.TempDir()
+	spec := Spec{
+		Name: "test", Description: "cost hook test", Completion: "done",
+		Tasks: []Task{
+			{ID: "t1", Description: "first"},
+			{ID: "t2", Description: "second"},
+		},
+	}
+	specFile := writeSpec(t, dir, spec)
+
+	sampler := &scriptedSampler{
+		responses: []string{
+			`{"complete": false, "task_id": "t1", "tool_name": "echo", "arguments": {"message": "one"}, "mark_done": true}`,
+			`{"complete": false, "task_id": "t2", "tool_name": "echo", "arguments": {"message": "two"}, "mark_done": true}`,
+			`{"complete": true, "reasoning": "all done"}`,
+		},
+	}
+
+	reg := registry.NewToolRegistry()
+	echoTool(reg)
+
+	tracker := finops.NewTracker()
+	var hookTotals []int64
+	loop, err := NewLoop(Config{
+		SpecFile:     specFile,
+		ToolRegistry: reg,
+		Sampler:      sampler,
+		CostTracker:  tracker,
+		Hooks: Hooks{
+			OnCostUpdate: func(iteration int, summary finops.UsageSummary) {
+				hookTotals = append(hookTotals, summary.TotalInputTokens+summary.TotalOutputTokens)
+			},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := loop.Run(context.Background()); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	// OnCostUpdate should have been called twice (once per tool-executing iteration).
+	if len(hookTotals) != 2 {
+		t.Errorf("OnCostUpdate called %d times, want 2", len(hookTotals))
+	}
+	// Totals should be non-decreasing.
+	if len(hookTotals) >= 2 && hookTotals[1] <= hookTotals[0] {
+		t.Errorf("expected increasing totals, got %v", hookTotals)
 	}
 }

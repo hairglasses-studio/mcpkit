@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -222,6 +223,85 @@ func TestNewLoop_MissingRequired(t *testing.T) {
 	}
 }
 
+func TestValidateSpec_Valid(t *testing.T) {
+	spec := Spec{
+		Name: "test", Description: "test desc",
+		Tasks: []Task{{ID: "t1", Description: "task one"}},
+	}
+	if err := ValidateSpec(spec); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestValidateSpec_EmptyName(t *testing.T) {
+	spec := Spec{
+		Description: "test desc",
+		Tasks:       []Task{{ID: "t1", Description: "task one"}},
+	}
+	err := ValidateSpec(spec)
+	if err == nil {
+		t.Fatal("expected error for empty name")
+	}
+	if !strings.Contains(err.Error(), "name is required") {
+		t.Errorf("error = %q, want mention of 'name is required'", err)
+	}
+}
+
+func TestValidateSpec_DuplicateTaskIDs(t *testing.T) {
+	spec := Spec{
+		Name: "test", Description: "test desc",
+		Tasks: []Task{
+			{ID: "t1", Description: "first"},
+			{ID: "t1", Description: "duplicate"},
+		},
+	}
+	err := ValidateSpec(spec)
+	if err == nil {
+		t.Fatal("expected error for duplicate task IDs")
+	}
+	if !strings.Contains(err.Error(), "duplicate id") {
+		t.Errorf("error = %q, want mention of 'duplicate id'", err)
+	}
+}
+
+func TestValidateSpec_EmptyTaskID(t *testing.T) {
+	spec := Spec{
+		Name: "test", Description: "test desc",
+		Tasks: []Task{{Description: "no id"}},
+	}
+	err := ValidateSpec(spec)
+	if err == nil {
+		t.Fatal("expected error for empty task ID")
+	}
+	if !strings.Contains(err.Error(), "id is required") {
+		t.Errorf("error = %q, want mention of 'id is required'", err)
+	}
+}
+
+func TestValidateSpec_NoTasks(t *testing.T) {
+	spec := Spec{Name: "test", Description: "test desc"}
+	err := ValidateSpec(spec)
+	if err == nil {
+		t.Fatal("expected error for no tasks")
+	}
+	if !strings.Contains(err.Error(), "at least one task") {
+		t.Errorf("error = %q, want mention of 'at least one task'", err)
+	}
+}
+
+func TestLoadSpec_Invalid(t *testing.T) {
+	dir := t.TempDir()
+	specFile := filepath.Join(dir, "spec.json")
+	// Valid JSON but invalid spec (no name).
+	data, _ := json.Marshal(Spec{Tasks: []Task{{ID: "t1", Description: "ok"}}})
+	os.WriteFile(specFile, data, 0644)
+
+	_, err := LoadSpec(specFile)
+	if err == nil {
+		t.Fatal("expected error for invalid spec")
+	}
+}
+
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && findSubstring(s, substr)
 }
@@ -240,4 +320,93 @@ type mockSampler struct{}
 
 func (m *mockSampler) CreateMessage(_ context.Context, _ sampling.CreateMessageRequest) (*sampling.CreateMessageResult, error) {
 	return nil, fmt.Errorf("not implemented")
+}
+
+func TestDecision_ResolvedToolCalls_Multi(t *testing.T) {
+	d := Decision{
+		ToolCalls: []ToolCall{
+			{Name: "tool_a", Arguments: map[string]interface{}{"x": 1}},
+			{Name: "tool_b", Arguments: map[string]interface{}{"y": 2}},
+		},
+	}
+	calls := d.ResolvedToolCalls()
+	if len(calls) != 2 {
+		t.Fatalf("ResolvedToolCalls() len = %d, want 2", len(calls))
+	}
+	if calls[0].Name != "tool_a" {
+		t.Errorf("calls[0].Name = %q, want %q", calls[0].Name, "tool_a")
+	}
+	if calls[1].Name != "tool_b" {
+		t.Errorf("calls[1].Name = %q, want %q", calls[1].Name, "tool_b")
+	}
+}
+
+func TestDecision_ResolvedToolCalls_Single(t *testing.T) {
+	d := Decision{
+		ToolName:  "echo",
+		Arguments: map[string]interface{}{"message": "hello"},
+	}
+	calls := d.ResolvedToolCalls()
+	if len(calls) != 1 {
+		t.Fatalf("ResolvedToolCalls() len = %d, want 1", len(calls))
+	}
+	if calls[0].Name != "echo" {
+		t.Errorf("calls[0].Name = %q, want %q", calls[0].Name, "echo")
+	}
+	msg, _ := calls[0].Arguments["message"].(string)
+	if msg != "hello" {
+		t.Errorf("calls[0].Arguments[message] = %q, want %q", msg, "hello")
+	}
+}
+
+func TestDecision_ResolvedToolCalls_Empty(t *testing.T) {
+	d := Decision{Complete: false}
+	calls := d.ResolvedToolCalls()
+	if calls != nil {
+		t.Errorf("ResolvedToolCalls() = %v, want nil", calls)
+	}
+}
+
+func TestParseDecision_MultiTool(t *testing.T) {
+	input := `{
+		"complete": false,
+		"task_id": "t1",
+		"tool_calls": [
+			{"name": "echo", "arguments": {"message": "first"}},
+			{"name": "echo", "arguments": {"message": "second"}}
+		],
+		"reasoning": "do two things"
+	}`
+	d, err := parseDecision(input)
+	if err != nil {
+		t.Fatalf("parseDecision: %v", err)
+	}
+	if len(d.ToolCalls) != 2 {
+		t.Fatalf("ToolCalls len = %d, want 2", len(d.ToolCalls))
+	}
+	if d.ToolCalls[0].Name != "echo" {
+		t.Errorf("ToolCalls[0].Name = %q, want %q", d.ToolCalls[0].Name, "echo")
+	}
+	msg, _ := d.ToolCalls[1].Arguments["message"].(string)
+	if msg != "second" {
+		t.Errorf("ToolCalls[1].Arguments[message] = %q, want %q", msg, "second")
+	}
+	calls := d.ResolvedToolCalls()
+	if len(calls) != 2 {
+		t.Errorf("ResolvedToolCalls() len = %d, want 2", len(calls))
+	}
+}
+
+func TestDecision_ResolvedToolCalls_PrefersToolCalls(t *testing.T) {
+	// When both ToolCalls and ToolName are set, ToolCalls takes precedence.
+	d := Decision{
+		ToolName: "ignored",
+		ToolCalls: []ToolCall{
+			{Name: "preferred"},
+		},
+	}
+	calls := d.ResolvedToolCalls()
+	if len(calls) != 1 || calls[0].Name != "preferred" {
+		t.Errorf("ResolvedToolCalls() = %v, want [{preferred}]", calls)
+	}
 }
