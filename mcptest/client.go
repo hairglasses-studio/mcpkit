@@ -49,3 +49,37 @@ func (c *Client) CallToolWithContext(ctx context.Context, name string, args map[
 	}
 	return result
 }
+
+// ReadResource reads a resource by URI.
+// It fails the test if the resource is not found or returns an error.
+func (c *Client) ReadResource(uri string) *registry.ReadResourceResult {
+	c.t.Helper()
+	result, err := c.ReadResourceE(uri)
+	if err != nil {
+		c.t.Fatalf("ReadResource(%s): %v", uri, err)
+	}
+	return result
+}
+
+// ReadResourceE reads a resource by URI, returning both result and error.
+func (c *Client) ReadResourceE(uri string) (*registry.ReadResourceResult, error) {
+	c.t.Helper()
+	return c.tr.readResource(context.Background(), c.t, uri)
+}
+
+// GetPrompt gets a prompt by name with optional arguments.
+// It fails the test if the prompt is not found or returns an error.
+func (c *Client) GetPrompt(name string, args map[string]string) *registry.GetPromptResult {
+	c.t.Helper()
+	result, err := c.GetPromptE(name, args)
+	if err != nil {
+		c.t.Fatalf("GetPrompt(%s): %v", name, err)
+	}
+	return result
+}
+
+// GetPromptE gets a prompt by name, returning both result and error.
+func (c *Client) GetPromptE(name string, args map[string]string) (*registry.GetPromptResult, error) {
+	c.t.Helper()
+	return c.tr.getPrompt(context.Background(), c.t, name, args)
+}

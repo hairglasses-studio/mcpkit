@@ -21,7 +21,7 @@ make check-dual          # Full check + official SDK build
 | `handler` | TypedHandler generics, param extraction, result builders, elicitation | `registry` |
 | `resilience` | CircuitBreaker, RateLimiter, CacheEntry generics, middleware | `registry` |
 | `mcptest` | Test server/client, assertion helpers, HTTP pool | `registry` |
-| `auth` | JWT/JWKS validation, OAuth discovery, Bearer middleware, DPoP token binding, context identity | `registry` |
+| `auth` | JWT/JWKS validation, OAuth discovery, Bearer middleware, DPoP proof validation + HTTP middleware, context identity | `registry` |
 | `security` | RBAC, audit logging middleware | `registry`, `auth` |
 | `health` | Health check endpoint and checker registry | none |
 | `observability` | OpenTelemetry tracing/metrics middleware | `registry` |
@@ -32,12 +32,13 @@ make check-dual          # Full check + official SDK build
 | `prompts` | Prompt registry, middleware chain, server integration for reusable templates | `registry` |
 | `logging` | slog.Handler bridge to MCP clients, tool invocation logging middleware | `registry` |
 | `sampling` | Sampling client interface, context injection middleware, request builders | `registry` |
+| `roots` | Client workspace root discovery, caching, context helpers | `registry` |
 | `research` | MCP ecosystem monitoring and viability assessment tools | `registry`, `handler`, `client` |
 
 ## Dependency Layers
 
 - **Layer 1** (no internal deps): `registry`, `health`, `sanitize`, `secrets`, `client`
-- **Layer 2** (depend on Layer 1): `resources`, `prompts`, `handler`, `resilience`, `mcptest`, `auth`, `observability`, `logging`, `sampling`, `research`
+- **Layer 2** (depend on Layer 1): `resources`, `prompts`, `handler`, `resilience`, `mcptest`, `auth`, `observability`, `logging`, `sampling`, `roots`, `research`
 - **Layer 3** (depend on Layer 2): `security`
 
 ## Coding Conventions
@@ -67,11 +68,11 @@ make check-dual          # Full check + official SDK build
 
 ## Roadmap
 
-Current spec coverage: **100%** (14/14 MCP 2025-11-25 features implemented or partial).
+Current spec coverage: **100%** (all MCP 2025-11-25 features implemented).
 
 Next priorities:
-1. Elicitation package (server-to-client user prompting)
-2. Roots package (client workspace root discovery)
-3. Structured output validation middleware
+1. mcptest sampling test helpers (resource/prompt helpers done)
+2. OAuth token exchange completion
+3. Input validation middleware (wrapping sanitize)
 
 See [RESEARCH.md](RESEARCH.md) for full analysis: 17 roadmap items across 3 priority tiers, 4 implementation phases.

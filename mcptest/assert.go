@@ -82,6 +82,62 @@ func AssertStructured(t testing.TB, result *registry.CallToolResult, target inte
 	}
 }
 
+// AssertResourceText checks the first resource content matches expected text.
+func AssertResourceText(t testing.TB, result *registry.ReadResourceResult, expected string) {
+	t.Helper()
+	if result == nil {
+		t.Fatal("result is nil")
+	}
+	text, ok := registry.ExtractResourceText(result)
+	if !ok {
+		t.Fatal("first resource content is not text")
+	}
+	if text != expected {
+		t.Errorf("resource text = %q, want %q", text, expected)
+	}
+}
+
+// AssertResourceContains checks the first resource content contains substr.
+func AssertResourceContains(t testing.TB, result *registry.ReadResourceResult, substr string) {
+	t.Helper()
+	if result == nil {
+		t.Fatal("result is nil")
+	}
+	text, ok := registry.ExtractResourceText(result)
+	if !ok {
+		t.Fatal("first resource content is not text")
+	}
+	if !strings.Contains(text, substr) {
+		t.Errorf("resource text %q does not contain %q", text, substr)
+	}
+}
+
+// AssertPromptMessages checks the prompt result has exactly count messages.
+func AssertPromptMessages(t testing.TB, result *registry.GetPromptResult, count int) {
+	t.Helper()
+	if result == nil {
+		t.Fatal("result is nil")
+	}
+	if len(result.Messages) != count {
+		t.Errorf("prompt message count = %d, want %d", len(result.Messages), count)
+	}
+}
+
+// AssertPromptContains checks that any prompt message text contains substr.
+func AssertPromptContains(t testing.TB, result *registry.GetPromptResult, substr string) {
+	t.Helper()
+	if result == nil {
+		t.Fatal("result is nil")
+	}
+	for _, msg := range result.Messages {
+		text, ok := registry.ExtractTextContent(msg.Content)
+		if ok && strings.Contains(text, substr) {
+			return
+		}
+	}
+	t.Errorf("no prompt message contains %q", substr)
+}
+
 // ExtractText extracts the text from the first TextContent in a result.
 func ExtractText(t testing.TB, result *registry.CallToolResult) string {
 	t.Helper()

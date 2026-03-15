@@ -60,3 +60,25 @@ func (tr *transport) callTool(ctx context.Context, t testing.TB, name string, ar
 
 	return result, nil
 }
+
+func (tr *transport) readResource(ctx context.Context, t testing.TB, uri string) (*registry.ReadResourceResult, error) {
+	t.Helper()
+
+	result, err := tr.session.ReadResource(ctx, &mcp.ReadResourceParams{URI: uri})
+	if err != nil {
+		return nil, fmt.Errorf("ReadResource(%s): %w", uri, err)
+	}
+
+	return result, nil
+}
+
+func (tr *transport) getPrompt(ctx context.Context, t testing.TB, name string, args map[string]string) (*registry.GetPromptResult, error) {
+	t.Helper()
+
+	result, err := tr.session.GetPrompt(ctx, &mcp.GetPromptParams{Name: name, Arguments: args})
+	if err != nil {
+		return nil, fmt.Errorf("GetPrompt(%s): %w", name, err)
+	}
+
+	return result, nil
+}

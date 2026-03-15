@@ -43,6 +43,11 @@ type (
 	SamplingMessage      = mcp.SamplingMessage
 	CreateMessageParams  = mcp.CreateMessageParams
 	ModelPreferences     = mcp.ModelPreferences
+
+	// Root types
+	Root             = mcp.Root
+	ListRootsParams  = mcp.ListRootsParams
+	ListRootsResult  = mcp.ListRootsResult
 )
 
 // Note: The official SDK does not have separate ToolInputSchema/ToolOutputSchema
@@ -86,6 +91,15 @@ const (
 // These adapters maintain API compatibility.
 type TextResourceContents = mcp.ResourceContents
 type BlobResourceContents = mcp.ResourceContents
+
+// ExtractResourceText extracts the text from the first resource content in a ReadResourceResult.
+// Returns the text and true if the first content has text.
+func ExtractResourceText(result *ReadResourceResult) (string, bool) {
+	if result == nil || len(result.Contents) == 0 || result.Contents[0] == nil {
+		return "", false
+	}
+	return result.Contents[0].Text, result.Contents[0].Text != ""
+}
 
 // MakeTextContent constructs a Content value containing text.
 func MakeTextContent(text string) Content {
