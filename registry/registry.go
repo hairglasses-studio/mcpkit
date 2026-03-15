@@ -110,6 +110,15 @@ func NewToolRegistry(config ...Config) *ToolRegistry {
 	}
 }
 
+// SetMiddleware replaces the middleware chain. This is useful when middleware
+// depends on state that isn't available at registry creation time (e.g.,
+// an observability provider initialized after module init() functions run).
+func (r *ToolRegistry) SetMiddleware(middleware []Middleware) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.config.Middleware = middleware
+}
+
 // RegisterModule registers a tool module with the registry.
 func (r *ToolRegistry) RegisterModule(module ToolModule) {
 	r.mu.Lock()
