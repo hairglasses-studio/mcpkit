@@ -1,6 +1,6 @@
 # mcpkit Roadmap
 
-Last updated: 2026-03-14.
+Last updated: 2026-03-15.
 
 ## Status Summary
 
@@ -100,6 +100,13 @@ All Tier 3 items delivered: discovery, DPoP, gateway, ralph enhancements, worklo
 - ~~Server lifecycle~~ (`lifecycle/lifecycle.go`) — signal handling, graceful drain, LIFO shutdown hooks — **DONE**
 - ~~Health readiness~~ (`health/health.go`) — SetStatus/IsReady, 503 on draining — **DONE**
 
+### Phase 13: Integration Completeness — COMPLETE
+
+- ~~FinOps→Observability bridge~~ (`finops/context.go`, `observability/middleware.go`) — mutable TokenUsageHolder pattern so inner finops middleware propagates token counts back to outer observability spans — **DONE**
+- ~~Handoff tracing~~ (`handoff/observability.go`) — TracingMiddleware(tracer) DelegateMiddleware with agent/status/duration attributes — **DONE**
+- ~~Ralph tracing~~ (`ralph/observability.go`) — TracingHooks(tracer) with per-iteration spans, task ID, error recording — **DONE**
+- ~~Full example rewrite~~ (`examples/full/main.go`) — demonstrates lifecycle, observability, finops, sanitize, logging, health with correct middleware ordering — **DONE**
+
 ### Decision Points
 
 - **After Phase 5**: Evaluate A2A spec stability — if v1.0 ships, fast-track `a2a/`; otherwise prototype only
@@ -108,9 +115,24 @@ All Tier 3 items delivered: discovery, DPoP, gateway, ralph enhancements, worklo
 
 ---
 
-## Updated Dependency Layers (post-Phase 7)
+## Tier 5: Bleeding Edge
+
+| # | Item | Description | Priority |
+|---|------|-------------|----------|
+| T5-1 | **June 2026 Spec Prep** | Stateless HTTP, session management, server cards, tool versioning | High |
+| T5-2 | **Agent Evaluation** | Go-native eval framework (benchmark tool accuracy, latency, cost) | High |
+| T5-3 | **Tool Signing** | Ed25519 signatures on ToolDefinition, registry-level verification | Medium |
+| T5-4 | **SIEM/Audit Export** | Structured audit log export to Kafka/OTLP for enterprise compliance | Medium |
+| T5-5 | **Server Cards** | `.well-known/mcp.json` generation from registry metadata | Medium |
+| T5-6 | **WebMCP Bridge** | Browser transport adapter (when spec stabilizes) | Low |
+| T5-7 | **A2A Bridge** | Google A2A v1.0 (when spec ships) | Low |
+| T5-8 | **Temporal Integration** | Durable execution adapter for workflow engine | Low |
+
+---
+
+## Updated Dependency Layers (post-Phase 13)
 
 - **Layer 1** (no internal deps): `registry`, `health`, `sanitize`, `secrets`, `client`
-- **Layer 2** (depend on Layer 1): `resources`, `prompts`, `handler`, `resilience`, `mcptest`, `auth`, `observability`, `logging`, `sampling`, `roots`, `research`, `discovery`, `dispatcher`, `extensions`, `memory`, `finops`
+- **Layer 2** (depend on Layer 1): `resources`, `prompts`, `handler`, `resilience`, `mcptest`, `auth`, `observability`, `logging`, `sampling`, `roots`, `research`, `discovery`, `dispatcher`, `extensions`, `memory`, `finops`, `lifecycle`
 - **Layer 3** (depend on Layer 2): `security`, `gateway`, `ralph`, `skills`, `a2a`
 - **Layer 4** (depend on Layer 3): `orchestrator`, `handoff`, `workflow`, `bootstrap`
