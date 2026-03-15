@@ -23,9 +23,14 @@
       "depends_on": ["implement"]
     },
     {
+      "id": "reflect",
+      "description": "Record improvement notes for this cycle using rdcycle_notes: what worked, what failed, wasted iterations, cost, and suggestions for next cycle.",
+      "depends_on": ["verify"]
+    },
+    {
       "id": "report",
       "description": "Run rdcycle_report to generate RESEARCH-*.md from scan data. Run rdcycle_commit to save changes.",
-      "depends_on": ["verify"]
+      "depends_on": ["reflect"]
     },
     {
       "id": "schedule",

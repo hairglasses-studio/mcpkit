@@ -35,6 +35,8 @@ func (m *Module) reportTool() registry.ToolDefinition {
 		desc,
 		m.handleReport,
 	)
+	td.Category = "rdcycle"
+	td.Timeout = 30 * time.Second
 	td.IsWrite = true
 	return td
 }

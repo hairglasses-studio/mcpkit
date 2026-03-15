@@ -36,6 +36,8 @@ func (m *Module) scheduleTool() registry.ToolDefinition {
 		desc,
 		m.handleSchedule,
 	)
+	td.Category = "rdcycle"
+	td.Timeout = 30 * time.Second
 	td.IsWrite = true
 	return td
 }
@@ -80,9 +82,14 @@ func (m *Module) handleSchedule(_ context.Context, input ScheduleInput) (Schedul
 				"depends_on":  []string{"implement"},
 			},
 			{
+				"id":          "reflect",
+				"description": "Record improvement notes for this cycle using rdcycle_notes: what worked, what failed, wasted iterations, cost, and suggestions for next cycle.",
+				"depends_on":  []string{"verify"},
+			},
+			{
 				"id":          "report",
 				"description": "Run rdcycle_report to generate research reports. Run rdcycle_commit to save changes.",
-				"depends_on":  []string{"verify"},
+				"depends_on":  []string{"reflect"},
 			},
 			{
 				"id":          "schedule",
@@ -90,6 +97,58 @@ func (m *Module) handleSchedule(_ context.Context, input ScheduleInput) (Schedul
 				"depends_on":  []string{"report"},
 			},
 		},
+	}
+
+	// Load improvement notes and inject lessons learned.
+	notesPath := filepath.Join("rdcycle", "notes", "improvement_log.json")
+	notes, _ := LoadNotes(notesPath)
+	if len(notes) > 0 {
+		// Inject last 3 notes as lessons learned context.
+		lastN := notes
+		if len(lastN) > 3 {
+			lastN = lastN[len(lastN)-3:]
+		}
+		var lessons []string
+		for _, n := range lastN {
+			for _, s := range n.Suggestions {
+				lessons = append(lessons, s)
+			}
+			for _, f := range n.WhatFailed {
+				lessons = append(lessons, "Avoid: "+f)
+			}
+		}
+		if len(lessons) > 0 {
+			desc := spec["description"].(string)
+			desc += "\n\nLessons from previous cycles:\n"
+			for _, l := range lessons {
+				desc += "- " + l + "\n"
+			}
+			spec["description"] = desc
+		}
+
+		// Every 10 cycles, add self_improve task.
+		if len(notes)%10 == 0 {
+			tasks := spec["tasks"].([]map[string]any)
+			improveTask := map[string]any{
+				"id":          "self_improve",
+				"description": "Run rdcycle_improve to analyze accumulated notes and apply recommendations.",
+				"depends_on":  []string{"reflect"},
+			}
+			for i, task := range tasks {
+				if task["id"] == "report" {
+					tasks[i]["depends_on"] = []string{"self_improve"}
+					break
+				}
+			}
+			var newTasks []map[string]any
+			for _, task := range tasks {
+				if task["id"] == "report" {
+					newTasks = append(newTasks, improveTask)
+				}
+				newTasks = append(newTasks, task)
+			}
+			spec["tasks"] = newTasks
+		}
 	}
 
 	data, err := json.MarshalIndent(spec, "", "  ")

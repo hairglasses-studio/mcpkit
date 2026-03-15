@@ -49,7 +49,7 @@ make check-dual          # Full check + official SDK build
 | `bootstrap` | Agent workspace init, context reports, capability matrix | `registry`, `resources`, `prompts`, `extensions` |
 | `eval` | Evaluation framework: cases, scorers (exact/contains/regex/jsonpath/custom/not-empty/latency), JSON suite loading, runner | `registry` |
 | `roadmap` | Machine-readable roadmap management, XML-tagged markdown rendering, gap analysis, query functions | `registry`, `handler` |
-| `rdcycle` | R&D cycle orchestration tools: scan, plan, verify, commit, report, schedule, workflow graph | `registry`, `handler`, `research`, `roadmap`, `workflow` |
+| `rdcycle` | R&D cycle orchestration tools: scan, plan, verify, commit, report, schedule, notes, improve, workflow graph, budget profiles, model tiers | `registry`, `handler`, `research`, `roadmap`, `workflow`, `finops` |
 
 ## Dependency Layers
 
@@ -208,3 +208,21 @@ See [ROADMAP.md](ROADMAP.md) for detailed phased plan and [RESEARCH.md](RESEARCH
 ### Phase 23 — Workflow Compensation + Dynamic Gateway (COMPLETE)
 - ~~`workflow/compensate.go`~~ — Saga/compensation pattern: CompensateFunc, CompensationStack (LIFO), AddCompensableNode, engine integration with CompensateOnFailure
 - ~~`gateway/dynamic.go`~~ — DynamicUpstreamRegistry: runtime add/remove upstreams, default policy, lifecycle hooks
+
+### Phase 24 — Autonomous Loop Guardrails + Self-Improvement (COMPLETE)
+- ~~`rdcycle/module.go`~~ — Register missing tools (commit, report, schedule) + new tools (notes, improve)
+- ~~`rdcycle/profiles.go`~~ — BudgetProfile presets (Personal/WorkAPI), BuildFinOpsStack composing Tracker+CostPolicy+WindowedTracker
+- ~~`rdcycle/models.go`~~ — ModelTierConfig with task-phase-aware model selection
+- ~~`ralph/ralph.go`~~ — ModelSelector on Config for per-iteration model hints
+- ~~`ralph/loop.go`~~ — Wire ModelSelector into sampling request options
+- ~~`rdcycle/notes.go`~~ — ImprovementNote persistence, rdcycle_notes tool for per-cycle reflection
+- ~~`rdcycle/improve.go`~~ — rdcycle_improve tool: pattern analysis, cost trends, budget suggestions
+- ~~`rdcycle/schedule.go`~~ — Inject lessons learned from past notes, conditional self_improve task every 10 cycles
+- ~~`rdcycle/specs/rd_cycle.json`~~ — Added reflect task between verify and report
+
+### Phase 25 — Coverage Hardening + Godoc Completeness (COMPLETE)
+- ~~`secrets/sanitize_test.go`~~ — 67% → 91.9% coverage: IsSensitiveKey, MaskValue, Sanitize, SanitizeString, SanitizeHeaders, RedactedString, SecureCompare
+- ~~`handler/examples_test.go`~~ — 72% → 88.5% coverage: FormatExamples, formatKV, intToStr, floatToStr, formatAny
+- ~~`ralph/prompt_test.go`~~ — 79% → 85.2% coverage: buildIterationPrompt (blocked/completed/activity/truncation/tools/deps)
+- ~~`rdcycle/example_test.go`~~ — Godoc examples: ExampleNewModule, ExampleNewInMemoryArtifactStore, ExamplePersonalProfile
+- ~~`roadmap/example_test.go`~~ — Godoc examples: ExampleLoadRoadmap, ExampleGapAnalysis, ExampleNextPhase

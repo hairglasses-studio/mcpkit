@@ -60,8 +60,8 @@ func TestHandleSchedule_Success(t *testing.T) {
 	if !ok {
 		t.Fatal("spec missing 'tasks' array")
 	}
-	if len(tasks) != 6 {
-		t.Errorf("tasks count = %d; want 6", len(tasks))
+	if len(tasks) != 7 {
+		t.Errorf("tasks count = %d; want 7", len(tasks))
 	}
 }
 

@@ -150,6 +150,10 @@ type Config struct {
 	EstimateFunc  func(string) int      // optional: override token estimation (default: len/4)
 	ForceRestart  bool              // if true, ignore existing progress and start fresh
 	TemplateVars  map[string]string // optional: template variable substitution for spec file
+	// ModelSelector optionally returns a model hint for sampling requests.
+	// Called each iteration with the current iteration number and completed task IDs.
+	// Return empty string for no preference.
+	ModelSelector func(iteration int, completedIDs []string) string
 }
 
 // Loop is the autonomous iteration runner.
