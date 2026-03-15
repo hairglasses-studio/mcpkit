@@ -74,6 +74,8 @@ func (m *Module) Tools() []registry.ToolDefinition {
 		m.ecosystemTool(),
 		m.assessTool(),
 		m.summaryTool(),
+		m.githubActivityTool(),
+		m.diffAnalysisTool(),
 	}
 
 	// Apply shared metadata
