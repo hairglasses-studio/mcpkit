@@ -21,7 +21,7 @@ make check-dual          # Full check + official SDK build
 | `handler` | TypedHandler generics, param extraction, result builders, elicitation | `registry` |
 | `resilience` | CircuitBreaker, RateLimiter, CacheEntry generics, middleware | `registry` |
 | `mcptest` | Test server/client, assertion helpers, HTTP pool | `registry` |
-| `auth` | JWT/JWKS validation, OAuth discovery + client flow, Bearer middleware, DPoP proof validation + HTTP middleware, context identity | `registry`, `client` |
+| `auth` | JWT/JWKS validation, OAuth discovery + client flow, Bearer middleware, DPoP proof validation + HTTP middleware, workload identity (GCP/AWS), context identity | `registry`, `client` |
 | `security` | RBAC, audit logging middleware | `registry`, `auth` |
 | `health` | Health check endpoint and checker registry | none |
 | `observability` | OpenTelemetry tracing/metrics middleware | `registry` |
@@ -36,13 +36,23 @@ make check-dual          # Full check + official SDK build
 | `roots` | Client workspace root discovery, caching, context helpers | `registry` |
 | `research` | MCP ecosystem monitoring and viability assessment tools | `registry`, `handler`, `client` |
 | `gateway` | Multi-server aggregation with namespaced tool routing | `registry`, `client` |
-| `ralph` | Autonomous loop runner for iterative task execution (Ralph Loop pattern) | `registry`, `handler`, `sampling` |
+| `dispatcher` | Priority worker pool with concurrency groups, middleware integration | `registry` |
+| `ralph` | Autonomous loop runner for iterative task execution (Ralph Loop pattern) | `registry`, `handler`, `sampling`, `finops` |
+| `finops` | Token accounting, budget policies, usage tracking middleware | `registry` |
+| `memory` | Agent memory registry with pluggable storage backends | `registry` |
+| `skills` | Context-aware lazy tool loading with skill bundles and triggers | `registry` |
+| `handoff` | Agent delegation protocol with manager/agent-as-tool patterns | `registry`, `sampling`, `finops` |
+| `orchestrator` | Multi-agent execution patterns: fan-out, pipeline, select | none |
+| `workflow` | Cyclical graph engine with conditional branching, checkpoints, and state machines | `orchestrator`, `registry`, `sampling` |
+| `extensions` | MCP Extensions negotiation and capability handshake | none |
+| `bootstrap` | Agent workspace init, context reports, capability matrix | `registry`, `resources`, `prompts`, `extensions` |
 
 ## Dependency Layers
 
 - **Layer 1** (no internal deps): `registry`, `health`, `sanitize`, `secrets`, `client`
-- **Layer 2** (depend on Layer 1): `resources`, `prompts`, `handler`, `resilience`, `mcptest`, `auth`, `observability`, `logging`, `sampling`, `roots`, `research`, `discovery`
-- **Layer 3** (depend on Layer 2): `security`, `gateway`, `ralph`
+- **Layer 2** (depend on Layer 1): `resources`, `prompts`, `handler`, `resilience`, `mcptest`, `auth`, `observability`, `logging`, `sampling`, `roots`, `research`, `discovery`, `dispatcher`, `extensions`, `memory`, `finops`
+- **Layer 3** (depend on Layer 2): `security`, `gateway`, `ralph`, `skills`, `a2a`
+- **Layer 4** (depend on Layer 3): `orchestrator`, `handoff`, `workflow`, `bootstrap`
 
 ## Coding Conventions
 
@@ -72,26 +82,24 @@ make check-dual          # Full check + official SDK build
 ## Roadmap
 
 Current spec coverage: **100%** (all MCP 2025-11-25 features implemented).
-All Tier 1 and Tier 2 roadmap items complete.
+All Tier 1 and Tier 2 roadmap items complete. Tier 3 mostly complete.
 
-Completed Tier 3 items:
-- [x] Registry integration (MCP Registry for server discovery/publishing) — `discovery` package
-- [x] Gateway pattern (multi-server aggregation and routing) — `gateway` package
+See [ROADMAP.md](ROADMAP.md) for detailed phased plan and [RESEARCH.md](RESEARCH.md) for full analysis.
 
-Completed Tier 3 items (continued):
-- [x] Playbooks / autonomous loops (Ralph Loop pattern) — `ralph` package
+### Phase 5 — Ralph Evolution + Foundations (COMPLETE)
+- ~~Ralph enhancements~~ (multi-tool, cost, hooks, validation, DAG, resume, streaming, templates)
+- ~~`extensions/`~~ — MCP Extensions negotiation and capability handshake
+- ~~`memory/`~~ — Agent memory registry with pluggable storage backends
+- ~~`finops/`~~ — Token accounting, budget policies, Prometheus export
 
-Remaining Tier 3 priorities:
-1. Workload identity (GCP/AWS IAM for server-to-server auth)
+### Phase 6 — Multi-Agent + A2A (COMPLETE)
+- `a2a/` — Google A2A v0.3 protocol bridge (deferred — spec not stable)
+- ~~`orchestrator/`~~ — Fan-out/fan-in, pipeline, select patterns
+- ~~`handoff/`~~ — Manager/agent-as-tool + peer delegation
+- ~~`skills/`~~ — Context-aware lazy tool loading
 
-### Future `ralph` Improvements
-1. Multi-tool decisions — allow LLM to request multiple tool calls per iteration (parallel execution)
-2. Spec validation — schema validation for spec files, required field checks, task ID uniqueness
-3. Resumable loops — resume from progress file after process restart (re-attach to in-flight state)
-4. Event hooks — user-defined callbacks on iteration start/end, task completion, errors
-5. Conditional tasks — task dependencies and prerequisite chains (DAG-based execution)
-6. Streaming progress — SSE/websocket push of iteration status to connected clients
-7. Cost tracking — token usage accounting per iteration and cumulative per loop run
-8. Spec templates — YAML support, variable interpolation, spec composition from fragments
-
-See [RESEARCH.md](RESEARCH.md) for full analysis: 17 roadmap items across 3 priority tiers, 4 implementation phases.
+### Phase 7 — Workflow Engine + Bootstrap (COMPLETE)
+- ~~`workflow/`~~ — Cyclical graph engine, state machines, checkpoints
+- ~~`extensions/`~~ — MCP Extensions negotiation and capability handshake
+- ~~`bootstrap/`~~ — Agent workspace init, context reports
+- ~~`auth/workload.go`~~ — Workload identity (GCP/AWS IAM)

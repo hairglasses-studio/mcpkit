@@ -87,20 +87,8 @@ func (d *DynamicRegistry) RemoveTemplate(uriTemplate string) bool {
 }
 
 // RegisterWithServer registers all resources and templates with an MCP server
-// and sets up change notification to re-sync on changes.
+// and sets up diff-based change notification to add/remove items on changes.
 func (d *DynamicRegistry) RegisterWithServer(s *registry.MCPServer) {
 	d.ResourceRegistry.RegisterWithServer(s)
-
-	d.OnChange(func() {
-		d.mu.RLock()
-		defer d.mu.RUnlock()
-		for _, rd := range d.resources {
-			wrapped := d.wrapHandler(rd.Resource.URI, rd)
-			registry.AddResourceToServer(s, rd.Resource, wrapped)
-		}
-		for _, td := range d.templates {
-			wrapped := d.wrapTemplateHandler(td.Template.URITemplate.Raw(), td)
-			registry.AddResourceTemplateToServer(s, td.Template, wrapped)
-		}
-	})
+	WireResourceListChanged(d, s)
 }
