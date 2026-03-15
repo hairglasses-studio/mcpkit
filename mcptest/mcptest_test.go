@@ -72,3 +72,55 @@ func TestRecorderReset(t *testing.T) {
 	rec.Reset()
 	rec.AssertCallCount(t, 0)
 }
+
+func TestReadResource(t *testing.T) {
+	_, c := setupTestServerWithAll(t)
+	result := c.ReadResource("test://greeting")
+	AssertResourceText(t, result, "Hello, world!")
+}
+
+func TestReadResourceE_NotFound(t *testing.T) {
+	_, c := setupTestServerWithAll(t)
+	_, err := c.ReadResourceE("test://nonexistent")
+	if err == nil {
+		t.Fatal("expected error for nonexistent resource")
+	}
+}
+
+func TestGetPrompt(t *testing.T) {
+	_, c := setupTestServerWithAll(t)
+	result := c.GetPrompt("greeting", nil)
+	AssertPromptMessages(t, result, 2)
+}
+
+func TestGetPrompt_WithArgs(t *testing.T) {
+	_, c := setupTestServerWithAll(t)
+	result := c.GetPrompt("personalized", map[string]string{"name": "Alice"})
+	AssertPromptMessages(t, result, 1)
+	AssertPromptContains(t, result, "Hello, Alice!")
+}
+
+func TestAssertResourceText(t *testing.T) {
+	_, c := setupTestServerWithAll(t)
+	result := c.ReadResource("test://greeting")
+	AssertResourceText(t, result, "Hello, world!")
+}
+
+func TestAssertResourceContains(t *testing.T) {
+	_, c := setupTestServerWithAll(t)
+	result := c.ReadResource("test://greeting")
+	AssertResourceContains(t, result, "world")
+}
+
+func TestAssertPromptMessages(t *testing.T) {
+	_, c := setupTestServerWithAll(t)
+	result := c.GetPrompt("greeting", nil)
+	AssertPromptMessages(t, result, 2)
+}
+
+func TestAssertPromptContains(t *testing.T) {
+	_, c := setupTestServerWithAll(t)
+	result := c.GetPrompt("greeting", nil)
+	AssertPromptContains(t, result, "hello")
+	AssertPromptContains(t, result, "Hello!")
+}
