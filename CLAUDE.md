@@ -165,3 +165,8 @@ See [ROADMAP.md](ROADMAP.md) for detailed phased plan and [RESEARCH.md](RESEARCH
 - ~~`eval/scorers.go`~~ — ErrorRate ResultScorer (passes on non-error, fails on error)
 - ~~`eval/runner_test.go`~~ — End-to-end TestRun_WithResultScorers exercising both Scorer and ResultScorer
 - ~~Godoc examples~~ — auth, observability, sanitize, health, lifecycle, logging example_test.go files
+
+### Phase 17 — Godoc Examples Batch 3 + Dispatcher/Sampling Test Coverage (COMPLETE)
+- ~~Godoc examples batch 3~~ — dispatcher, ralph, roots, sampling, secrets, bootstrap, client, extensions, research example_test.go files
+- ~~Dispatcher unit tests~~ — groups_test.go, job_test.go, middleware_test.go, queue_test.go
+- ~~Sampling unit tests~~ — middleware_test.go, helpers_test.go
