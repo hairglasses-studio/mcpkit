@@ -43,6 +43,7 @@ type ToolDefinition struct {
 	IsWrite             bool
 	Deprecated          bool
 	Successor           string
+	Version             string
 	Timeout             time.Duration
 	CircuitBreakerGroup string
 	RuntimeGroup        string

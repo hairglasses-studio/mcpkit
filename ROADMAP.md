@@ -107,6 +107,27 @@ All Tier 3 items delivered: discovery, DPoP, gateway, ralph enhancements, worklo
 - ~~Ralph tracing~~ (`ralph/observability.go`) — TracingHooks(tracer) with per-iteration spans, task ID, error recording — **DONE**
 - ~~Full example rewrite~~ (`examples/full/main.go`) — demonstrates lifecycle, observability, finops, sanitize, logging, health with correct middleware ordering — **DONE**
 
+### Phase 14: Server Cards, Tool Signing, Eval Framework — COMPLETE
+
+- ~~Server cards~~ (`discovery/wellknown.go`) — `ServerCardHandler` and `StaticServerCardHandler` for `.well-known/mcp.json` — **DONE**
+- ~~Tool versioning~~ (`registry/registry.go`, `discovery/discovery.go`) — `Version` field on ToolDefinition and ToolSummary — **DONE**
+- ~~Tool signing~~ (`registry/signing.go`, `registry/signing_middleware.go`) — Ed25519 `SignTool`/`VerifyToolSignature`, `SignatureStore`, `SignatureVerificationMiddleware` — **DONE**
+- ~~Eval framework~~ (`eval/`) — `Case`, `Suite`, `Summary`, `Scorer` interface, 6 built-in scorers, `Run`/`RunT` runner — **DONE**
+
+### Phase 15: Audit Export, Eval Hardening, Godoc Examples — COMPLETE
+
+- ~~Audit export~~ (`security/export.go`) — `AuditExporter` interface, `JSONLExporter` (JSONL to io.Writer), `StreamExporter` (filtered export), integrated into `AuditLogger.Log()` — **DONE** (T5-4)
+- ~~Eval hardening~~ (`eval/loader.go`, `eval/scorers.go`, `eval/runner.go`) — `LoadSuiteJSON`, `NotEmpty` scorer, `ResultScorer` interface, `Latency` scorer — **DONE**
+- ~~Godoc examples~~ — `eval/example_test.go`, `registry/signing_example_test.go`, `discovery/wellknown_example_test.go` — **DONE**
+
+### Phase 16: Security Middleware Tests, Eval Completeness, Godoc Examples Batch 2 — COMPLETE
+
+- ~~Security middleware tests~~ (`security/middleware_test.go`) — 8 tests covering AuditMiddleware and RBACMiddleware (allow, deny, nil logger, combined stack) — **DONE**
+- ~~Security examples~~ (`security/example_test.go`) — ExampleNewRBAC, ExampleAuditMiddleware, ExampleNewAuditLogger_withExporter — **DONE**
+- ~~ErrorRate scorer~~ (`eval/scorers.go`) — ResultScorer that passes (1.0) on non-error, fails (0.0) on error — **DONE**
+- ~~Runner ResultScorer test~~ (`eval/runner_test.go`) — end-to-end test exercising both Scorer and ResultScorer in a suite — **DONE**
+- ~~Godoc examples batch 2~~ — `auth/`, `observability/`, `sanitize/`, `health/`, `lifecycle/`, `logging/` example_test.go files — **DONE**
+
 ### Decision Points
 
 - **After Phase 5**: Evaluate A2A spec stability — if v1.0 ships, fast-track `a2a/`; otherwise prototype only
@@ -120,19 +141,19 @@ All Tier 3 items delivered: discovery, DPoP, gateway, ralph enhancements, worklo
 | # | Item | Description | Priority |
 |---|------|-------------|----------|
 | T5-1 | **June 2026 Spec Prep** | Stateless HTTP, session management, server cards, tool versioning | High |
-| T5-2 | **Agent Evaluation** | Go-native eval framework (benchmark tool accuracy, latency, cost) | High |
-| T5-3 | **Tool Signing** | Ed25519 signatures on ToolDefinition, registry-level verification | Medium |
-| T5-4 | **SIEM/Audit Export** | Structured audit log export to Kafka/OTLP for enterprise compliance | Medium |
-| T5-5 | **Server Cards** | `.well-known/mcp.json` generation from registry metadata | Medium |
+| T5-2 | ~~**Agent Evaluation**~~ | Go-native eval framework (benchmark tool accuracy, latency, cost) | ~~High~~ **DONE** |
+| T5-3 | ~~**Tool Signing**~~ | Ed25519 signatures on ToolDefinition, registry-level verification | ~~Medium~~ **DONE** |
+| T5-4 | ~~**SIEM/Audit Export**~~ | Pluggable AuditExporter interface, JSONL + stream exporters | ~~Medium~~ **DONE** |
+| T5-5 | ~~**Server Cards**~~ | `.well-known/mcp.json` generation from registry metadata | ~~Medium~~ **DONE** |
 | T5-6 | **WebMCP Bridge** | Browser transport adapter (when spec stabilizes) | Low |
 | T5-7 | **A2A Bridge** | Google A2A v1.0 (when spec ships) | Low |
 | T5-8 | **Temporal Integration** | Durable execution adapter for workflow engine | Low |
 
 ---
 
-## Updated Dependency Layers (post-Phase 13)
+## Updated Dependency Layers (post-Phase 14)
 
 - **Layer 1** (no internal deps): `registry`, `health`, `sanitize`, `secrets`, `client`
-- **Layer 2** (depend on Layer 1): `resources`, `prompts`, `handler`, `resilience`, `mcptest`, `auth`, `observability`, `logging`, `sampling`, `roots`, `research`, `discovery`, `dispatcher`, `extensions`, `memory`, `finops`, `lifecycle`
+- **Layer 2** (depend on Layer 1): `resources`, `prompts`, `handler`, `resilience`, `mcptest`, `auth`, `observability`, `logging`, `sampling`, `roots`, `research`, `discovery`, `dispatcher`, `extensions`, `memory`, `finops`, `lifecycle`, `eval`
 - **Layer 3** (depend on Layer 2): `security`, `gateway`, `ralph`, `skills`, `a2a`
 - **Layer 4** (depend on Layer 3): `orchestrator`, `handoff`, `workflow`, `bootstrap`
