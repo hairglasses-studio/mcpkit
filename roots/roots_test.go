@@ -176,6 +176,56 @@ func TestCachedClient_Invalidate(t *testing.T) {
 	}
 }
 
+func TestCachedClient_InnerFetchError(t *testing.T) {
+	t.Parallel()
+	wantErr := errors.New("backend unavailable")
+	inner := &mockClient{
+		listRootsFunc: func(ctx context.Context) ([]Root, error) {
+			return nil, wantErr
+		},
+	}
+	cached := NewCachedClient(inner)
+
+	_, err := cached.ListRoots(context.Background())
+	if !errors.Is(err, wantErr) {
+		t.Errorf("expected %v, got %v", wantErr, err)
+	}
+
+	// Cache should NOT be marked valid after an error; subsequent call should retry.
+	inner.mu.Lock()
+	inner.listRootsFunc = func(ctx context.Context) ([]Root, error) {
+		return []Root{{URI: "file:///ok", Name: "ok"}}, nil
+	}
+	inner.mu.Unlock()
+
+	roots, err := cached.ListRoots(context.Background())
+	if err != nil {
+		t.Fatalf("expected success on retry, got %v", err)
+	}
+	if len(roots) != 1 || roots[0].URI != "file:///ok" {
+		t.Errorf("unexpected roots after retry: %+v", roots)
+	}
+}
+
+func TestMiddleware_NilClient(t *testing.T) {
+	t.Parallel()
+	mw := Middleware(nil)
+
+	var capturedClient RootsClient
+	handler := mw("tool", dummyToolDef(), func(ctx context.Context, req callToolRequest) (*callToolResult, error) {
+		capturedClient = ClientFromContext(ctx)
+		return makeTextResult("ok"), nil
+	})
+
+	_, err := handler(context.Background(), callToolRequest{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if capturedClient != nil {
+		t.Errorf("expected nil client when Middleware called with nil, got %v", capturedClient)
+	}
+}
+
 func TestCachedClient_ConcurrentSafe(t *testing.T) {
 	t.Parallel()
 	inner := &mockClient{

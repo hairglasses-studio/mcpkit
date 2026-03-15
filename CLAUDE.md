@@ -226,3 +226,9 @@ See [ROADMAP.md](ROADMAP.md) for detailed phased plan and [RESEARCH.md](RESEARCH
 - ~~`ralph/prompt_test.go`~~ — 79% → 85.2% coverage: buildIterationPrompt (blocked/completed/activity/truncation/tools/deps)
 - ~~`rdcycle/example_test.go`~~ — Godoc examples: ExampleNewModule, ExampleNewInMemoryArtifactStore, ExamplePersonalProfile
 - ~~`roadmap/example_test.go`~~ — Godoc examples: ExampleLoadRoadmap, ExampleGapAnalysis, ExampleNextPhase
+
+### Phase 26 — Final Coverage Hardening (COMPLETE)
+- ~~`observability/middleware_test.go`~~ — 71.3% → 89.3% coverage: addGenAISpanAttrs, Init branches, error paths, TokenUsageHolder
+- ~~`mcptest/replay_test.go`~~ — 75.2% → 87.4% coverage: resultsMatch, resultToMap, SaveSession/LoadSession, Replay mismatches
+- ~~`mcptest/snapshot_test.go`~~ — normaliseResult, timestamp stripping, structured content branches
+- ~~`roots/server_test.go`~~ — 78.0% → 94.0% coverage: ServerRootsClient all branches, CachedClient error propagation, nil Middleware
