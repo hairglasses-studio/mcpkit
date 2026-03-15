@@ -31,6 +31,7 @@ type (
 	TextResourceContents = mcp.TextResourceContents
 	BlobResourceContents = mcp.BlobResourceContents
 	ReadResourceRequest  = mcp.ReadResourceRequest
+	ReadResourceResult   = mcp.ReadResourceResult
 
 	// Prompt types
 	Prompt           = mcp.Prompt
@@ -46,6 +47,11 @@ type (
 	SamplingMessage      = mcp.SamplingMessage
 	CreateMessageParams  = mcp.CreateMessageParams
 	ModelPreferences     = mcp.ModelPreferences
+
+	// Root types
+	Root             = mcp.Root
+	ListRootsRequest = mcp.ListRootsRequest
+	ListRootsResult  = mcp.ListRootsResult
 )
 
 var (
@@ -95,6 +101,19 @@ func IsResultError(r *CallToolResult) bool {
 // Returns the text and true if successful, or empty string and false otherwise.
 func ExtractTextContent(c Content) (string, bool) {
 	tc, ok := c.(mcp.TextContent)
+	if !ok {
+		return "", false
+	}
+	return tc.Text, true
+}
+
+// ExtractResourceText extracts the text from the first resource content in a ReadResourceResult.
+// Returns the text and true if the first content is a TextResourceContents.
+func ExtractResourceText(result *ReadResourceResult) (string, bool) {
+	if result == nil || len(result.Contents) == 0 {
+		return "", false
+	}
+	tc, ok := result.Contents[0].(mcp.TextResourceContents)
 	if !ok {
 		return "", false
 	}

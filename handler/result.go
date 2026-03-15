@@ -15,6 +15,7 @@ const (
 	ErrNotFound     = "NOT_FOUND"
 	ErrAPIError     = "API_ERROR"
 	ErrPermission   = "PERMISSION_DENIED"
+	ErrValidation   = "OUTPUT_VALIDATION_FAILED"
 )
 
 // TextResult creates a text result for a tool response.
