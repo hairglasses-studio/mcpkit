@@ -1,3 +1,5 @@
+// Package roots provides client workspace root discovery, caching, and context
+// helpers for accessing the filesystem roots reported by an MCP client.
 package roots
 
 import (

@@ -1,3 +1,5 @@
+// Package orchestrator provides multi-agent execution patterns including
+// fan-out, pipeline, and select for parallel and sequential stage composition.
 package orchestrator
 
 import (

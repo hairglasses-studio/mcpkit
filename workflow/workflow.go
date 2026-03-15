@@ -1,3 +1,5 @@
+// Package workflow provides a cyclical graph engine with conditional branching,
+// checkpoints, and state machines for building stateful agent workflows.
 package workflow
 
 import (

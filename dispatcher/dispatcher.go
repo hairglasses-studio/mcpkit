@@ -1,3 +1,5 @@
+// Package dispatcher provides a priority worker pool with concurrency groups
+// and middleware integration for controlled parallel tool execution.
 package dispatcher
 
 import (

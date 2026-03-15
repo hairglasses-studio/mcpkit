@@ -1,3 +1,5 @@
+// Package sampling provides a sampling client interface, context injection
+// middleware, and request builders for requesting LLM completions via MCP.
 package sampling
 
 import (

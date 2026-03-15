@@ -1,3 +1,5 @@
+// Package ralph provides an autonomous loop runner (the Ralph Loop pattern)
+// for iterative agent task execution with sampling, cost tracking, and DAG support.
 package ralph
 
 import (

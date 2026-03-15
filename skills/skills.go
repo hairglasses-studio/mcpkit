@@ -1,3 +1,5 @@
+// Package skills provides context-aware lazy tool loading with skill bundles
+// and trigger functions for activating tools on demand.
 package skills
 
 import (
