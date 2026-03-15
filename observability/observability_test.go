@@ -3,6 +3,10 @@ package observability
 import (
 	"context"
 	"errors"
+	"fmt"
+	"io"
+	"net"
+	"net/http"
 	"testing"
 	"time"
 
@@ -344,6 +348,43 @@ func findMetric(rm metricdata.ResourceMetrics, name string) *metricdata.Metrics 
 		}
 	}
 	return nil
+}
+
+// TestStartPrometheusServer_HealthEndpoint verifies that startPrometheusServer
+// exposes a /health endpoint that returns 200 "ok".
+func TestStartPrometheusServer_HealthEndpoint(t *testing.T) {
+	// Find a free port by binding then releasing it.
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("could not find free port: %v", err)
+	}
+	port := fmt.Sprintf("%d", ln.Addr().(*net.TCPAddr).Port)
+	ln.Close() // release so startPrometheusServer can bind it
+
+	go startPrometheusServer(port)
+
+	// Retry until the server is up (up to ~2 s).
+	var resp *http.Response
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		resp, err = http.Get("http://127.0.0.1:" + port + "/health")
+		if err == nil {
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	if err != nil {
+		t.Fatalf("could not reach /health after retries: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("expected /health status 200, got %d", resp.StatusCode)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	if string(body) != "ok" {
+		t.Errorf("expected /health body 'ok', got %q", string(body))
+	}
 }
 
 // containsStr is a small helper to check substring presence.
