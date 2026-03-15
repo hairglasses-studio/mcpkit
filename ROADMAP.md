@@ -128,6 +128,12 @@ All Tier 3 items delivered: discovery, DPoP, gateway, ralph enhancements, worklo
 - ~~Runner ResultScorer test~~ (`eval/runner_test.go`) — end-to-end test exercising both Scorer and ResultScorer in a suite — **DONE**
 - ~~Godoc examples batch 2~~ — `auth/`, `observability/`, `sanitize/`, `health/`, `lifecycle/`, `logging/` example_test.go files — **DONE**
 
+### Phase 17: Godoc Examples Batch 3 + Dispatcher/Sampling Test Coverage — COMPLETE
+
+- ~~Godoc examples batch 3~~ — `dispatcher/`, `ralph/`, `roots/`, `sampling/`, `secrets/`, `bootstrap/`, `client/`, `extensions/`, `research/` example_test.go files — **DONE**
+- ~~Dispatcher unit tests~~ — `groups_test.go`, `job_test.go`, `middleware_test.go`, `queue_test.go` for internal coverage — **DONE**
+- ~~Sampling unit tests~~ — `middleware_test.go`, `helpers_test.go` for internal coverage — **DONE**
+
 ### Decision Points
 
 - **After Phase 5**: Evaluate A2A spec stability — if v1.0 ships, fast-track `a2a/`; otherwise prototype only
