@@ -1,0 +1,36 @@
+{
+  "name": "R&D Cycle: {{cycle_name}}",
+  "description": "Autonomous R&D cycle scanning MCP ecosystem changes since {{since_date}}, planning roadmap updates, implementing changes, and verifying quality.",
+  "completion": "All planned work items are implemented, tests pass, and roadmap is updated.",
+  "tasks": [
+    {
+      "id": "scan",
+      "description": "Run rdcycle_scan to check ecosystem activity for repos since {{since_date}}. Store the scan artifact."
+    },
+    {
+      "id": "plan",
+      "description": "Run rdcycle_plan with scan results and roadmap at {{roadmap_path}} to identify gaps and ready work items.",
+      "depends_on": ["scan"]
+    },
+    {
+      "id": "implement",
+      "description": "For each ready work item from the plan, implement the changes. Use one tool call per package. Follow dependency layers.",
+      "depends_on": ["plan"]
+    },
+    {
+      "id": "verify",
+      "description": "Run rdcycle_verify to execute make check. If it fails, fix issues and re-verify.",
+      "depends_on": ["implement"]
+    },
+    {
+      "id": "report",
+      "description": "Run rdcycle_report to generate RESEARCH-*.md from scan data. Run rdcycle_commit to save changes.",
+      "depends_on": ["verify"]
+    },
+    {
+      "id": "schedule",
+      "description": "Run rdcycle_schedule to write the next cycle's spec with updated since_date.",
+      "depends_on": ["report"]
+    }
+  ]
+}

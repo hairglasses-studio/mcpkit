@@ -34,26 +34,28 @@ make check-dual          # Full check + official SDK build
 | `logging` | slog.Handler bridge to MCP clients, tool invocation logging middleware | `registry` |
 | `sampling` | Sampling client interface, context injection middleware, request builders | `registry` |
 | `roots` | Client workspace root discovery, caching, context helpers | `registry` |
-| `research` | MCP ecosystem monitoring and viability assessment tools | `registry`, `handler`, `client` |
+| `research` | MCP ecosystem monitoring and viability assessment tools, GitHub activity monitoring, diff analysis | `registry`, `handler`, `client` |
 | `gateway` | Multi-server aggregation with namespaced tool routing, per-upstream resilience (circuit breaker, rate limit, timeout) | `registry`, `client`, `resilience` |
 | `dispatcher` | Priority worker pool with concurrency groups, middleware integration | `registry` |
-| `ralph` | Autonomous loop runner for iterative task execution (Ralph Loop pattern) | `registry`, `handler`, `sampling`, `finops` |
+| `ralph` | Autonomous loop runner for iterative task execution (Ralph Loop pattern), workflow-backed loop | `registry`, `handler`, `sampling`, `finops`, `workflow` |
 | `finops` | Token accounting, budget policies, usage tracking middleware, dollar-cost estimation, scoped budgets, time-windowed tracking | `registry` |
 | `memory` | Agent memory registry with pluggable storage backends | `registry` |
 | `skills` | Context-aware lazy tool loading with skill bundles and triggers | `registry` |
 | `handoff` | Agent delegation protocol with manager/agent-as-tool patterns, delegate middleware | `registry`, `sampling`, `finops` |
 | `orchestrator` | Multi-agent execution patterns: fan-out, pipeline, select, stage middleware | none |
-| `workflow` | Cyclical graph engine with conditional branching, checkpoints, state machines, node middleware | `orchestrator`, `registry`, `sampling` |
+| `workflow` | Cyclical graph engine with conditional branching, checkpoints, state machines, node middleware, fork nodes for parallel branches | `orchestrator`, `registry`, `sampling` |
 | `extensions` | MCP Extensions negotiation and capability handshake | none |
 | `lifecycle` | Production server lifecycle: signal handling, graceful drain, shutdown hooks | none |
 | `bootstrap` | Agent workspace init, context reports, capability matrix | `registry`, `resources`, `prompts`, `extensions` |
 | `eval` | Evaluation framework: cases, scorers (exact/contains/regex/jsonpath/custom/not-empty/latency), JSON suite loading, runner | `registry` |
+| `roadmap` | Machine-readable roadmap management, XML-tagged markdown rendering, gap analysis, query functions | `registry`, `handler` |
+| `rdcycle` | R&D cycle orchestration tools: scan, plan, verify, commit, report, schedule, workflow graph | `registry`, `handler`, `research`, `roadmap`, `workflow` |
 
 ## Dependency Layers
 
 - **Layer 1** (no internal deps): `registry`, `health`, `sanitize`, `secrets`, `client`
-- **Layer 2** (depend on Layer 1): `resources`, `prompts`, `handler`, `resilience`, `mcptest`, `auth`, `observability`, `logging`, `sampling`, `roots`, `research`, `discovery`, `dispatcher`, `extensions`, `memory`, `finops`, `lifecycle`, `eval`
-- **Layer 3** (depend on Layer 2): `security`, `gateway`, `ralph`, `skills`, `a2a`
+- **Layer 2** (depend on Layer 1): `resources`, `prompts`, `handler`, `resilience`, `mcptest`, `auth`, `observability`, `logging`, `sampling`, `roots`, `research`, `discovery`, `dispatcher`, `extensions`, `memory`, `finops`, `lifecycle`, `eval`, `roadmap`
+- **Layer 3** (depend on Layer 2): `security`, `gateway`, `ralph`, `skills`, `a2a`, `rdcycle`
 - **Layer 4** (depend on Layer 3): `orchestrator`, `handoff`, `workflow`, `bootstrap`
 
 ## Coding Conventions
@@ -184,3 +186,21 @@ See [ROADMAP.md](ROADMAP.md) for detailed phased plan and [RESEARCH.md](RESEARCH
 - ~~Memory tests~~ — store_mem_test.go (19) — full InMemoryStore lifecycle, concurrent safety
 - ~~FinOps tests~~ — tracker_test.go (9), estimate_test.go (12) — tracker lifecycle, estimation formulas
 - ~~Resilience tests~~ — middleware_test.go (9) — rate limit + circuit breaker middleware
+
+### Phase 20 — Structured Roadmap + R&D Cycle Tools (COMPLETE)
+- ~~`roadmap/`~~ — Machine-readable roadmap types, XML-tagged markdown, gap analysis, query functions, tool module
+- ~~`research/github.go`~~ — GitHub activity monitoring tool (commits, issues, releases)
+- ~~`research/diff.go`~~ — Diff analysis tool for comparing SummaryOutput snapshots
+- ~~`rdcycle/`~~ — R&D cycle orchestration: scan, plan, verify, artifacts tools + InMemoryArtifactStore
+
+### Phase 21 — Workflow Graph + Parallel Branches (COMPLETE)
+- ~~`workflow/fork.go`~~ — AddForkNode with parallel goroutine branches, MergeFunc, MergeAll, MergeKeyed
+- ~~`rdcycle/workflow.go`~~ — NewRDCycleGraph: scan→plan→gate→implement→verify→gate_quality→END
+- ~~`rdcycle/specs/rd_cycle.json`~~ — Ralph Spec template with TemplateVars for autonomous R&D
+
+### Phase 22 — Close the Loop: Self-Updating + Example (COMPLETE)
+- ~~`rdcycle/commit.go`~~ — rdcycle_commit tool (git staging, commit, branch safety)
+- ~~`rdcycle/report.go`~~ — rdcycle_report tool (RESEARCH-*.md generation)
+- ~~`rdcycle/schedule.go`~~ — rdcycle_schedule tool (next cycle spec generation)
+- ~~`ralph/workflow.go`~~ — WorkflowLoop bridging ralph lifecycle with workflow.Engine
+- ~~`examples/rdcycle/main.go`~~ — Full R&D cycle example: research+roadmap+rdcycle→workflow→WorkflowLoop

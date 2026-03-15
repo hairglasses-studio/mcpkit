@@ -1,0 +1,136 @@
+package rdcycle
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+
+	"github.com/hairglasses-studio/mcpkit/handler"
+	"github.com/hairglasses-studio/mcpkit/registry"
+)
+
+// ScheduleInput is the input for the rdcycle_schedule tool.
+type ScheduleInput struct {
+	CycleName   string `json:"cycle_name" jsonschema:"required,description=Name for the next cycle"`
+	OutputPath  string `json:"output_path,omitempty" jsonschema:"description=Path for the output spec file (default: rdcycle/specs/next_cycle.json)"`
+	RoadmapPath string `json:"roadmap_path,omitempty" jsonschema:"description=Roadmap path for template (default: config path)"`
+}
+
+// ScheduleOutput is the output of the rdcycle_schedule tool.
+type ScheduleOutput struct {
+	SpecPath string `json:"spec_path"`
+	Written  bool   `json:"written"`
+	SinceDate string `json:"since_date"`
+}
+
+func (m *Module) scheduleTool() registry.ToolDefinition {
+	desc := "Write a Ralph spec file for the next R&D cycle, parameterized with the current " +
+		"date as since_date. Uses the rd_cycle.json template format."
+
+	td := handler.TypedHandler[ScheduleInput, ScheduleOutput](
+		"rdcycle_schedule",
+		desc,
+		m.handleSchedule,
+	)
+	td.IsWrite = true
+	return td
+}
+
+func (m *Module) handleSchedule(_ context.Context, input ScheduleInput) (ScheduleOutput, error) {
+	if input.CycleName == "" {
+		return ScheduleOutput{}, fmt.Errorf("cycle_name is required")
+	}
+
+	sinceDate := time.Now().UTC().Format(time.RFC3339)
+	roadmapPath := input.RoadmapPath
+	if roadmapPath == "" {
+		roadmapPath = m.config.RoadmapPath
+		if roadmapPath == "" {
+			roadmapPath = "roadmap.json"
+		}
+	}
+
+	// Build the spec using the template structure
+	spec := map[string]any{
+		"name":        fmt.Sprintf("R&D Cycle: %s", input.CycleName),
+		"description": fmt.Sprintf("Autonomous R&D cycle scanning MCP ecosystem changes since %s, planning roadmap updates, implementing changes, and verifying quality.", sinceDate),
+		"completion":  "All planned work items are implemented, tests pass, and roadmap is updated.",
+		"tasks": []map[string]any{
+			{
+				"id":          "scan",
+				"description": fmt.Sprintf("Run rdcycle_scan to check ecosystem activity since %s.", sinceDate),
+			},
+			{
+				"id":          "plan",
+				"description": fmt.Sprintf("Run rdcycle_plan with scan results and roadmap at %s.", roadmapPath),
+				"depends_on":  []string{"scan"},
+			},
+			{
+				"id":          "implement",
+				"description": "For each ready work item from the plan, implement the changes.",
+				"depends_on":  []string{"plan"},
+			},
+			{
+				"id":          "verify",
+				"description": "Run rdcycle_verify to execute make check. Fix issues and re-verify if needed.",
+				"depends_on":  []string{"implement"},
+			},
+			{
+				"id":          "report",
+				"description": "Run rdcycle_report to generate research reports. Run rdcycle_commit to save changes.",
+				"depends_on":  []string{"verify"},
+			},
+			{
+				"id":          "schedule",
+				"description": "Run rdcycle_schedule to write the next cycle's spec.",
+				"depends_on":  []string{"report"},
+			},
+		},
+	}
+
+	data, err := json.MarshalIndent(spec, "", "  ")
+	if err != nil {
+		return ScheduleOutput{}, fmt.Errorf("marshal spec: %w", err)
+	}
+
+	outputPath := input.OutputPath
+	if outputPath == "" {
+		outputPath = filepath.Join("rdcycle", "specs", "next_cycle.json")
+	}
+
+	// Ensure parent directory exists
+	dir := filepath.Dir(outputPath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return ScheduleOutput{}, fmt.Errorf("create dir: %w", err)
+	}
+
+	// Atomic write
+	tmp, err := os.CreateTemp(dir, ".schedule-*.tmp")
+	if err != nil {
+		return ScheduleOutput{}, fmt.Errorf("create temp: %w", err)
+	}
+	tmpName := tmp.Name()
+	if _, err := tmp.Write(data); err != nil {
+		tmp.Close()
+		os.Remove(tmpName)
+		return ScheduleOutput{}, fmt.Errorf("write temp: %w", err)
+	}
+	tmp.Close()
+	if err := os.Rename(tmpName, outputPath); err != nil {
+		os.Remove(tmpName)
+		return ScheduleOutput{}, fmt.Errorf("rename: %w", err)
+	}
+
+	// Normalize the output path separators
+	outputPath = strings.ReplaceAll(outputPath, "\\", "/")
+
+	return ScheduleOutput{
+		SpecPath:  outputPath,
+		Written:   true,
+		SinceDate: sinceDate,
+	}, nil
+}

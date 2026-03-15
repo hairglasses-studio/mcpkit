@@ -22,5 +22,5 @@ func ExampleModule_Tools() {
 	tools := m.Tools()
 	fmt.Println(len(tools))
 	// Output:
-	// 5
+	// 7
 }
