@@ -204,6 +204,15 @@ func (r *MultiCycleRunner) runOneCycle(ctx context.Context, cycleNum int, specFi
 	// Build per-cycle finops stack.
 	tracker, _, _ := rdcycle.BuildFinOpsStack(r.cfg.Profile)
 
+	// Build adaptive task synthesizer.
+	notesPath := "rdcycle/notes/improvement_log.json"
+	learning := rdcycle.NewLearningEngine(notesPath)
+	sources := []rdcycle.TaskSource{
+		rdcycle.NewRoadmapSource(r.cfg.RoadmapPath),
+		rdcycle.NewImprovementSource(notesPath),
+	}
+	synthesizer := rdcycle.NewSynthesizer(sources, learning)
+
 	// Build tool registry with all modules.
 	reg := registry.NewToolRegistry()
 
@@ -224,11 +233,25 @@ func (r *MultiCycleRunner) runOneCycle(ctx context.Context, cycleNum int, specFi
 		RoadmapPath: r.cfg.RoadmapPath,
 		GitRoot:     ".",
 		ScanRepos:   r.cfg.ScanRepos,
+		Synthesizer: synthesizer,
 	})
 	reg.RegisterModule(rdcycleMod)
 
 	// Configure ralph loop.
 	progressFile := fmt.Sprintf(".rdloop_cycle_%d.progress.json", cycleNum)
+
+	// Configure ralph-level loop hardening.
+	circuitBreaker := ralph.NewCircuitBreaker(ralph.CircuitBreakerConfig{
+		NoProgressThreshold: 5,
+		SameErrorThreshold:  5,
+		CooldownDuration:    10 * time.Minute,
+	})
+	costGovernor := ralph.NewCostGovernor(ralph.CostGovernorConfig{
+		HardBudgetTokens:  int64(r.cfg.Profile.TokenBudget),
+		VelocityWindow:    5,
+		VelocityAlarmRate: float64(r.cfg.Profile.MaxTokensPerReq) * 3,
+		UnproductiveMax:   5,
+	})
 
 	loopCfg := ralph.Config{
 		SpecFile:      specFile,
@@ -240,6 +263,9 @@ func (r *MultiCycleRunner) runOneCycle(ctx context.Context, cycleNum int, specFi
 		CostTracker:   tracker,
 		ForceRestart:  true,
 		TemplateVars:  templateVars,
+		CircuitBreaker: circuitBreaker,
+		CostGovernor:   costGovernor,
+		ExitGate:       ralph.ExitGate{RequireAllTasksDone: true},
 		ModelSelector: rdcycle.CombineSelectors(
 			r.cfg.ModelTier.Selector(),
 			rdcycle.NewCostAdapter(int64(r.cfg.Profile.MaxIterations)*int64(r.cfg.Profile.MaxTokensPerReq), r.cfg.Profile.MaxIterations),

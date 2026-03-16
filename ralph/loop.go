@@ -77,6 +77,12 @@ func (l *Loop) Run(ctx context.Context) error {
 		default:
 		}
 
+		// Circuit breaker: block if the circuit is open.
+		if l.config.CircuitBreaker != nil && !l.config.CircuitBreaker.CanExecute() {
+			l.setStatus(StatusStopped)
+			return fmt.Errorf("ralph: circuit breaker open: %s", l.config.CircuitBreaker.OpenReason())
+		}
+
 		l.mu.Lock()
 		iteration := l.progress.Iteration + 1
 		if iteration > l.config.MaxIterations {
@@ -226,6 +232,29 @@ func (l *Loop) Run(ctx context.Context) error {
 
 		// Complete?
 		if decision.Complete {
+			// ExitGate: require all task IDs done before accepting completion.
+			if l.config.ExitGate.RequireAllTasksDone {
+				l.mu.Lock()
+				doneSet := make(map[string]bool)
+				for _, id := range l.progress.CompletedIDs {
+					doneSet[id] = true
+				}
+				allDone := true
+				var missing []string
+				for _, t := range spec.Tasks {
+					if !doneSet[t.ID] {
+						allDone = false
+						missing = append(missing, t.ID)
+					}
+				}
+				l.mu.Unlock()
+				if !allDone {
+					l.recordIteration(iteration, "", nil,
+						fmt.Sprintf("completion rejected: ExitGate requires all tasks done; missing: %s",
+							strings.Join(missing, ", ")))
+					continue
+				}
+			}
 			l.recordIteration(iteration, "", nil, "loop completed")
 			l.setStatus(StatusCompleted)
 			return nil
@@ -372,8 +401,37 @@ func (l *Loop) Run(ctx context.Context) error {
 		}
 		l.mu.Unlock()
 
-		// Budget guard: stop if token budget exceeded.
-		if l.config.BudgetLimit > 0 && l.config.CostTracker != nil {
+		// Circuit breaker: record this iteration's result.
+		if l.config.CircuitBreaker != nil {
+			hasProgress := decision.MarkDone && decision.TaskID != ""
+			errorKey := ""
+			if isErrorResult(combinedResult) {
+				errorKey = normalizeError(combinedResult)
+			}
+			l.config.CircuitBreaker.RecordResult(hasProgress, errorKey)
+		}
+
+		// Budget guard: use CostGovernor when configured, else fall back to legacy BudgetLimit.
+		if l.config.CostGovernor != nil {
+			// Estimate tokens for this iteration: prompt + response.
+			estimate := l.config.EstimateFunc
+			if estimate == nil {
+				estimate = func(text string) int { return len(text) / 4 }
+			}
+			tokens := int64(estimate(prompt) + estimate(responseText))
+			hasProgress := decision.MarkDone && decision.TaskID != ""
+			l.config.CostGovernor.RecordIteration(tokens, hasProgress)
+			verdict := l.config.CostGovernor.Check()
+			switch verdict.Action {
+			case "halt":
+				l.setStatus(StatusFailed)
+				return fmt.Errorf("ralph: cost governor halt: %s", verdict.Warning)
+			case "downgrade":
+				l.mu.Lock()
+				l.costDowngrade = true
+				l.mu.Unlock()
+			}
+		} else if l.config.BudgetLimit > 0 && l.config.CostTracker != nil {
 			if l.config.CostTracker.Total() > l.config.BudgetLimit {
 				l.setStatus(StatusFailed)
 				return fmt.Errorf("ralph: token budget exceeded (limit=%d, used=%d)",
@@ -382,6 +440,7 @@ func (l *Loop) Run(ctx context.Context) error {
 		}
 	}
 }
+
 
 func makeCallToolRequest(name string, args map[string]interface{}) registry.CallToolRequest {
 	return mcp.CallToolRequest{

@@ -145,6 +145,14 @@ func (h *Hooks) callCostUpdate(iteration int, summary finops.UsageSummary) {
 	}
 }
 
+// ExitGate controls what conditions must be met before the loop accepts a
+// completion decision from the LLM.
+type ExitGate struct {
+	// RequireAllTasksDone, when true, prevents the loop from accepting
+	// Complete=true unless every task ID in the spec is present in CompletedIDs.
+	RequireAllTasksDone bool
+}
+
 // Config configures a Loop execution.
 type Config struct {
 	MaxIterations int
@@ -193,6 +201,14 @@ type Config struct {
 	// StuckThreshold is the number of repeated patterns before the stuck detector
 	// triggers corrective hints. Default 3.
 	StuckThreshold int
+	// CircuitBreaker monitors iteration health and opens the circuit when the
+	// loop makes no progress or repeats the same errors. Optional.
+	CircuitBreaker *CircuitBreaker
+	// CostGovernor enforces a 3-layer token cost defense (hard budget, unproductive
+	// streak, velocity alarm). Optional; replaces the legacy BudgetLimit check when set.
+	CostGovernor *CostGovernor
+	// ExitGate controls extra conditions for accepting a completion decision.
+	ExitGate ExitGate
 }
 
 // Loop is the autonomous iteration runner.
@@ -206,6 +222,17 @@ type Loop struct {
 	specModified     bool               // true when TaskDecomposer has modified the spec
 	checkpointFile   string             // resolved checkpoint file path
 	stuckHint        string             // corrective hint injected by stuck detector
+	costDowngrade    bool               // set when CostGovernor requests a downgrade
+}
+
+// CostDowngradeRequested reports whether the CostGovernor has issued a downgrade
+// verdict since the last call to this method. The flag is reset on each call.
+func (l *Loop) CostDowngradeRequested() bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	v := l.costDowngrade
+	l.costDowngrade = false
+	return v
 }
 
 // DefaultProgressFile returns the default progress file path for a spec file.

@@ -43,9 +43,49 @@ func (m *Module) scheduleTool() registry.ToolDefinition {
 	return td
 }
 
-func (m *Module) handleSchedule(_ context.Context, input ScheduleInput) (ScheduleOutput, error) {
+func (m *Module) handleSchedule(ctx context.Context, input ScheduleInput) (ScheduleOutput, error) {
 	if input.CycleName == "" {
 		return ScheduleOutput{}, fmt.Errorf("cycle_name is required")
+	}
+
+	// Adaptive synthesis: when a Synthesizer is configured, use it instead of the
+	// hardcoded template. The Synthesizer fetches tasks from roadmap + improvement
+	// sources, filters by avoid patterns and strategy, and builds an optimal DAG.
+	if m.config.Synthesizer != nil {
+		roadmapPath := input.RoadmapPath
+		if roadmapPath == "" {
+			roadmapPath = m.config.RoadmapPath
+			if roadmapPath == "" {
+				roadmapPath = "roadmap.json"
+			}
+		}
+
+		// Determine strategy from improvement history.
+		notesPath := filepath.Join("rdcycle", "notes", "improvement_log.json")
+		notes, _ := LoadNotes(notesPath)
+		strategy := SelectStrategy(notes, 0, 1.0) // TODO: wire consecutiveSuccess and budgetPct
+
+		spec, err := m.config.Synthesizer.Synthesize(ctx, SynthesisConfig{
+			CycleName:   input.CycleName,
+			RoadmapPath: roadmapPath,
+			Strategy:    strategy,
+		})
+		if err == nil {
+			outputPath := resolveOutputPath(input)
+			dir := filepath.Dir(outputPath)
+			os.MkdirAll(dir, 0755)
+			data, merr := json.MarshalIndent(spec, "", "  ")
+			if merr == nil {
+				if werr := os.WriteFile(outputPath, data, 0644); werr == nil {
+					return ScheduleOutput{
+						SpecPath:  strings.ReplaceAll(outputPath, "\\", "/"),
+						Written:   true,
+						SinceDate: time.Now().UTC().Format(time.RFC3339),
+					}, nil
+				}
+			}
+		}
+		// Fall through to legacy template on synthesis error.
 	}
 
 	// When a plan artifact is referenced, synthesize a dynamic spec.
