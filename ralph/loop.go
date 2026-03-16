@@ -76,26 +76,52 @@ func (l *Loop) Run(ctx context.Context) error {
 
 		l.config.Hooks.callIterationStart(iteration)
 
-		// Re-read spec each iteration (clean context principle).
-		if len(l.config.TemplateVars) > 0 {
-			spec, err = RenderSpec(l.config.SpecFile, l.config.TemplateVars)
-		} else {
-			spec, err = LoadSpec(l.config.SpecFile)
-		}
-		if err != nil {
-			l.setStatus(StatusFailed)
-			return err
+		// Re-read spec each iteration (clean context principle),
+		// unless the TaskDecomposer has modified it in-memory.
+		if !l.specModified {
+			if len(l.config.TemplateVars) > 0 {
+				spec, err = RenderSpec(l.config.SpecFile, l.config.TemplateVars)
+			} else {
+				spec, err = LoadSpec(l.config.SpecFile)
+			}
+			if err != nil {
+				l.setStatus(StatusFailed)
+				return err
+			}
 		}
 
 		// Build prompt and call LLM.
 		tools := l.config.ToolRegistry.GetAllToolDefinitions()
 		prompt := buildIterationPrompt(spec, progressCopy, tools)
 
-		messages := []sampling.SamplingMessage{
-			sampling.TextMessage("user", prompt),
+		// Determine max tokens: phase override > config default.
+		maxTokens := l.config.MaxTokens
+		if l.config.PhaseMaxTokens != nil {
+			// Find the first ready task to use as phase key.
+			completed := make(map[string]bool)
+			for _, id := range progressCopy.CompletedIDs {
+				completed[id] = true
+			}
+			for _, id := range ReadyTasks(spec.Tasks, completed) {
+				if override, ok := l.config.PhaseMaxTokens[id]; ok {
+					maxTokens = override
+					break
+				}
+			}
 		}
+
+		// Build messages: multi-turn history or single-turn.
+		var messages []sampling.SamplingMessage
+		if l.config.HistoryWindow > 0 && len(l.history) > 0 {
+			messages = BuildMessages(l.history, l.config.HistoryWindow, prompt)
+		} else {
+			messages = []sampling.SamplingMessage{
+				sampling.TextMessage("user", prompt),
+			}
+		}
+
 		opts := []sampling.RequestOption{
-			sampling.WithMaxTokens(l.config.MaxTokens),
+			sampling.WithMaxTokens(maxTokens),
 			sampling.WithSystemPrompt(systemPrompt),
 		}
 		if l.config.ModelSelector != nil {
@@ -208,6 +234,36 @@ func (l *Loop) Run(ctx context.Context) error {
 
 		combinedResult := strings.Join(resultParts, "\n")
 
+		// Auto-verify: run go build after write_file calls.
+		if l.config.AutoVerify && l.config.ProjectRoot != "" {
+			for _, call := range calls {
+				if call.Name != "write_file" {
+					continue
+				}
+				path, _ := call.Arguments["path"].(string)
+				pkg := detectPackage(path)
+				if pkg == "" {
+					continue
+				}
+				buildOutput := runGoBuild(ctx, l.config.ProjectRoot, pkg)
+				if buildOutput != "" {
+					resultParts = append(resultParts, "AUTO-VERIFY FAIL: "+buildOutput)
+				} else {
+					resultParts = append(resultParts, "AUTO-VERIFY OK: "+pkg+" compiles")
+				}
+			}
+			combinedResult = strings.Join(resultParts, "\n")
+		}
+
+		// Record conversation turn for multi-turn history.
+		if l.config.HistoryWindow > 0 {
+			l.history = append(l.history, ConversationTurn{
+				UserPrompt:    prompt,
+				AssistantText: responseText,
+				ToolResults:   resultParts,
+			})
+		}
+
 		// Mark task done if requested, but only when the task is ready (not blocked).
 		if decision.MarkDone && decision.TaskID != "" {
 			l.mu.Lock()
@@ -229,6 +285,17 @@ func (l *Loop) Run(ctx context.Context) error {
 				l.progress.CompletedIDs = appendUnique(l.progress.CompletedIDs, decision.TaskID)
 				l.mu.Unlock()
 				l.config.Hooks.callTaskComplete(decision.TaskID)
+
+				// Task decomposition: inject sub-tasks after completion.
+				if l.config.TaskDecomposer != nil {
+					l.mu.Lock()
+					subTasks := l.config.TaskDecomposer(decision.TaskID, l.progress, &spec)
+					l.mu.Unlock()
+					if len(subTasks) > 0 {
+						spec.Tasks = injectSubTasks(spec.Tasks, decision.TaskID, subTasks)
+						l.specModified = true
+					}
+				}
 			} else {
 				l.mu.Unlock()
 			}
@@ -322,4 +389,19 @@ func (l *Loop) recordCost(iteration int, prompt, response string, calls []ToolCa
 	}
 
 	l.config.Hooks.callCostUpdate(iteration, l.config.CostTracker.Summary())
+}
+
+// injectSubTasks replaces the completed task entry with sub-tasks that depend on
+// the same dependencies as the original, preserving DAG ordering.
+func injectSubTasks(tasks []Task, completedID string, subTasks []Task) []Task {
+	var result []Task
+	for _, t := range tasks {
+		if t.ID == completedID {
+			// Replace with sub-tasks at the same position.
+			result = append(result, subTasks...)
+		} else {
+			result = append(result, t)
+		}
+	}
+	return result
 }
