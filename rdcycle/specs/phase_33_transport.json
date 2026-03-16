@@ -1,0 +1,42 @@
+{
+  "name": "Phase 33: WebSocket Transport Prep",
+  "description": "Create transport/ package with abstraction layer for stdio, HTTP, and WebSocket transports. Provides adapter pattern so mcpkit is transport-agnostic.",
+  "completion": "transport/ package exists with stdio and HTTP adapters working, WebSocket stub compiles, middleware chain functional.",
+  "tasks": [
+    {
+      "id": "interfaces",
+      "description": "Define Transport interface in transport/transport.go: Start, Stop, Send, Receive, Protocol (returns transport type string). Define TransportMiddleware signature matching registry middleware pattern.",
+      "done": false
+    },
+    {
+      "id": "stdio",
+      "description": "Implement StdioTransport in transport/stdio.go wrapping existing mcp-go stdio transport. Adapter converts between Transport interface and mcp-go server.StdioTransport.",
+      "done": false,
+      "depends_on": ["interfaces"]
+    },
+    {
+      "id": "http",
+      "description": "Implement HTTPTransport in transport/http.go wrapping mcp-go streamable HTTP. Adapter for StreamableHTTP transport with session management hooks.",
+      "done": false,
+      "depends_on": ["interfaces"]
+    },
+    {
+      "id": "ws_stub",
+      "description": "Create WebSocketTransport stub in transport/ws.go. Implements Transport interface but returns ErrNotImplemented for all methods. Placeholder for June 2026 spec.",
+      "done": false,
+      "depends_on": ["interfaces"]
+    },
+    {
+      "id": "middleware",
+      "description": "Implement transport middleware chain in transport/middleware.go. Support logging, metrics, and panic recovery at the transport level.",
+      "done": false,
+      "depends_on": ["interfaces"]
+    },
+    {
+      "id": "tests",
+      "description": "Write transport/transport_test.go (interface compliance), transport/stdio_test.go, transport/http_test.go, transport/middleware_test.go. Target 90%+ coverage.",
+      "done": false,
+      "depends_on": ["stdio", "http", "ws_stub", "middleware"]
+    }
+  ]
+}

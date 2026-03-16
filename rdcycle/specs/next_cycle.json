@@ -1,0 +1,53 @@
+{
+  "completion": "All planned work items are implemented, tests pass, and roadmap is updated.",
+  "description": "Autonomous R\u0026D cycle scanning MCP ecosystem changes since 2026-03-16T01:58:40Z, planning roadmap updates, implementing changes, and verifying quality.",
+  "name": "R\u0026D Cycle: auto-3",
+  "tasks": [
+    {
+      "description": "Run rdcycle_scan to check ecosystem activity since 2026-03-16T01:58:40Z.",
+      "id": "scan"
+    },
+    {
+      "depends_on": [
+        "scan"
+      ],
+      "description": "Run rdcycle_plan with scan results and roadmap at roadmap.json.",
+      "id": "plan"
+    },
+    {
+      "depends_on": [
+        "plan"
+      ],
+      "description": "For each ready work item from the plan, implement the changes.",
+      "id": "implement"
+    },
+    {
+      "depends_on": [
+        "implement"
+      ],
+      "description": "Run rdcycle_verify to execute make check. Fix issues and re-verify if needed.",
+      "id": "verify"
+    },
+    {
+      "depends_on": [
+        "verify"
+      ],
+      "description": "Record improvement notes for this cycle using rdcycle_notes: what worked, what failed, wasted iterations, cost, and suggestions for next cycle.",
+      "id": "reflect"
+    },
+    {
+      "depends_on": [
+        "reflect"
+      ],
+      "description": "Run rdcycle_report to generate research reports. Run rdcycle_commit to save changes.",
+      "id": "report"
+    },
+    {
+      "depends_on": [
+        "report"
+      ],
+      "description": "Run rdcycle_schedule to write the next cycle's spec.",
+      "id": "schedule"
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "name": "Phase 32: Stateless HTTP",
+  "description": "Add external session store interface with Redis adapter pattern, session token extraction, stateless gateway routing, and serialization formats for horizontal scaling.",
+  "completion": "External session store interface exists, token extraction works, gateway routes statelessly, serialization round-trips correctly.",
+  "tasks": [
+    {
+      "id": "ext_store",
+      "description": "Define ExternalSessionStore interface in session/store_external.go extending SessionStore with Connect, Close, Ping methods. Implement RedisSessionStore stub (interface only, no Redis dependency) with configuration struct.",
+      "done": false
+    },
+    {
+      "id": "token",
+      "description": "Implement session token extraction middleware in session/token.go. Support Bearer token, cookie, and custom header extraction strategies. Configurable via TokenExtractor interface.",
+      "done": false,
+      "depends_on": ["ext_store"]
+    },
+    {
+      "id": "routing",
+      "description": "Add stateless request routing to gateway/. Use session token to determine upstream affinity without local session state. Support consistent hashing for session distribution.",
+      "done": false,
+      "depends_on": ["token"]
+    },
+    {
+      "id": "serialize",
+      "description": "Implement session serialization in session/serialize.go. Support JSON and gob encoding. Benchmark both formats for size and speed.",
+      "done": false,
+      "depends_on": ["ext_store"]
+    },
+    {
+      "id": "health",
+      "description": "Add session store health check to health/ package. ExternalSessionStore.Ping integration with health checker registry.",
+      "done": false,
+      "depends_on": ["ext_store"]
+    },
+    {
+      "id": "tests",
+      "description": "Write tests for all new code: token extraction strategies, stateless routing, serialization round-trips, health checks. Target 90%+ coverage on new code.",
+      "done": false,
+      "depends_on": ["routing", "serialize", "health"]
+    }
+  ]
+}
