@@ -16,6 +16,9 @@ type CycleConfig struct {
 	GitRoot     string   // Root of the git repository
 	ScanRepos   []string // GitHub repos to monitor (owner/repo)
 	DateRange   string   // ISO 8601 since date for scans
+	// Synthesizer optionally enables adaptive task synthesis for rdcycle_schedule.
+	// When set, schedule uses Synthesizer.Synthesize() instead of the hardcoded template.
+	Synthesizer *Synthesizer
 }
 
 // Artifact represents a piece of work output (code diff, test result, build output).
