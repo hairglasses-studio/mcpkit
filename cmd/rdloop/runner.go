@@ -158,6 +158,10 @@ func (r *MultiCycleRunner) Run(ctx context.Context) error {
 		log.Printf("rdloop: === Cycle %d done (%s, %d iters, $%.4f) ===",
 			cycleNum, summary.Status, summary.Iters, summary.Cost)
 
+		if summary.Downgraded {
+			log.Printf("rdloop: WARNING: cycle %d triggered cost-velocity downgrade — next cycle will use lighter model hints", cycleNum)
+		}
+
 		// Back off on consecutive failures to avoid tight error loops.
 		if summary.Status == "failed" {
 			consecutiveFails++
@@ -316,6 +320,11 @@ func (r *MultiCycleRunner) runOneCycle(ctx context.Context, cycleNum int, specFi
 	}
 
 	err = loop.Run(ctx)
+
+	// Check whether the CostGovernor issued a downgrade signal during this cycle.
+	if loop.CostDowngradeRequested() {
+		summary.Downgraded = true
+	}
 
 	// Read final progress for iteration count.
 	progress := loop.Status()

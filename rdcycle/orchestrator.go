@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/hairglasses-studio/mcpkit/ralph"
 )
 
 // CycleResult holds the outcome of a single orchestrated cycle.
@@ -35,14 +37,15 @@ type OrchestratorConfig struct {
 
 // Orchestrator runs the perpetual R&D cycle loop.
 type Orchestrator struct {
-	mu       sync.Mutex
-	mod      *Module
-	cfg      OrchestratorConfig
-	synth    *TaskSynthesizer
-	running  bool
-	stopCh   chan struct{}
-	cycleNum int
-	results  []CycleResult
+	mu           sync.Mutex
+	mod          *Module
+	cfg          OrchestratorConfig
+	synth        *TaskSynthesizer
+	adaptiveSynth *Synthesizer
+	running      bool
+	stopCh       chan struct{}
+	cycleNum     int
+	results      []CycleResult
 }
 
 // NewOrchestrator creates a new orchestrator bound to the given module.
@@ -54,11 +57,25 @@ func NewOrchestrator(mod *Module, cfg OrchestratorConfig) *Orchestrator {
 	if specDir == "" {
 		specDir = "rdcycle/specs"
 	}
-	return &Orchestrator{
+	o := &Orchestrator{
 		mod:   mod,
 		cfg:   cfg,
 		synth: &TaskSynthesizer{SpecDir: specDir},
 	}
+
+	// Build adaptive synthesizer if sources are available.
+	if cfg.ArtifactStore != nil {
+		notesPath := "rdcycle/notes/improvement_log.json"
+		learning := NewLearningEngine(notesPath)
+		var sources []TaskSource
+		if mod.config.RoadmapPath != "" {
+			sources = append(sources, NewRoadmapSource(mod.config.RoadmapPath))
+		}
+		sources = append(sources, NewImprovementSource(notesPath))
+		o.adaptiveSynth = NewSynthesizer(sources, learning)
+	}
+
+	return o
 }
 
 // Run executes the perpetual cycle loop until context is cancelled, the breaker
@@ -160,21 +177,46 @@ func (o *Orchestrator) RunOneCycle(ctx context.Context) (CycleResult, error) {
 	}
 	result.PlanOutput = planOut
 
-	// 5. Synthesize spec.
-	lessons := o.gatherLessons()
+	// 5. Synthesize spec — prefer adaptive synthesizer, fall back to legacy.
+	var spec ralph.Spec
+	var specPath string
 	cycleName := fmt.Sprintf("cycle-%d", cycleNum)
-	spec, err := o.synth.SynthesizeSpec(planOut, cycleName, lessons)
-	if err != nil {
-		result.FinishedAt = time.Now()
-		o.recordBreakerResult(false, true)
-		return result, fmt.Errorf("synthesize: %w", err)
+
+	if o.adaptiveSynth != nil {
+		notes, _ := LoadNotes("rdcycle/notes/improvement_log.json")
+		strategy := SelectStrategy(notes, 0, 1.0)
+		synthSpec, synthErr := o.adaptiveSynth.Synthesize(ctx, SynthesisConfig{
+			CycleName:   cycleName,
+			RoadmapPath: o.mod.config.RoadmapPath,
+			Strategy:    strategy,
+		})
+		if synthErr == nil {
+			spec = synthSpec
+			var writeErr error
+			specPath, writeErr = o.synth.WriteSpec(spec, cycleName)
+			if writeErr != nil {
+				// fall through to legacy path
+				spec = ralph.Spec{}
+			}
+		}
 	}
 
-	specPath, err := o.synth.WriteSpec(spec, cycleName)
-	if err != nil {
-		result.FinishedAt = time.Now()
-		o.recordBreakerResult(false, true)
-		return result, fmt.Errorf("write spec: %w", err)
+	if spec.Name == "" {
+		// Legacy path.
+		lessons := o.gatherLessons()
+		var err error
+		spec, err = o.synth.SynthesizeSpec(planOut, cycleName, lessons)
+		if err != nil {
+			result.FinishedAt = time.Now()
+			o.recordBreakerResult(false, true)
+			return result, fmt.Errorf("synthesize: %w", err)
+		}
+		specPath, err = o.synth.WriteSpec(spec, cycleName)
+		if err != nil {
+			result.FinishedAt = time.Now()
+			o.recordBreakerResult(false, true)
+			return result, fmt.Errorf("write spec: %w", err)
+		}
 	}
 	result.SpecPath = specPath
 
