@@ -43,11 +43,27 @@ func (l *Loop) Run(ctx context.Context) error {
 		return nil
 	}
 	l.progress.SpecFile = l.config.SpecFile
+	l.progress.ProjectRoot = l.config.ProjectRoot
 	l.progress.Status = StatusRunning
 	if l.progress.StartedAt.IsZero() {
 		l.progress.StartedAt = time.Now()
 	}
 	l.mu.Unlock()
+
+	// Load checkpoint for conversation history resumption.
+	if l.config.HistoryWindow > 0 {
+		cpFile := l.config.CheckpointFile
+		if cpFile == "" {
+			cpFile = DefaultCheckpointFile(l.config.SpecFile)
+		}
+		if !l.config.ForceRestart {
+			if loaded, cpErr := LoadCheckpoint(cpFile); cpErr == nil && len(loaded) > 0 {
+				l.history = loaded
+			}
+		}
+		// Store resolved checkpoint file for saving later.
+		l.checkpointFile = cpFile
+	}
 
 	for {
 		// Check stop conditions.
@@ -92,7 +108,10 @@ func (l *Loop) Run(ctx context.Context) error {
 
 		// Build prompt and call LLM.
 		tools := l.config.ToolRegistry.GetAllToolDefinitions()
-		prompt := buildIterationPrompt(spec, progressCopy, tools)
+		l.mu.Lock()
+		currentStuckHint := l.stuckHint
+		l.mu.Unlock()
+		prompt := buildIterationPrompt(spec, progressCopy, tools, currentStuckHint)
 
 		// Determine max tokens: phase override > config default.
 		maxTokens := l.config.MaxTokens
@@ -265,23 +284,21 @@ func (l *Loop) Run(ctx context.Context) error {
 
 		combinedResult := strings.Join(resultParts, "\n")
 
-		// Auto-verify: run go build after write_file calls.
-		if l.config.AutoVerify && l.config.ProjectRoot != "" {
+		// Auto-verify: run checks after write_file calls based on configured level.
+		if l.config.AutoVerifyLevel != "" && l.config.ProjectRoot != "" {
+			seenPkgs := make(map[string]bool)
 			for _, call := range calls {
 				if call.Name != "write_file" {
 					continue
 				}
 				path, _ := call.Arguments["path"].(string)
 				pkg := detectPackage(path)
-				if pkg == "" {
+				if pkg == "" || seenPkgs[pkg] {
 					continue
 				}
-				buildOutput := runGoBuild(ctx, l.config.ProjectRoot, pkg)
-				if buildOutput != "" {
-					resultParts = append(resultParts, "AUTO-VERIFY FAIL: "+buildOutput)
-				} else {
-					resultParts = append(resultParts, "AUTO-VERIFY OK: "+pkg+" compiles")
-				}
+				seenPkgs[pkg] = true
+				verifyResults := runAutoVerify(ctx, l.config.ProjectRoot, pkg, l.config.AutoVerifyLevel)
+				resultParts = append(resultParts, verifyResults...)
 			}
 			combinedResult = strings.Join(resultParts, "\n")
 		}
@@ -293,6 +310,12 @@ func (l *Loop) Run(ctx context.Context) error {
 				AssistantText: responseText,
 				ToolResults:   resultParts,
 			})
+			// Prune to bound file size: keep 2x window.
+			l.history = pruneHistory(l.history, l.config.HistoryWindow*2)
+			// Persist checkpoint.
+			if l.checkpointFile != "" {
+				SaveCheckpoint(l.checkpointFile, l.history)
+			}
 		}
 
 		// Mark task done if requested, but only when the task is ready (not blocked).
@@ -334,6 +357,20 @@ func (l *Loop) Run(ctx context.Context) error {
 
 		l.recordIteration(iteration, decision.TaskID, toolNames, combinedResult)
 		l.recordCost(iteration, prompt, responseText, calls, toolResults)
+
+		// Stuck-loop detection: inject corrective hint if patterns detected.
+		stuckThreshold := l.config.StuckThreshold
+		if stuckThreshold <= 0 {
+			stuckThreshold = 3
+		}
+		detector := NewStuckDetector(stuckThreshold)
+		l.mu.Lock()
+		if sig := detector.Check(l.progress.Log); sig != nil {
+			l.stuckHint = sig.Suggestion
+		} else {
+			l.stuckHint = ""
+		}
+		l.mu.Unlock()
 
 		// Budget guard: stop if token budget exceeded.
 		if l.config.BudgetLimit > 0 && l.config.CostTracker != nil {

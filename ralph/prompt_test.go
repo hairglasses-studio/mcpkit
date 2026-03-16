@@ -524,6 +524,60 @@ func TestBuildIterationPrompt_NoLastErrorOnSuccess(t *testing.T) {
 	}
 }
 
+func TestBuildIterationPrompt_ProjectContext(t *testing.T) {
+	t.Parallel()
+	spec := minimalSpec()
+	progress := Progress{
+		SpecFile:    "/home/user/project/spec.json",
+		ProjectRoot: "/home/user/project",
+	}
+	prompt := buildIterationPrompt(spec, progress, nil)
+
+	if !strings.Contains(prompt, "## Project Context") {
+		t.Errorf("prompt missing Project Context section; got:\n%s", prompt)
+	}
+	if !strings.Contains(prompt, "/home/user/project") {
+		t.Errorf("prompt missing project root path; got:\n%s", prompt)
+	}
+}
+
+func TestBuildIterationPrompt_NoProjectContext(t *testing.T) {
+	t.Parallel()
+	spec := minimalSpec()
+	progress := Progress{}
+	prompt := buildIterationPrompt(spec, progress, nil)
+
+	if strings.Contains(prompt, "## Project Context") {
+		t.Errorf("prompt should not have Project Context when ProjectRoot is empty; got:\n%s", prompt)
+	}
+}
+
+func TestBuildIterationPrompt_StuckHint(t *testing.T) {
+	t.Parallel()
+	spec := minimalSpec()
+	progress := Progress{}
+	prompt := buildIterationPrompt(spec, progress, nil, "Try a different approach")
+
+	if !strings.Contains(prompt, "## !! Stuck Loop Detected !!") {
+		t.Errorf("prompt missing Stuck Loop section; got:\n%s", prompt)
+	}
+	if !strings.Contains(prompt, "Try a different approach") {
+		t.Errorf("prompt missing stuck hint text; got:\n%s", prompt)
+	}
+}
+
+func TestBuildIterationPrompt_NoStuckHint(t *testing.T) {
+	t.Parallel()
+	spec := minimalSpec()
+	progress := Progress{}
+	// No stuck hint — should not have the section.
+	prompt := buildIterationPrompt(spec, progress, nil)
+
+	if strings.Contains(prompt, "Stuck Loop Detected") {
+		t.Errorf("prompt should not have Stuck Loop section without hint; got:\n%s", prompt)
+	}
+}
+
 func TestIsErrorResult(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

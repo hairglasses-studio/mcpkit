@@ -46,6 +46,7 @@ type Task struct {
 // Progress tracks the execution state of a loop run.
 type Progress struct {
 	SpecFile     string         `json:"spec_file"     yaml:"spec_file"`
+	ProjectRoot  string         `json:"project_root,omitempty" yaml:"project_root,omitempty"`
 	Iteration    int            `json:"iteration"     yaml:"iteration"`
 	CompletedIDs []string       `json:"completed_ids" yaml:"completed_ids"`
 	Log          []IterationLog `json:"log"           yaml:"log"`
@@ -170,18 +171,28 @@ type Config struct {
 	// sees previous turns instead of the "Recent Activity" summary.
 	// Default 0 means legacy single-turn mode.
 	HistoryWindow int
+	// CheckpointFile is the path for persisting conversation history across crashes.
+	// Defaults to "<specfile>.checkpoint.json" when HistoryWindow > 0.
+	// Set to empty string to disable checkpointing.
+	CheckpointFile string
 	// PhaseMaxTokens maps task IDs to max token overrides for the sampling request.
 	// If a task ID is found here, its value is used instead of Config.MaxTokens.
 	PhaseMaxTokens map[string]int
-	// AutoVerify when true runs `go build` after write_file calls and includes
-	// the result in the conversation history so the LLM sees compilation errors.
-	AutoVerify bool
+	// AutoVerifyLevel controls verification after write_file calls.
+	// "build" runs go build only (default when non-empty).
+	// "vet" runs go build + go vet.
+	// "full" runs go build + go vet + go test -short.
+	// Empty string disables auto-verify.
+	AutoVerifyLevel AutoVerifyLevel
 	// ProjectRoot is the working directory for auto-verify commands.
-	// Required when AutoVerify is true.
+	// Required when AutoVerifyLevel is non-empty.
 	ProjectRoot string
 	// TaskDecomposer is called after a task is marked done, allowing injection
 	// of sub-tasks into the spec. Return nil to make no changes.
 	TaskDecomposer func(taskID string, progress Progress, spec *Spec) []Task
+	// StuckThreshold is the number of repeated patterns before the stuck detector
+	// triggers corrective hints. Default 3.
+	StuckThreshold int
 }
 
 // Loop is the autonomous iteration runner.
@@ -191,8 +202,10 @@ type Loop struct {
 	progress Progress
 	stopCh   chan struct{}
 	stopped  bool
-	history      []ConversationTurn // multi-turn conversation history
-	specModified bool               // true when TaskDecomposer has modified the spec
+	history          []ConversationTurn // multi-turn conversation history
+	specModified     bool               // true when TaskDecomposer has modified the spec
+	checkpointFile   string             // resolved checkpoint file path
+	stuckHint        string             // corrective hint injected by stuck detector
 }
 
 // DefaultProgressFile returns the default progress file path for a spec file.
