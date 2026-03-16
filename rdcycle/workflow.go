@@ -55,12 +55,20 @@ func NewRDCycleGraph(cfg CycleConfig) (*workflow.Graph, error) {
 		return nil, err
 	}
 
-	// Node: implement — placeholder that marks implementation as done
-	// In real usage, this would be replaced with fork nodes for parallel package work
-	if err := g.AddNode("implement", func(ctx context.Context, s workflow.State) (workflow.State, error) {
+	// Node: implement — compensable node that rolls back on failure.
+	// Uses AddCompensableNode so that if verify fails, the compensation function
+	// can clean up (e.g., git checkout) orphaned code.
+	implementForward := func(ctx context.Context, s workflow.State) (workflow.State, error) {
 		s.Data["implement_complete"] = true
 		return s, nil
-	}); err != nil {
+	}
+	implementCompensate := func(ctx context.Context, s workflow.State) error {
+		// In real usage, this would run `git checkout -- .` to revert changes.
+		// For now, mark that compensation was triggered.
+		s.Data["implement_compensated"] = true
+		return nil
+	}
+	if err := g.AddCompensableNode("implement", implementForward, implementCompensate); err != nil {
 		return nil, err
 	}
 
