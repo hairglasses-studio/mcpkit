@@ -286,14 +286,14 @@ func TestBuildIterationPrompt_LogTruncation(t *testing.T) {
 	progress := Progress{Log: logs}
 	prompt := buildIterationPrompt(spec, progress, nil)
 
-	// Iterations 1-3 should NOT appear; 4-13 should appear.
-	for _, hidden := range []int{1, 2, 3} {
+	// Only last 5 should appear (9-13); iterations 1-8 should be hidden.
+	for _, hidden := range []int{1, 2, 3, 4, 5, 6, 7, 8} {
 		needle := "Iteration " + itoa(hidden) + ":"
 		if strings.Contains(prompt, needle) {
-			t.Errorf("prompt should not contain hidden iteration %d (showing last 10 only); got:\n%s", hidden, prompt)
+			t.Errorf("prompt should not contain hidden iteration %d (showing last 5 only); got:\n%s", hidden, prompt)
 		}
 	}
-	for _, shown := range []int{4, 5, 6, 7, 8, 9, 10, 11, 12, 13} {
+	for _, shown := range []int{9, 10, 11, 12, 13} {
 		needle := "Iteration " + itoa(shown) + ":"
 		if !strings.Contains(prompt, needle) {
 			t.Errorf("prompt should contain iteration %d; got:\n%s", shown, prompt)
