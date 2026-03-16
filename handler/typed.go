@@ -49,7 +49,11 @@ func TypedHandler[In any, Out any](name, description string, fn TypedHandlerFunc
 				return ErrorResult(fmt.Errorf("failed to marshal arguments: %w", err)), nil
 			}
 			if err := json.Unmarshal(argBytes, &input); err != nil {
-				return CodedErrorResult(ErrInvalidParam, fmt.Errorf("failed to parse arguments: %w", err)), nil
+				hint := ""
+				if hb, e := json.Marshal(inputSchema); e == nil {
+					hint = "\nExpected schema: " + string(hb)
+				}
+				return CodedErrorResult(ErrInvalidParam, fmt.Errorf("failed to parse arguments: %w%s", err, hint)), nil
 			}
 		}
 
