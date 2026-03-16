@@ -5,179 +5,422 @@ Last updated: 2026-03-15.
 ## Status Summary
 
 - **Spec coverage**: 100% (all MCP 2025-11-25 features implemented)
-- **Tier 1**: Complete
-- **Tier 2**: Complete
-- **Tier 3**: Complete
-- **Tier 4**: Complete (A2A deferred — spec not stable)
+- **Tiers 1–4**: Complete (A2A deferred — spec not stable)
 - **Test coverage**: All 35 non-example packages at 90%+ (min 90.0%, max 100.0%)
-- **Documentation**: All 33 packages have doc.go, 28+ example_test.go files
+- **Documentation**: All 33 packages have `doc.go`, 28+ `example_test.go` files
 
 See [RESEARCH.md](RESEARCH.md) for detailed analysis and evidence.
 
 ---
 
-## Tier 3 (Complete)
+## Ecosystem Resources
 
-All Tier 3 items delivered: discovery, DPoP, gateway, ralph enhancements, workload identity.
-
----
-
-## Tier 4: Ecosystem Leadership
-
-| # | Item | Description | Effort | New Package |
-|---|------|-------------|--------|-------------|
-| T4-1 | **A2A Protocol Bridge** | Google A2A v0.3 compliance — Agent Cards, task lifecycle, push notifications, gRPC transport | High (3wk) | `a2a/` |
-| T4-2 | **Multi-Agent Orchestrator** | Go-native patterns: fan-out/fan-in, pipeline, swarm mesh, hierarchical delegation | High (3wk) | `orchestrator/` |
-| T4-3 | **Agent Memory Registry** | Episodic/semantic/procedural memory tiers, pluggable storage backends, thread-safe registry | Medium (2wk) | `memory/` |
-| T4-4 | **Workflow Engine** | Cyclical graph execution, state machines, conditional branching, YAML definitions | High (3wk) | `workflow/` |
-| T4-5 | **Extensions Framework** | MCP Extensions negotiation, capability handshake, version-gated features | Medium (2wk) | `extensions/` |
-| T4-6 | **Agent Handoff Protocol** | Manager/agent-as-tool + peer handoff patterns (OpenAI Agents SDK style) | Medium (2wk) | `handoff/` |
-| T4-7 | **Skills & Context-Aware Loading** | Skill bundles, context-aware lazy loading, ~95% context reduction | Medium (10d) | `skills/` |
-| T4-8 | **FinOps / Cost Tracking** | Token accounting per tool/sampling/agent/workflow, budget policies, Prometheus export | Low (1wk) | `finops/` |
-| T4-9 | **Agent Bootstrap Framework** | Workspace init, context reports, capability matrix, multi-session state | Medium (10d) | `bootstrap/` |
+| Resource | URL |
+|----------|-----|
+| MCP Spec (current) | https://modelcontextprotocol.io/specification/2025-11-25 |
+| MCP Roadmap | https://modelcontextprotocol.io/development/roadmap |
+| mcp-go | https://github.com/mark3labs/mcp-go |
+| Official go-sdk | https://github.com/modelcontextprotocol/go-sdk |
+| FastMCP | https://github.com/jlowin/fastmcp |
+| TypeScript SDK | https://github.com/modelcontextprotocol/typescript-sdk |
+| A2A Protocol | https://github.com/google/A2A |
+| Anthropic Blog | https://www.anthropic.com/news |
 
 ---
 
-## Implementation Phases
+## Completed Phases (1–30)
 
-### Phase 5: Ralph Evolution + Foundations (Weeks 1-3)
+### Phases 1–4: Foundation (COMPLETE)
 
-- All ralph enhancements (multi-tool, cost, hooks, validation, DAG, resume, templates)
-- `extensions/` package (foundation for protocol evolution)
-- `memory/` package (foundation for agent state)
-- `finops/` package (cross-cutting cost middleware)
+Registry, handler, resilience, auth, resources, prompts, security, observability, health, sanitize, secrets, client, discovery. Full MCP 2025-11-25 spec coverage including DPoP, JWKS, PKCE, RBAC, audit logging, and gateway aggregation.
 
-**Parallelization**: 3 agents — ralph-agent, memory-agent, extensions-finops-agent.
+### Phases 5–7: Ralph + Multi-Agent + Workflow (COMPLETE)
 
-### Phase 6: Multi-Agent + A2A (Weeks 4-7) — COMPLETE
+Ralph autonomous loop runner with DAG enforcement, multi-tool selection, cost tracking, YAML specs. `extensions/`, `memory/`, `finops/`, `orchestrator/`, `handoff/`, `skills/`, `workflow/`, `bootstrap/` packages. Workload identity (GCP/AWS).
 
-- `a2a/` package (A2A v0.3 compliance) — **deferred** (spec not stable, no internal consumer)
-- ~~`orchestrator/` package~~ (fan-out, pipeline, select) — **DONE**
-- ~~`handoff/` package~~ (manager + peer patterns, AgentAsTool) — **DONE**
-- ~~`skills/` package~~ (context-aware lazy loading, triggers, middleware) — **DONE**
+### Phases 8–10: Security + Testing + Production (COMPLETE)
 
-### Phase 7: Workflow Engine + Bootstrap + Polish (Weeks 8-10) — COMPLETE
+Output sanitization, URI validation, tool integrity verification, tenant context propagation. Session replay, snapshot testing, benchmark helpers, FinOps v2 (cost estimation, scoped budgets, time-windowed tracking). Per-upstream gateway resilience, orchestrator/handoff/workflow middleware.
 
-- ~~`workflow/` package~~ (cyclical graph engine, checkpoints, adapters) — **DONE**
-- ~~`extensions/` package~~ (capability negotiation, offer/accept/reject) — **DONE**
-- ~~`bootstrap/` package~~ (context reports, capability matrix, formatting) — **DONE**
-- ~~`auth/workload.go`~~ (workload identity — GCP metadata + AWS IMDSv2) — **DONE**
+### Phases 11–16: DX + Observability + Eval (COMPLETE)
 
-### Phase 8: Security Hardening — COMPLETE
+README overhaul, 28 runnable Godoc examples, full OTel tracing across gateway/orchestrator/workflow/handoff/ralph, server lifecycle manager, health readiness. Server cards (`.well-known/mcp.json`), Ed25519 tool signing, eval framework (6 scorers, JSON suite loading, ResultScorer), SIEM/audit export (JSONL + stream), security middleware tests.
 
-- ~~Output sanitization middleware~~ (`sanitize/output.go`, `sanitize/patterns.go`) — secret/PII/injection redaction — **DONE**
-- ~~URI validation~~ (`sanitize/uri.go`, `resources/uri_middleware.go`) — path traversal + SSRF protection — **DONE**
-- ~~Tool integrity verification~~ (`registry/integrity.go`) — SHA-256 fingerprinting, tamper detection — **DONE**
-- ~~Tenant context propagation~~ (`security/tenant.go`) — multi-tenant identity middleware — **DONE**
+### Phases 17–24: Coverage + R&D Tools + Workflow Engine (COMPLETE)
 
-### Phase 9: Testing Infrastructure + FinOps v2 — COMPLETE
+Dispatcher/sampling unit tests, core registry/workflow/auth test coverage, discovery/handler/memory/finops/resilience test coverage. `roadmap/` machine-readable types, `research/` GitHub activity + diff analysis, `rdcycle/` R&D orchestration tools. Workflow fork nodes (parallel branches), compensation/saga rollback, dynamic gateway upstream registry. Autonomous loop guardrails, budget profiles, model tier config, improvement notes, YAML spec support.
 
-- ~~Session replay~~ (`mcptest/replay.go`) — record/save/load/replay MCP sessions — **DONE**
-- ~~Snapshot testing~~ (`mcptest/snapshot.go`) — golden file assertions with UPDATE_SNAPSHOTS — **DONE**
-- ~~Benchmark helpers~~ (`mcptest/benchmark.go`) — BenchmarkTool, BenchmarkToolParallel, BenchmarkSuite — **DONE**
-- ~~Dollar-cost estimation~~ (`finops/cost.go`) — ModelPricing, CostPolicy, dollar budgets — **DONE**
-- ~~Scoped budgets~~ (`finops/scope.go`) — per-tenant/user/session budget tracking — **DONE**
-- ~~Time-windowed tracking~~ (`finops/window.go`) — lazy rotation, hourly/daily/weekly/monthly windows — **DONE**
-- ~~Metadata enhancement~~ (`discovery/metadata.go`) — MetadataFromConfig with resources + prompts extraction — **DONE**
-- ~~Publish convenience~~ (`discovery/publisher.go`) — Publish/Unpublish one-call wrappers — **DONE**
+### Phases 25–30: Coverage Hardening + Documentation (COMPLETE)
 
-### Phase 10: Production Hardening — COMPLETE
-
-- ~~Gateway resilience~~ (`gateway/resilience.go`) — per-upstream circuit breaker, rate limiter, call timeout via UpstreamPolicy — **DONE**
-- ~~Orchestrator middleware~~ (`orchestrator/middleware.go`) — StageMiddleware, WrapStage, WrapStages — **DONE**
-- ~~Handoff middleware~~ (`handoff/middleware.go`) — DelegateMiddleware, WrapDelegate, Config.WithMiddleware — **DONE**
-- ~~Workflow middleware~~ (`workflow/middleware.go`) — NodeMiddleware, WrapNodeFunc, EngineConfig.NodeMiddleware — **DONE**
-
-### Phase 11: DX Sprint — COMPLETE
-
-- ~~README overhaul~~ — complete rewrite reflecting 30+ packages, 100% spec coverage — **DONE**
-- ~~Godoc examples~~ — 14 `example_test.go` files with 28 runnable `Example*` functions — **DONE**
-- ~~Package doc comments~~ — added to orchestrator, workflow, dispatcher, extensions, health, mcptest, ralph, roots, sampling, skills, gateway — **DONE**
-
-### Phase 12: Observability Integration + Lifecycle — COMPLETE
-
-- ~~Gateway tracing~~ (`gateway/observability.go`) — TracingMiddleware with upstream/tool attributes — **DONE**
-- ~~Orchestrator tracing~~ (`orchestrator/observability.go`) — TracingMiddleware for stage spans — **DONE**
-- ~~Workflow tracing~~ (`workflow/observability.go`) — TracingMiddleware for node spans — **DONE**
-- ~~Server lifecycle~~ (`lifecycle/lifecycle.go`) — signal handling, graceful drain, LIFO shutdown hooks — **DONE**
-- ~~Health readiness~~ (`health/health.go`) — SetStatus/IsReady, 503 on draining — **DONE**
-
-### Phase 13: Integration Completeness — COMPLETE
-
-- ~~FinOps→Observability bridge~~ (`finops/context.go`, `observability/middleware.go`) — mutable TokenUsageHolder pattern so inner finops middleware propagates token counts back to outer observability spans — **DONE**
-- ~~Handoff tracing~~ (`handoff/observability.go`) — TracingMiddleware(tracer) DelegateMiddleware with agent/status/duration attributes — **DONE**
-- ~~Ralph tracing~~ (`ralph/observability.go`) — TracingHooks(tracer) with per-iteration spans, task ID, error recording — **DONE**
-- ~~Full example rewrite~~ (`examples/full/main.go`) — demonstrates lifecycle, observability, finops, sanitize, logging, health with correct middleware ordering — **DONE**
-
-### Phase 14: Server Cards, Tool Signing, Eval Framework — COMPLETE
-
-- ~~Server cards~~ (`discovery/wellknown.go`) — `ServerCardHandler` and `StaticServerCardHandler` for `.well-known/mcp.json` — **DONE**
-- ~~Tool versioning~~ (`registry/registry.go`, `discovery/discovery.go`) — `Version` field on ToolDefinition and ToolSummary — **DONE**
-- ~~Tool signing~~ (`registry/signing.go`, `registry/signing_middleware.go`) — Ed25519 `SignTool`/`VerifyToolSignature`, `SignatureStore`, `SignatureVerificationMiddleware` — **DONE**
-- ~~Eval framework~~ (`eval/`) — `Case`, `Suite`, `Summary`, `Scorer` interface, 6 built-in scorers, `Run`/`RunT` runner — **DONE**
-
-### Phase 15: Audit Export, Eval Hardening, Godoc Examples — COMPLETE
-
-- ~~Audit export~~ (`security/export.go`) — `AuditExporter` interface, `JSONLExporter` (JSONL to io.Writer), `StreamExporter` (filtered export), integrated into `AuditLogger.Log()` — **DONE** (T5-4)
-- ~~Eval hardening~~ (`eval/loader.go`, `eval/scorers.go`, `eval/runner.go`) — `LoadSuiteJSON`, `NotEmpty` scorer, `ResultScorer` interface, `Latency` scorer — **DONE**
-- ~~Godoc examples~~ — `eval/example_test.go`, `registry/signing_example_test.go`, `discovery/wellknown_example_test.go` — **DONE**
-
-### Phase 16: Security Middleware Tests, Eval Completeness, Godoc Examples Batch 2 — COMPLETE
-
-- ~~Security middleware tests~~ (`security/middleware_test.go`) — 8 tests covering AuditMiddleware and RBACMiddleware (allow, deny, nil logger, combined stack) — **DONE**
-- ~~Security examples~~ (`security/example_test.go`) — ExampleNewRBAC, ExampleAuditMiddleware, ExampleNewAuditLogger_withExporter — **DONE**
-- ~~ErrorRate scorer~~ (`eval/scorers.go`) — ResultScorer that passes (1.0) on non-error, fails (0.0) on error — **DONE**
-- ~~Runner ResultScorer test~~ (`eval/runner_test.go`) — end-to-end test exercising both Scorer and ResultScorer in a suite — **DONE**
-- ~~Godoc examples batch 2~~ — `auth/`, `observability/`, `sanitize/`, `health/`, `lifecycle/`, `logging/` example_test.go files — **DONE**
-
-### Phase 17: Godoc Examples Batch 3 + Dispatcher/Sampling Test Coverage — COMPLETE
-
-- ~~Godoc examples batch 3~~ — `dispatcher/`, `ralph/`, `roots/`, `sampling/`, `secrets/`, `bootstrap/`, `client/`, `extensions/`, `research/` example_test.go files — **DONE**
-- ~~Dispatcher unit tests~~ — `groups_test.go`, `job_test.go`, `middleware_test.go`, `queue_test.go` for internal coverage — **DONE**
-- ~~Sampling unit tests~~ — `middleware_test.go`, `helpers_test.go` for internal coverage — **DONE**
-
-### Phase 18: Core Package Test Coverage — COMPLETE
-
-- ~~Registry tests~~ — `search_test.go` (14), `dynamic_test.go` (21), `deferred_test.go` (14), `annotations_test.go` (12) — **DONE**
-- ~~Workflow tests~~ — `engine_test.go` (17), `checkpoint_test.go`, `hooks_test.go` — **DONE**
-- ~~Auth tests~~ — `pkce_test.go`, `context_test.go`, `metadata_test.go`, `config_test.go` — **DONE**
-- ~~Discovery examples~~ — `example_test.go` (5 Example functions) — **DONE**
-- ~~mcptest tests~~ — `assert_test.go`, `recorder_test.go` — **DONE**
-
-### Phase 19: Remaining Test Coverage — COMPLETE
-
-- ~~Discovery tests~~ — `client_test.go` (13), `publisher_test.go` (12) — httptest mocks, caching, error mapping — **DONE**
-- ~~Handler tests~~ — `result_test.go` (22), `structured_test.go` (18) — all result builders — **DONE**
-- ~~Memory tests~~ — `store_mem_test.go` (19) — full InMemoryStore lifecycle, concurrent safety — **DONE**
-- ~~FinOps tests~~ — `tracker_test.go` (9), `estimate_test.go` (12) — tracker lifecycle, estimation — **DONE**
-- ~~Resilience tests~~ — `middleware_test.go` (9) — rate limit + circuit breaker middleware — **DONE**
-
-### Decision Points
-
-- **After Phase 5**: Evaluate A2A spec stability — if v1.0 ships, fast-track `a2a/`; otherwise prototype only
-- **After Phase 6**: Assess orchestrator patterns against real-world usage from hg-mcp/jobb migrations
-- **After Phase 7**: Re-evaluate WebMCP bridge and Chrome integration based on adoption signals
+All 35 non-example packages raised to 90%+ coverage. All 33 packages documented with `doc.go`. Phase 30 pushed 11 packages past the 90% threshold (auth, eval, ralph, research, gateway, mcptest, secrets/providers, handler, rdcycle, observability, roadmap).
 
 ---
 
-## Tier 5: Bleeding Edge
+## Planned Phases (31–42)
 
-| # | Item | Description | Priority |
-|---|------|-------------|----------|
-| T5-1 | **June 2026 Spec Prep** | Stateless HTTP, session management, server cards, tool versioning | High |
-| T5-2 | ~~**Agent Evaluation**~~ | Go-native eval framework (benchmark tool accuracy, latency, cost) | ~~High~~ **DONE** |
-| T5-3 | ~~**Tool Signing**~~ | Ed25519 signatures on ToolDefinition, registry-level verification | ~~Medium~~ **DONE** |
-| T5-4 | ~~**SIEM/Audit Export**~~ | Pluggable AuditExporter interface, JSONL + stream exporters | ~~Medium~~ **DONE** |
-| T5-5 | ~~**Server Cards**~~ | `.well-known/mcp.json` generation from registry metadata | ~~Medium~~ **DONE** |
-| T5-6 | **WebMCP Bridge** | Browser transport adapter (when spec stabilizes) | Low |
-| T5-7 | **A2A Bridge** | Google A2A v1.0 (when spec ships) | Low |
-| T5-8 | **Temporal Integration** | Durable execution adapter for workflow engine | Low |
+<roadmap-tier id="T5" name="Spec Forward-Compatibility">
+
+<roadmap-phase id="P31" status="planned" name="Session Management Foundation">
+
+<roadmap-item id="P31-1" package="session" status="planned">
+Session and SessionStore interfaces — define core session lifecycle types used across all session middleware.
+</roadmap-item>
+
+<roadmap-item id="P31-2" package="session" status="planned">
+In-memory session store — thread-safe default SessionStore implementation with map-backed storage.
+</roadmap-item>
+
+<roadmap-item id="P31-3" package="session" status="planned">
+Session middleware — attach/read session from MCP request context, create on first contact.
+</roadmap-item>
+
+<roadmap-item id="P31-4" package="session" status="planned">
+Session migration helpers — utilities to migrate session identity across transport reconnects.
+</roadmap-item>
+
+<roadmap-item id="P31-5" package="session" status="planned">
+Session TTL and eviction — configurable expiry with background eviction goroutine.
+</roadmap-item>
+
+<roadmap-item id="P31-6" package="gateway" status="planned">
+Gateway session affinity — route requests with a session token to the same upstream backend.
+</roadmap-item>
+
+<roadmap-item id="P31-7" package="mcptest" status="planned">
+Session integration tests — mcptest helpers for asserting session lifecycle across tool calls.
+</roadmap-item>
+
+</roadmap-phase>
+
+<roadmap-phase id="P32" status="planned" name="Stateless HTTP">
+
+<roadmap-item id="P32-1" package="session" status="planned">
+External session store / Redis adapter — pluggable SessionStore backed by Redis for stateless deployments.
+</roadmap-item>
+
+<roadmap-item id="P32-2" package="session" status="planned">
+Session token extraction middleware — extract session tokens from headers, cookies, or query params.
+</roadmap-item>
+
+<roadmap-item id="P32-3" package="gateway" status="planned">
+Stateless gateway routing — gateway mode that reads session affinity from token without local state.
+</roadmap-item>
+
+<roadmap-item id="P32-4" package="session" status="planned">
+Session serialization (JSON + gob) — encode/decode session values for external store round-trips.
+</roadmap-item>
+
+<roadmap-item id="P32-5" package="session" status="planned">
+Load balancer compat tests — verify session consistency under simulated round-robin routing.
+</roadmap-item>
+
+<roadmap-item id="P32-6" package="health" status="planned">
+Session store health checks — health.Checker integration for external session store liveness.
+</roadmap-item>
+
+</roadmap-phase>
+
+<roadmap-phase id="P33" status="planned" name="WebSocket Transport Prep">
+
+<roadmap-item id="P33-1" package="transport" status="planned">
+Transport abstraction interfaces — Transport, Conn, and Message interfaces decoupling protocol from tool dispatch.
+</roadmap-item>
+
+<roadmap-item id="P33-2" package="transport" status="planned">
+Stdio transport adapter — wrap existing stdio server path behind the Transport interface.
+</roadmap-item>
+
+<roadmap-item id="P33-3" package="transport" status="planned">
+HTTP transport adapter — wrap StreamableHTTP server path behind the Transport interface.
+</roadmap-item>
+
+<roadmap-item id="P33-4" package="transport" status="planned">
+WebSocket transport stub — placeholder WebSocket Transport implementation gated on spec stabilization.
+</roadmap-item>
+
+<roadmap-item id="P33-5" package="transport" status="planned">
+Transport middleware chain — apply registry middleware at the transport boundary before dispatch.
+</roadmap-item>
+
+<roadmap-item id="P33-6" package="transport" status="planned">
+Transport integration tests — end-to-end tests exercising tool calls through each transport adapter.
+</roadmap-item>
+
+</roadmap-phase>
+
+</roadmap-tier>
+
+<roadmap-tier id="T6" name="SDK Migration">
+
+<roadmap-phase id="P34" status="planned" name="Dual-SDK Test Hardening">
+
+<roadmap-item id="P34-1" package="registry" status="planned">
+Audit compat.go aliases — verify all public adapter functions (MakeTextContent, MakeErrorResult, ExtractArguments) compile under both build tags.
+</roadmap-item>
+
+<roadmap-item id="P34-2" package="registry" status="planned">
+_official_test.go files — parallel test files under the official_sdk build tag covering compat.go paths.
+</roadmap-item>
+
+<roadmap-item id="P34-3" status="planned">
+Dual-SDK CI matrix — GitHub Actions matrix builds with and without the official_sdk tag on every PR.
+</roadmap-item>
+
+<roadmap-item id="P34-4" status="planned">
+Migration guide document — step-by-step guide for projects moving from mcp-go to go-sdk with mcpkit.
+</roadmap-item>
+
+<roadmap-item id="P34-5" status="planned">
+Bump mcp-go to latest — update to latest mcp-go minor; validate no compat regressions.
+</roadmap-item>
+
+<roadmap-item id="P34-6" package="registry" status="planned">
+go-sdk v2.0 compat assessment — evaluate breaking changes once v2.0 is announced; plan compat.go updates.
+</roadmap-item>
+
+</roadmap-phase>
+
+</roadmap-tier>
+
+<roadmap-tier id="T7" name="Research Enhancement">
+
+<roadmap-phase id="P35" status="planned" name="Cloud Platform Monitoring">
+
+<roadmap-item id="P35-1" package="research" status="planned">
+PlatformMonitor interface — common interface for cloud-platform MCP activity monitors.
+</roadmap-item>
+
+<roadmap-item id="P35-2" package="research" status="planned">
+Cloudflare Workers monitor — poll Cloudflare blog and Workers changelog for MCP-adjacent announcements.
+</roadmap-item>
+
+<roadmap-item id="P35-3" package="research" status="planned">
+Vercel adapter monitor — track Vercel AI SDK changelog for MCP transport and adapter updates.
+</roadmap-item>
+
+<roadmap-item id="P35-4" package="research" status="planned">
+Azure MCP Center monitor — track Azure AI Foundry MCP Center releases and breaking changes.
+</roadmap-item>
+
+<roadmap-item id="P35-5" package="research" status="planned">
+Platform activity aggregation — aggregate PlatformMonitor results into a unified SummaryOutput for rdcycle scan.
+</roadmap-item>
+
+<roadmap-item id="P35-6" package="research" status="planned">
+Cloud platform tests — httptest mocks and unit tests for each platform monitor.
+</roadmap-item>
+
+</roadmap-phase>
+
+<roadmap-phase id="P36" status="planned" name="A2A Tracking + Competitive Analysis">
+
+<roadmap-item id="P36-1" package="research" status="planned">
+A2AMonitor — poll Google A2A repository for spec version bumps, new agent card examples, and breaking changes.
+</roadmap-item>
+
+<roadmap-item id="P36-2" package="research" status="planned">
+SDKCompare analysis — diff feature matrices across mcp-go, go-sdk, FastMCP, and TypeScript SDK.
+</roadmap-item>
+
+<roadmap-item id="P36-3" package="research" status="planned">
+Template reports — pre-built report templates for competitive analysis and gap summaries.
+</roadmap-item>
+
+<roadmap-item id="P36-4" package="research" status="planned">
+Competitive dashboard data — export structured JSON suitable for a monitoring dashboard.
+</roadmap-item>
+
+<roadmap-item id="P36-5" package="rdcycle" status="planned">
+rdcycle scan integration — wire A2AMonitor and SDKCompare into the rdcycle_scan tool output.
+</roadmap-item>
+
+</roadmap-phase>
+
+</roadmap-tier>
+
+<roadmap-tier id="T8" name="Production DX">
+
+<roadmap-phase id="P37" status="planned" name="Server Registry Publishing">
+
+<roadmap-item id="P37-1" package="discovery" status="planned">
+PublishWorkflow + validation — multi-step publish: validate server card, check schema compliance, then publish.
+</roadmap-item>
+
+<roadmap-item id="P37-2" package="discovery" status="planned">
+Schema compliance checker — validate a ServerCard struct against the MCP registry JSON schema before publishing.
+</roadmap-item>
+
+<roadmap-item id="P37-3" package="cmd" status="planned">
+CLI publishing helper — thin CLI wrapper around PublishWorkflow for use in CI pipelines.
+</roadmap-item>
+
+<roadmap-item id="P37-4" package="discovery" status="planned">
+Registry auth flow — OAuth2 client credentials flow for authenticating with the MCP registry API.
+</roadmap-item>
+
+<roadmap-item id="P37-5" package="discovery" status="planned">
+Publish integration tests — httptest mock of the MCP registry API; exercise full publish + unpublish lifecycle.
+</roadmap-item>
+
+</roadmap-phase>
+
+<roadmap-phase id="P38" status="planned" name="Performance Benchmarking">
+
+<roadmap-item id="P38-1" package="mcptest" status="planned">
+Baseline benchmark suite — BenchmarkTool baselines for registry, handler, and no-op middleware overhead.
+</roadmap-item>
+
+<roadmap-item id="P38-2" package="mcptest" status="planned">
+Middleware overhead measurement — per-middleware latency measurement using BenchmarkSuite with named layers.
+</roadmap-item>
+
+<roadmap-item id="P38-3" package="mcptest" status="planned">
+Memory profiling helpers — allocs-per-op assertions in benchmark helpers to catch allocation regressions.
+</roadmap-item>
+
+<roadmap-item id="P38-4" status="planned">
+CI regression thresholds — fail CI if any benchmark regresses beyond a configured latency or alloc budget.
+</roadmap-item>
+
+<roadmap-item id="P38-5" package="mcptest" status="planned">
+Benchmark comparison tool — compare two BenchmarkSuite runs and report per-tool delta percentages.
+</roadmap-item>
+
+</roadmap-phase>
+
+</roadmap-tier>
+
+<roadmap-tier id="T9" name="Agent Protocol Evolution">
+
+<roadmap-phase id="P39" status="planned" name="A2A Protocol Bridge">
+
+<roadmap-item id="P39-1" package="a2a" status="planned">
+A2A types — AgentCard, Task, TaskStatus, Artifact, and Message structs aligned to A2A spec v0.9+.
+</roadmap-item>
+
+<roadmap-item id="P39-2" package="a2a" status="planned">
+AgentCard generation — derive AgentCard from registry.Registry metadata and server card fields.
+</roadmap-item>
+
+<roadmap-item id="P39-3" package="a2a" status="planned">
+Task lifecycle — submit, update, cancel, and poll task state with A2A-compliant status transitions.
+</roadmap-item>
+
+<roadmap-item id="P39-4" package="a2a" status="planned">
+MCP-to-A2A bridge — translate MCP tool calls into A2A Task submissions and relay results back.
+</roadmap-item>
+
+<roadmap-item id="P39-5" package="a2a" status="planned">
+A2A-to-MCP bridge — expose an A2A agent endpoint that dispatches to mcpkit tool handlers.
+</roadmap-item>
+
+<roadmap-item id="P39-6" package="a2a" status="planned">
+Push notifications — Server-Sent Events stream for A2A task status updates.
+</roadmap-item>
+
+</roadmap-phase>
+
+<roadmap-phase id="P40" status="planned" name="Enhanced Orchestration">
+
+<roadmap-item id="P40-1" package="orchestrator" status="planned">
+Swarm mesh — peer-to-peer agent communication pattern with broadcast and unicast routing.
+</roadmap-item>
+
+<roadmap-item id="P40-2" package="orchestrator" status="planned">
+Hierarchical delegation — nested manager/worker trees with result aggregation at each level.
+</roadmap-item>
+
+<roadmap-item id="P40-3" package="orchestrator" status="planned">
+Dynamic pattern selector — choose fan-out, pipeline, or select pattern based on runtime task metadata.
+</roadmap-item>
+
+<roadmap-item id="P40-4" package="orchestrator" status="planned">
+Performance benchmarks — BenchmarkSuite covering fan-out at 1/10/100 agents with latency assertions.
+</roadmap-item>
+
+<roadmap-item id="P40-5" package="workflow" status="planned">
+Multi-agent workflow templates — pre-built workflow graphs for common multi-agent topologies.
+</roadmap-item>
+
+</roadmap-phase>
+
+</roadmap-tier>
+
+<roadmap-tier id="T10" name="Community">
+
+<roadmap-phase id="P41" status="planned" name="Example Gallery + Migration Guides">
+
+<roadmap-item id="P41-1" status="planned">
+Example gallery index — `examples/README.md` linking every `examples/*/main.go` with a one-line summary.
+</roadmap-item>
+
+<roadmap-item id="P41-2" status="planned">
+FastMCP migration guide — side-by-side FastMCP Python → mcpkit Go translation for the most common patterns.
+</roadmap-item>
+
+<roadmap-item id="P41-3" status="planned">
+Docker-compose example — `examples/docker/` with compose file, health checks, and lifecycle integration.
+</roadmap-item>
+
+<roadmap-item id="P41-4" status="planned">
+CONTRIBUTING.md — contributor guide: branch naming, test requirements, middleware conventions, review checklist.
+</roadmap-item>
+
+<roadmap-item id="P41-5" status="planned">
+Tutorial content outline — structured outline for a multi-part "Build your first MCP server" tutorial series.
+</roadmap-item>
+
+</roadmap-phase>
+
+<roadmap-phase id="P42" status="planned" name="User Feedback + Telemetry">
+
+<roadmap-item id="P42-1" package="feedback" status="planned">
+Feedback tool — MCP tool that collects structured user feedback and writes to a configured sink.
+</roadmap-item>
+
+<roadmap-item id="P42-2" package="feedback" status="planned">
+Anonymous telemetry — opt-in usage telemetry (package usage counts, error rates) with explicit consent gate.
+</roadmap-item>
+
+<roadmap-item id="P42-3" package="rdcycle" status="planned">
+rdcycle integration — wire feedback summaries into rdcycle_scan output as a signal source.
+</roadmap-item>
+
+<roadmap-item id="P42-4" package="feedback" status="planned">
+Telemetry dashboard export — export aggregated telemetry as JSON suitable for a Grafana data source.
+</roadmap-item>
+
+</roadmap-phase>
+
+</roadmap-tier>
 
 ---
 
-## Updated Dependency Layers (post-Phase 14)
+## Decision Gates
+
+| Gate | Condition |
+|------|-----------|
+| Before P33 | Evaluate the June 2026 spec draft for WebSocket transport details before implementing the WebSocket stub beyond a placeholder. |
+| Before P39 | A2A spec must reach v0.9+ under Linux Foundation governance before any A2A bridge work begins. |
+| Before P34-6 | Wait for an official go-sdk v2.0 announcement before scoping compat.go updates. |
+| P38 benchmark threshold | Define middleware overhead threshold: no single middleware layer may add more than 5% p99 latency. |
+
+---
+
+## Ralph Loop Execution Strategy
+
+- **Parallel streams**: P31 (session), P32 (stateless HTTP), and P33 (transport) can run concurrently — the packages are independent.
+- **P34** (dual-SDK hardening) is independent of P31–P33 and can run in a separate stream.
+- **Budget profiles**: Use `PersonalProfile` for P35–P36 (research-heavy, lower token budget); use `WorkAPIProfile` for P31–P34 (implementation-heavy, higher throughput budget).
+- **Self-improvement**: `rdcycle_improve` runs every 10 cycles and may inject lessons into the next `rdcycle_schedule` spec.
+
+---
+
+## Dependency Layers (including planned packages)
 
 - **Layer 1** (no internal deps): `registry`, `health`, `sanitize`, `secrets`, `client`
-- **Layer 2** (depend on Layer 1): `resources`, `prompts`, `handler`, `resilience`, `mcptest`, `auth`, `observability`, `logging`, `sampling`, `roots`, `research`, `discovery`, `dispatcher`, `extensions`, `memory`, `finops`, `lifecycle`, `eval`
-- **Layer 3** (depend on Layer 2): `security`, `gateway`, `ralph`, `skills`, `a2a`
+- **Layer 2** (depend on Layer 1): `resources`, `prompts`, `handler`, `resilience`, `mcptest`, `auth`, `observability`, `logging`, `sampling`, `roots`, `research`, `discovery`, `dispatcher`, `extensions`, `memory`, `finops`, `lifecycle`, `eval`, `roadmap`, `session`, `transport`, `feedback`
+- **Layer 3** (depend on Layer 2): `security`, `gateway`, `ralph`, `skills`, `a2a`, `rdcycle`
 - **Layer 4** (depend on Layer 3): `orchestrator`, `handoff`, `workflow`, `bootstrap`
+
+_Note: `session` and `transport` depend only on Layer 1 packages. `feedback` has no internal deps beyond `registry`._
