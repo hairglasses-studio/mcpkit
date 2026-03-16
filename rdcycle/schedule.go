@@ -15,9 +15,10 @@ import (
 
 // ScheduleInput is the input for the rdcycle_schedule tool.
 type ScheduleInput struct {
-	CycleName   string `json:"cycle_name" jsonschema:"required,description=Name for the next cycle"`
-	OutputPath  string `json:"output_path,omitempty" jsonschema:"description=Path for the output spec file (default: rdcycle/specs/next_cycle.json)"`
-	RoadmapPath string `json:"roadmap_path,omitempty" jsonschema:"description=Roadmap path for template (default: config path)"`
+	CycleName      string `json:"cycle_name" jsonschema:"required,description=Name for the next cycle"`
+	OutputPath     string `json:"output_path,omitempty" jsonschema:"description=Path for the output spec file (default: rdcycle/specs/next_cycle.json)"`
+	RoadmapPath    string `json:"roadmap_path,omitempty" jsonschema:"description=Roadmap path for template (default: config path)"`
+	PlanArtifactID string `json:"plan_artifact_id,omitempty" jsonschema:"description=Artifact ID from rdcycle_plan to synthesize spec from (uses static template if absent)"`
 }
 
 // ScheduleOutput is the output of the rdcycle_schedule tool.
@@ -45,6 +46,42 @@ func (m *Module) scheduleTool() registry.ToolDefinition {
 func (m *Module) handleSchedule(_ context.Context, input ScheduleInput) (ScheduleOutput, error) {
 	if input.CycleName == "" {
 		return ScheduleOutput{}, fmt.Errorf("cycle_name is required")
+	}
+
+	// When a plan artifact is referenced, synthesize a dynamic spec.
+	if input.PlanArtifactID != "" {
+		if art, ok := m.store.Get(input.PlanArtifactID); ok {
+			plan, err := planOutputFromArtifact(art)
+			if err == nil {
+				notesPath := filepath.Join("rdcycle", "notes", "improvement_log.json")
+				notes, _ := LoadNotes(notesPath)
+				var lessons []string
+				lastN := notes
+				if len(lastN) > 3 {
+					lastN = lastN[len(lastN)-3:]
+				}
+				for _, n := range lastN {
+					lessons = append(lessons, n.Suggestions...)
+					for _, f := range n.WhatFailed {
+						lessons = append(lessons, "Avoid: "+f)
+					}
+				}
+
+				ts := &TaskSynthesizer{SpecDir: filepath.Dir(resolveOutputPath(input))}
+				spec, err := ts.SynthesizeSpec(plan, input.CycleName, lessons)
+				if err == nil {
+					path, err := ts.WriteSpec(spec, input.CycleName)
+					if err == nil {
+						return ScheduleOutput{
+							SpecPath:  strings.ReplaceAll(path, "\\", "/"),
+							Written:   true,
+							SinceDate: time.Now().UTC().Format(time.RFC3339),
+						}, nil
+					}
+				}
+			}
+		}
+		// Fall through to static template if artifact not found or synthesis fails.
 	}
 
 	sinceDate := time.Now().UTC().Format(time.RFC3339)
@@ -192,4 +229,31 @@ func (m *Module) handleSchedule(_ context.Context, input ScheduleInput) (Schedul
 		Written:   true,
 		SinceDate: sinceDate,
 	}, nil
+}
+
+// resolveOutputPath resolves the output path from input, applying defaults.
+func resolveOutputPath(input ScheduleInput) string {
+	if input.OutputPath != "" {
+		return input.OutputPath
+	}
+	return filepath.Join("rdcycle", "specs", "next_cycle.json")
+}
+
+// planOutputFromArtifact reconstructs a PlanOutput from a stored artifact's content.
+func planOutputFromArtifact(art Artifact) (PlanOutput, error) {
+	var plan PlanOutput
+
+	if suggestions, ok := art.Content["suggestions"].([]any); ok {
+		for _, s := range suggestions {
+			if str, ok := s.(string); ok {
+				plan.Suggestions = append(plan.Suggestions, str)
+			}
+		}
+	}
+
+	if gapCount, ok := art.Content["gap_count"].(float64); ok {
+		plan.GapCount = int(gapCount)
+	}
+
+	return plan, nil
 }
