@@ -1039,3 +1039,297 @@ func TestLoop_CostTrackingHook(t *testing.T) {
 		t.Errorf("expected increasing totals, got %v", hookTotals)
 	}
 }
+
+func TestLoop_HistoryWindow(t *testing.T) {
+	dir := t.TempDir()
+	spec := Spec{
+		Name: "test", Description: "history test", Completion: "done",
+		Tasks: []Task{{ID: "t1", Description: "do it"}},
+	}
+	specFile := writeSpec(t, dir, spec)
+
+	sampler := &scriptedSampler{
+		responses: []string{
+			`{"complete": false, "task_id": "t1", "tool_name": "echo", "arguments": {"message": "first"}, "reasoning": "step 1"}`,
+			`{"complete": false, "task_id": "t1", "tool_name": "echo", "arguments": {"message": "second"}, "reasoning": "step 2", "mark_done": true}`,
+			`{"complete": true, "reasoning": "all done"}`,
+		},
+	}
+
+	reg := registry.NewToolRegistry()
+	echoTool(reg)
+
+	loop, err := NewLoop(Config{
+		SpecFile:      specFile,
+		ToolRegistry:  reg,
+		Sampler:       sampler,
+		HistoryWindow: 3,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := loop.Run(context.Background()); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	// Verify history was recorded.
+	if len(loop.history) != 2 {
+		t.Errorf("history length = %d, want 2 (one per tool-executing iteration)", len(loop.history))
+	}
+
+	// First turn should contain the first prompt and response.
+	if len(loop.history) >= 1 {
+		turn := loop.history[0]
+		if turn.AssistantText == "" {
+			t.Error("first turn AssistantText is empty")
+		}
+		if len(turn.ToolResults) == 0 {
+			t.Error("first turn has no ToolResults")
+		}
+		if !strings.Contains(turn.ToolResults[0], "echo: first") {
+			t.Errorf("first turn ToolResults[0] = %q, want contains 'echo: first'", turn.ToolResults[0])
+		}
+	}
+
+	status := loop.Status()
+	if status.Status != StatusCompleted {
+		t.Errorf("Status = %q, want %q", status.Status, StatusCompleted)
+	}
+}
+
+func TestLoop_PhaseMaxTokens(t *testing.T) {
+	// This test verifies that PhaseMaxTokens is used by checking that the sampler
+	// receives different max tokens for different phases. We use a custom sampler
+	// that records the request.
+	dir := t.TempDir()
+	spec := Spec{
+		Name: "test", Description: "phase tokens test", Completion: "done",
+		Tasks: []Task{{ID: "scan", Description: "scan phase"}},
+	}
+	specFile := writeSpec(t, dir, spec)
+
+	var capturedMaxTokens []int
+	sampler := &capturingScriptedSampler{
+		responses: []string{
+			`{"complete": false, "task_id": "scan", "tool_name": "echo", "arguments": {"message": "hi"}, "mark_done": true}`,
+			`{"complete": true, "reasoning": "done"}`,
+		},
+		onRequest: func(req sampling.CreateMessageRequest) {
+			capturedMaxTokens = append(capturedMaxTokens, req.MaxTokens)
+		},
+	}
+
+	reg := registry.NewToolRegistry()
+	echoTool(reg)
+
+	loop, err := NewLoop(Config{
+		SpecFile:     specFile,
+		ToolRegistry: reg,
+		Sampler:      sampler,
+		MaxTokens:    4096,
+		PhaseMaxTokens: map[string]int{
+			"scan": 2048,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := loop.Run(context.Background()); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	// First iteration should use scan's override of 2048.
+	if len(capturedMaxTokens) == 0 {
+		t.Fatal("no requests captured")
+	}
+	if capturedMaxTokens[0] != 2048 {
+		t.Errorf("first request MaxTokens = %d, want 2048", capturedMaxTokens[0])
+	}
+}
+
+// capturingScriptedSampler extends scriptedSampler with request capture.
+type capturingScriptedSampler struct {
+	responses []string
+	calls     int
+	onRequest func(sampling.CreateMessageRequest)
+}
+
+func (s *capturingScriptedSampler) CreateMessage(_ context.Context, req sampling.CreateMessageRequest) (*sampling.CreateMessageResult, error) {
+	if s.onRequest != nil {
+		s.onRequest(req)
+	}
+	if s.calls >= len(s.responses) {
+		return nil, fmt.Errorf("no more scripted responses")
+	}
+	text := s.responses[s.calls]
+	s.calls++
+	return &sampling.CreateMessageResult{
+		SamplingMessage: registry.SamplingMessage{
+			Content: registry.MakeTextContent(text),
+			Role:    registry.RoleAssistant,
+		},
+	}, nil
+}
+
+func TestLoop_TaskDecomposer(t *testing.T) {
+	dir := t.TempDir()
+	spec := Spec{
+		Name: "test", Description: "decomposer test", Completion: "done",
+		Tasks: []Task{
+			{ID: "plan", Description: "plan phase"},
+			{ID: "implement", Description: "implement phase", DependsOn: []string{"plan"}},
+		},
+	}
+	specFile := writeSpec(t, dir, spec)
+
+	sampler := &scriptedSampler{
+		responses: []string{
+			// Complete plan
+			`{"complete": false, "task_id": "plan", "tool_name": "echo", "arguments": {"message": "planned"}, "mark_done": true, "reasoning": "plan done"}`,
+			// Work on first sub-task
+			`{"complete": false, "task_id": "impl_a", "tool_name": "echo", "arguments": {"message": "a"}, "mark_done": true, "reasoning": "impl_a done"}`,
+			// Work on second sub-task
+			`{"complete": false, "task_id": "impl_b", "tool_name": "echo", "arguments": {"message": "b"}, "mark_done": true, "reasoning": "impl_b done"}`,
+			`{"complete": true, "reasoning": "all done"}`,
+		},
+	}
+
+	reg := registry.NewToolRegistry()
+	echoTool(reg)
+
+	var decomposerCalled bool
+	loop, err := NewLoop(Config{
+		SpecFile:     specFile,
+		ToolRegistry: reg,
+		Sampler:      sampler,
+		TaskDecomposer: func(taskID string, progress Progress, spec *Spec) []Task {
+			if taskID == "plan" {
+				decomposerCalled = true
+				return []Task{
+					{ID: "impl_a", Description: "implement file A", DependsOn: []string{"plan"}},
+					{ID: "impl_b", Description: "implement file B", DependsOn: []string{"plan"}},
+				}
+			}
+			return nil
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := loop.Run(context.Background()); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	if !decomposerCalled {
+		t.Error("TaskDecomposer was not called")
+	}
+
+	status := loop.Status()
+	if status.Status != StatusCompleted {
+		t.Errorf("Status = %q, want %q", status.Status, StatusCompleted)
+	}
+	// Should have plan, impl_a, impl_b completed.
+	if len(status.CompletedIDs) != 3 {
+		t.Errorf("CompletedIDs = %v, want 3 items", status.CompletedIDs)
+	}
+}
+
+func TestBuildMessages(t *testing.T) {
+	t.Parallel()
+	history := []ConversationTurn{
+		{UserPrompt: "prompt1", AssistantText: "response1", ToolResults: []string{"result1"}},
+		{UserPrompt: "prompt2", AssistantText: "response2", ToolResults: []string{"result2a", "result2b"}},
+		{UserPrompt: "prompt3", AssistantText: "response3", ToolResults: nil},
+	}
+
+	// Window of 2 should include only turns 2 and 3.
+	messages := BuildMessages(history, 2, "current prompt")
+
+	// Turn 2: user + assistant + tool results = 3 messages
+	// Turn 3: user + assistant = 2 messages (no tool results)
+	// Current prompt: 1 message
+	// Total: 6 messages
+	if len(messages) != 6 {
+		t.Errorf("len(messages) = %d, want 6", len(messages))
+		for i, m := range messages {
+			content, _ := registry.ExtractTextContent(m.Content.(registry.Content))
+			t.Logf("  [%d] role=%s text=%q", i, m.Role, content[:min(50, len(content))])
+		}
+	}
+
+	// First message should be turn 2's user prompt.
+	if len(messages) > 0 {
+		text, _ := registry.ExtractTextContent(messages[0].Content.(registry.Content))
+		if text != "prompt2" {
+			t.Errorf("messages[0] text = %q, want 'prompt2'", text)
+		}
+	}
+
+	// Last message should be current prompt.
+	if len(messages) > 0 {
+		last := messages[len(messages)-1]
+		text, _ := registry.ExtractTextContent(last.Content.(registry.Content))
+		if text != "current prompt" {
+			t.Errorf("last message text = %q, want 'current prompt'", text)
+		}
+	}
+}
+
+func TestBuildMessages_EmptyHistory(t *testing.T) {
+	t.Parallel()
+	messages := BuildMessages(nil, 5, "current prompt")
+	if len(messages) != 1 {
+		t.Errorf("len(messages) = %d, want 1 (just current prompt)", len(messages))
+	}
+}
+
+func TestBuildMessages_WindowLargerThanHistory(t *testing.T) {
+	t.Parallel()
+	history := []ConversationTurn{
+		{UserPrompt: "p1", AssistantText: "r1", ToolResults: []string{"t1"}},
+	}
+	messages := BuildMessages(history, 10, "current")
+	// 1 turn (user + assistant + tool = 3) + current = 4
+	if len(messages) != 4 {
+		t.Errorf("len(messages) = %d, want 4", len(messages))
+	}
+}
+
+func TestInjectSubTasks(t *testing.T) {
+	tasks := []Task{
+		{ID: "a", Description: "first"},
+		{ID: "b", Description: "replaced"},
+		{ID: "c", Description: "third", DependsOn: []string{"b"}},
+	}
+	subTasks := []Task{
+		{ID: "b1", Description: "sub 1", DependsOn: []string{"a"}},
+		{ID: "b2", Description: "sub 2", DependsOn: []string{"a"}},
+	}
+
+	result := injectSubTasks(tasks, "b", subTasks)
+	if len(result) != 4 {
+		t.Fatalf("len(result) = %d, want 4", len(result))
+	}
+	if result[0].ID != "a" {
+		t.Errorf("result[0].ID = %q, want 'a'", result[0].ID)
+	}
+	if result[1].ID != "b1" {
+		t.Errorf("result[1].ID = %q, want 'b1'", result[1].ID)
+	}
+	if result[2].ID != "b2" {
+		t.Errorf("result[2].ID = %q, want 'b2'", result[2].ID)
+	}
+	if result[3].ID != "c" {
+		t.Errorf("result[3].ID = %q, want 'c'", result[3].ID)
+	}
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}

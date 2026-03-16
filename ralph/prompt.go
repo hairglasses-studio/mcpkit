@@ -1,10 +1,12 @@
 package ralph
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/hairglasses-studio/mcpkit/registry"
+	"github.com/hairglasses-studio/mcpkit/sampling"
 )
 
 const systemPrompt = `You are an autonomous task executor. You receive a task specification and must work through it iteratively.
@@ -39,9 +41,11 @@ When ALL tasks are done, set "complete": true (no tool call needed).
 Rules:
 - The task_id MUST exactly match one of the task IDs from the "Ready" section (e.g. "scan", "plan", etc.) — never invent task IDs
 - Only work on tasks listed under "Ready" — never attempt blocked tasks
-- Use only the tools listed below
-- To create or modify files, use write_file with full file content in the "content" argument. To read existing files, use read_file. To explore directories, use list_dir.
-- IMPORTANT: Do not spend more than 2 iterations exploring/reading. After reading what you need, immediately call write_file to create files. If a directory is empty, that means you need to create files there — don't keep listing it.
+- Use only the tools listed in the Available Tools section — each tool's parameters schema shows exact field names and types
+- Arguments must match schema types exactly:
+  Strings: "value"  |  Arrays: ["a", "b"]  |  Integers: 42  |  Booleans: true
+- After successfully completing a task, set "mark_done": true in the same response
+- If a tool returns an error with "Expected schema:", use it to correct your arguments
 - If a tool fails, try a different approach
 - Always include reasoning`
 
@@ -134,10 +138,10 @@ func buildIterationPrompt(spec Spec, progress Progress, tools []registry.ToolDef
 	}
 	b.WriteString("\n")
 
-	// Recent log (last 5)
+	// Recent log (last 10)
 	if len(progress.Log) > 0 {
 		b.WriteString("\n## Recent Activity\n\n")
-		start := len(progress.Log) - 5
+		start := len(progress.Log) - 10
 		if start < 0 {
 			start = 0
 		}
@@ -156,9 +160,35 @@ func buildIterationPrompt(spec Spec, progress Progress, tools []registry.ToolDef
 	// Available tools
 	b.WriteString("\n## Available Tools\n\n")
 	for _, td := range tools {
-		fmt.Fprintf(&b, "### %s\n%s\n\n", td.Tool.Name, td.Tool.Description)
+		fmt.Fprintf(&b, "### %s\n%s\n", td.Tool.Name, td.Tool.Description)
+		if schemaBytes, err := json.MarshalIndent(td.Tool.InputSchema, "", "  "); err == nil && string(schemaBytes) != "{}" {
+			fmt.Fprintf(&b, "\n**Parameters:**\n```json\n%s\n```\n", schemaBytes)
+		}
+		b.WriteString("\n")
 	}
 
 	b.WriteString("\nRespond with a JSON decision.")
 	return b.String()
+}
+
+// BuildMessages constructs a multi-turn message slice from conversation history.
+// It takes the last `windowSize` turns from history, interleaving user prompts,
+// assistant responses, and tool results, then appends the current prompt.
+func BuildMessages(history []ConversationTurn, windowSize int, currentPrompt string) []sampling.SamplingMessage {
+	start := len(history) - windowSize
+	if start < 0 {
+		start = 0
+	}
+	window := history[start:]
+
+	var messages []sampling.SamplingMessage
+	for _, turn := range window {
+		messages = append(messages, sampling.TextMessage("user", turn.UserPrompt))
+		messages = append(messages, sampling.TextMessage("assistant", turn.AssistantText))
+		if len(turn.ToolResults) > 0 {
+			messages = append(messages, sampling.TextMessage("user", "Tool results:\n"+strings.Join(turn.ToolResults, "\n")))
+		}
+	}
+	messages = append(messages, sampling.TextMessage("user", currentPrompt))
+	return messages
 }

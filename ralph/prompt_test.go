@@ -275,9 +275,9 @@ func TestBuildIterationPrompt_RecentActivityNoTaskID(t *testing.T) {
 func TestBuildIterationPrompt_LogTruncation(t *testing.T) {
 	t.Parallel()
 	spec := minimalSpec()
-	// Build 8 log entries — only the last 5 should appear.
+	// Build 13 log entries — only the last 10 should appear.
 	var logs []IterationLog
-	for i := 1; i <= 8; i++ {
+	for i := 1; i <= 13; i++ {
 		logs = append(logs, IterationLog{
 			Iteration: i,
 			Result:    "result",
@@ -286,15 +286,14 @@ func TestBuildIterationPrompt_LogTruncation(t *testing.T) {
 	progress := Progress{Log: logs}
 	prompt := buildIterationPrompt(spec, progress, nil)
 
-	// Iterations 1-3 should NOT appear; 4-8 should appear.
+	// Iterations 1-3 should NOT appear; 4-13 should appear.
 	for _, hidden := range []int{1, 2, 3} {
-		// Check that "Iteration N:" is absent (using the colon at end of entry format)
 		needle := "Iteration " + itoa(hidden) + ":"
 		if strings.Contains(prompt, needle) {
-			t.Errorf("prompt should not contain hidden iteration %d (showing last 5 only); got:\n%s", hidden, prompt)
+			t.Errorf("prompt should not contain hidden iteration %d (showing last 10 only); got:\n%s", hidden, prompt)
 		}
 	}
-	for _, shown := range []int{4, 5, 6, 7, 8} {
+	for _, shown := range []int{4, 5, 6, 7, 8, 9, 10, 11, 12, 13} {
 		needle := "Iteration " + itoa(shown) + ":"
 		if !strings.Contains(prompt, needle) {
 			t.Errorf("prompt should contain iteration %d; got:\n%s", shown, prompt)
@@ -355,6 +354,31 @@ func TestBuildIterationPrompt_ToolListing(t *testing.T) {
 	}
 	if !strings.Contains(prompt, "Write content to a file") {
 		t.Errorf("prompt missing write_file tool description; got:\n%s", prompt)
+	}
+}
+
+func TestBuildIterationPrompt_ToolInputSchema(t *testing.T) {
+	t.Parallel()
+	spec := minimalSpec()
+	progress := Progress{}
+
+	// Tool with a non-empty InputSchema
+	td := makeToolDef("my_tool", "A tool with params")
+	td.Tool.InputSchema = mcp.ToolInputSchema(mcp.ToolArgumentsSchema{
+		Type: "object",
+		Properties: map[string]any{
+			"query": map[string]any{"type": "string", "description": "Search query"},
+		},
+		Required: []string{"query"},
+	})
+
+	prompt := buildIterationPrompt(spec, progress, []registry.ToolDefinition{td})
+
+	if !strings.Contains(prompt, "**Parameters:**") {
+		t.Errorf("prompt missing Parameters section for tool with schema; got:\n%s", prompt)
+	}
+	if !strings.Contains(prompt, `"query"`) {
+		t.Errorf("prompt missing schema property 'query'; got:\n%s", prompt)
 	}
 }
 
