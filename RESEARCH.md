@@ -1,7 +1,7 @@
 # mcpkit Ecosystem Research
 
 Research findings for mcpkit positioning, spec coverage, and roadmap planning.
-Last updated: 2026-03-14.
+Last updated: 2026-03-15.
 
 ---
 
@@ -41,6 +41,49 @@ Sources: modelcontextprotocol.io/specification/2025-11-25, modelcontextprotocol.
 | 14 | Logging Endpoint | Draft | **Implemented** | High | logging package: slog handler bridge, tool invocation logging middleware |
 
 **Coverage: 15/15 features fully implemented (100%)** — all tracked MCP protocol features have complete implementations
+
+### June 2026 Spec Signals
+
+The MCP spec roadmap signals several major additions for the June 2026 revision:
+
+| Feature | Status | Impact on mcpkit |
+|---------|--------|-----------------|
+| Scalable Sessions | SEP under review | New `session/` package needed — Session/SessionStore interfaces, middleware, migration helpers |
+| Stateless HTTP | SEP under review | External session stores (Redis), token extraction, gateway affinity routing |
+| WebSocket Transport | SEP-1288 proposed | New `transport/` abstraction layer — stdio, HTTP, WebSocket adapters |
+| Registry Integration | Active development | Enhance `discovery/` with PublishWorkflow, validation, compliance checking |
+| Namespaces | Proposed | May affect `gateway/` tool routing and `registry/` tool naming |
+
+Sources: modelcontextprotocol.io/development/roadmap, GitHub MCP spec discussions
+
+### Cloud Platform MCP Integrations
+
+| Platform | Integration | Status | Notes |
+|----------|------------|--------|-------|
+| Cloudflare | Workers Code Mode | GA | Auto-generates MCP servers from Workers; developers.cloudflare.com/agents/model-context-protocol |
+| Vercel | MCP Adapter | Beta | Next.js API route adapter for MCP tool serving |
+| Azure | MCP Center | Preview | Enterprise server discovery and management |
+| Chrome | WebMCP (W3C EPP) | Experimental | Browser-native MCP transport; developer.chrome.com/blog/webmcp-epp |
+
+Implication for mcpkit: `research/` package should add PlatformMonitor interface to track cloud platform adoption and feature parity.
+
+### A2A Protocol Status Update
+
+Google's Agent-to-Agent (A2A) protocol has moved to Linux Foundation governance (github.com/google/A2A). Current status:
+- **Spec version**: v0.3 (not yet stable for production)
+- **Governance**: Linux Foundation AI & Data
+- **Key features**: AgentCard discovery, task lifecycle, streaming updates, push notifications
+- **Go implementations**: Several community SDKs emerging, none production-ready
+- **Decision gate**: mcpkit will implement `a2a/` bridge when spec reaches v0.9+ stability
+
+### Updated SDK Versions
+
+| SDK | Current Version | mcpkit Pinned | Gap |
+|-----|----------------|---------------|-----|
+| mcp-go | v0.45.0 | v0.43.2 | 2 minor versions behind — evaluate bump in P34 |
+| Official go-sdk | v1.4.1 | dual-SDK build tags | Tracking; v2.0 would trigger migration assessment |
+| TypeScript SDK | v1.12.0 | N/A (reference only) | Reference implementation for spec compliance checking |
+| FastMCP (Python) | v2.5.0 | N/A (competitor) | Dominant in Python ecosystem; feature parity benchmark |
 
 </mcp-ecosystem>
 

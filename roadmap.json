@@ -1,0 +1,1325 @@
+{
+  "title": "mcpkit Roadmap",
+  "description": "Machine-readable roadmap for mcpkit development. Phases 1-30 complete (MCP 2025-11-25 full coverage, 35+ packages, 90%+ test coverage). Phases 31-42 target spec forward-compatibility, SDK migration, research enhancement, production DX, agent protocol evolution, and community growth.",
+  "phases": [
+    {
+      "id": "P31",
+      "name": "Session Management Foundation",
+      "status": "planned",
+      "items": [
+        {
+          "id": "P31-1",
+          "description": "Define Session/SessionStore interfaces",
+          "package": "session",
+          "status": "complete",
+          "priority": "high"
+        },
+        {
+          "id": "P31-2",
+          "description": "In-memory session store implementation",
+          "package": "session",
+          "status": "complete",
+          "priority": "high"
+        },
+        {
+          "id": "P31-3",
+          "description": "Session middleware for request scoping",
+          "package": "session",
+          "status": "planned",
+          "depends_on": [
+            "P31-1"
+          ],
+          "priority": "high"
+        },
+        {
+          "id": "P31-4",
+          "description": "Session migration helpers for existing stateful servers",
+          "package": "session",
+          "status": "planned",
+          "depends_on": [
+            "P31-2"
+          ],
+          "priority": "medium"
+        },
+        {
+          "id": "P31-5",
+          "description": "Session TTL and eviction policies",
+          "package": "session",
+          "status": "planned",
+          "depends_on": [
+            "P31-2"
+          ],
+          "priority": "medium"
+        },
+        {
+          "id": "P31-6",
+          "description": "Gateway session affinity routing",
+          "package": "gateway",
+          "status": "planned",
+          "depends_on": [
+            "P31-3"
+          ],
+          "priority": "medium"
+        },
+        {
+          "id": "P31-7",
+          "description": "Session integration tests with mcptest",
+          "package": "mcptest",
+          "status": "planned",
+          "depends_on": [
+            "P31-3"
+          ],
+          "priority": "high"
+        }
+      ]
+    },
+    {
+      "id": "P32",
+      "name": "Stateless HTTP",
+      "status": "planned",
+      "items": [
+        {
+          "id": "P32-1",
+          "description": "External session store interface (Redis adapter)",
+          "package": "session",
+          "status": "planned",
+          "depends_on": [
+            "P31-2"
+          ],
+          "priority": "high"
+        },
+        {
+          "id": "P32-2",
+          "description": "Session token extraction middleware",
+          "package": "session",
+          "status": "planned",
+          "depends_on": [
+            "P31-3"
+          ],
+          "priority": "high"
+        },
+        {
+          "id": "P32-3",
+          "description": "Stateless request routing in gateway",
+          "package": "gateway",
+          "status": "planned",
+          "depends_on": [
+            "P32-1",
+            "P32-2"
+          ],
+          "priority": "high"
+        },
+        {
+          "id": "P32-4",
+          "description": "Session serialization format (JSON + gob)",
+          "package": "session",
+          "status": "planned",
+          "depends_on": [
+            "P32-1"
+          ],
+          "priority": "medium"
+        },
+        {
+          "id": "P32-5",
+          "description": "Load balancer compatibility tests",
+          "package": "session",
+          "status": "planned",
+          "depends_on": [
+            "P32-3"
+          ],
+          "priority": "medium"
+        },
+        {
+          "id": "P32-6",
+          "description": "Session store health checks",
+          "package": "health",
+          "status": "planned",
+          "depends_on": [
+            "P32-1"
+          ],
+          "priority": "low"
+        }
+      ]
+    },
+    {
+      "id": "P33",
+      "name": "WebSocket Transport Prep",
+      "status": "planned",
+      "items": [
+        {
+          "id": "P33-1",
+          "description": "Transport abstraction layer interfaces",
+          "package": "transport",
+          "status": "planned",
+          "priority": "high"
+        },
+        {
+          "id": "P33-2",
+          "description": "Stdio transport adapter",
+          "package": "transport",
+          "status": "planned",
+          "depends_on": [
+            "P33-1"
+          ],
+          "priority": "high"
+        },
+        {
+          "id": "P33-3",
+          "description": "HTTP transport adapter",
+          "package": "transport",
+          "status": "planned",
+          "depends_on": [
+            "P33-1"
+          ],
+          "priority": "high"
+        },
+        {
+          "id": "P33-4",
+          "description": "WebSocket transport stub",
+          "package": "transport",
+          "status": "planned",
+          "depends_on": [
+            "P33-1"
+          ],
+          "priority": "medium"
+        },
+        {
+          "id": "P33-5",
+          "description": "Transport middleware chain",
+          "package": "transport",
+          "status": "planned",
+          "depends_on": [
+            "P33-1"
+          ],
+          "priority": "medium"
+        },
+        {
+          "id": "P33-6",
+          "description": "Transport integration tests",
+          "package": "transport",
+          "status": "planned",
+          "depends_on": [
+            "P33-2",
+            "P33-3"
+          ],
+          "priority": "high"
+        }
+      ]
+    },
+    {
+      "id": "P34",
+      "name": "Dual-SDK Test Hardening",
+      "status": "planned",
+      "items": [
+        {
+          "id": "P34-1",
+          "description": "Audit all compat.go aliases for go-sdk coverage",
+          "package": "registry",
+          "status": "planned",
+          "priority": "high"
+        },
+        {
+          "id": "P34-2",
+          "description": "Create _official_test.go files for core packages",
+          "package": "registry",
+          "status": "planned",
+          "depends_on": [
+            "P34-1"
+          ],
+          "priority": "high"
+        },
+        {
+          "id": "P34-3",
+          "description": "Dual-SDK CI matrix (mcp-go + go-sdk)",
+          "status": "planned",
+          "depends_on": [
+            "P34-2"
+          ],
+          "priority": "high"
+        },
+        {
+          "id": "P34-4",
+          "description": "Migration guide document",
+          "status": "planned",
+          "depends_on": [
+            "P34-1"
+          ],
+          "priority": "medium"
+        },
+        {
+          "id": "P34-5",
+          "description": "Bump mcp-go to latest",
+          "status": "planned",
+          "priority": "medium"
+        },
+        {
+          "id": "P34-6",
+          "description": "go-sdk v2.0 compatibility assessment",
+          "package": "registry",
+          "status": "planned",
+          "depends_on": [
+            "P34-1"
+          ],
+          "priority": "low"
+        }
+      ]
+    },
+    {
+      "id": "P35",
+      "name": "Cloud Platform Monitoring",
+      "status": "planned",
+      "items": [
+        {
+          "id": "P35-1",
+          "description": "PlatformMonitor interface definition",
+          "package": "research",
+          "status": "planned",
+          "priority": "high"
+        },
+        {
+          "id": "P35-2",
+          "description": "Cloudflare Workers MCP monitor",
+          "package": "research",
+          "status": "planned",
+          "depends_on": [
+            "P35-1"
+          ],
+          "priority": "high"
+        },
+        {
+          "id": "P35-3",
+          "description": "Vercel MCP adapter monitor",
+          "package": "research",
+          "status": "planned",
+          "depends_on": [
+            "P35-1"
+          ],
+          "priority": "medium"
+        },
+        {
+          "id": "P35-4",
+          "description": "Azure MCP Center monitor",
+          "package": "research",
+          "status": "planned",
+          "depends_on": [
+            "P35-1"
+          ],
+          "priority": "medium"
+        },
+        {
+          "id": "P35-5",
+          "description": "Platform activity aggregation",
+          "package": "research",
+          "status": "planned",
+          "depends_on": [
+            "P35-2",
+            "P35-3",
+            "P35-4"
+          ],
+          "priority": "medium"
+        },
+        {
+          "id": "P35-6",
+          "description": "Cloud platform integration tests",
+          "package": "research",
+          "status": "planned",
+          "depends_on": [
+            "P35-5"
+          ],
+          "priority": "high"
+        }
+      ]
+    },
+    {
+      "id": "P36",
+      "name": "A2A Tracking + Competitive Analysis",
+      "status": "planned",
+      "items": [
+        {
+          "id": "P36-1",
+          "description": "A2AMonitor for protocol spec changes",
+          "package": "research",
+          "status": "planned",
+          "priority": "high"
+        },
+        {
+          "id": "P36-2",
+          "description": "SDKCompare cross-framework analysis",
+          "package": "research",
+          "status": "planned",
+          "priority": "medium"
+        },
+        {
+          "id": "P36-3",
+          "description": "Template report generation",
+          "package": "research",
+          "status": "planned",
+          "depends_on": [
+            "P36-1",
+            "P36-2"
+          ],
+          "priority": "medium"
+        },
+        {
+          "id": "P36-4",
+          "description": "Competitive landscape dashboard data",
+          "package": "research",
+          "status": "planned",
+          "depends_on": [
+            "P36-2"
+          ],
+          "priority": "low"
+        },
+        {
+          "id": "P36-5",
+          "description": "Integration with rdcycle scan",
+          "package": "rdcycle",
+          "status": "planned",
+          "depends_on": [
+            "P36-1"
+          ],
+          "priority": "medium"
+        }
+      ]
+    },
+    {
+      "id": "P37",
+      "name": "Server Registry Publishing",
+      "status": "planned",
+      "items": [
+        {
+          "id": "P37-1",
+          "description": "PublishWorkflow with validation pipeline",
+          "package": "discovery",
+          "status": "planned",
+          "priority": "high"
+        },
+        {
+          "id": "P37-2",
+          "description": "Server card schema compliance checker",
+          "package": "discovery",
+          "status": "planned",
+          "depends_on": [
+            "P37-1"
+          ],
+          "priority": "high"
+        },
+        {
+          "id": "P37-3",
+          "description": "CLI helper for interactive publishing",
+          "package": "cmd",
+          "status": "planned",
+          "depends_on": [
+            "P37-1"
+          ],
+          "priority": "medium"
+        },
+        {
+          "id": "P37-4",
+          "description": "Registry authentication flow",
+          "package": "discovery",
+          "status": "planned",
+          "depends_on": [
+            "P37-1"
+          ],
+          "priority": "high"
+        },
+        {
+          "id": "P37-5",
+          "description": "Publish/unpublish integration tests",
+          "package": "discovery",
+          "status": "planned",
+          "depends_on": [
+            "P37-1",
+            "P37-4"
+          ],
+          "priority": "high"
+        }
+      ]
+    },
+    {
+      "id": "P38",
+      "name": "Performance Benchmarking",
+      "status": "planned",
+      "items": [
+        {
+          "id": "P38-1",
+          "description": "Baseline benchmark suite for core packages",
+          "package": "mcptest",
+          "status": "planned",
+          "priority": "high"
+        },
+        {
+          "id": "P38-2",
+          "description": "Middleware overhead measurement",
+          "package": "mcptest",
+          "status": "planned",
+          "depends_on": [
+            "P38-1"
+          ],
+          "priority": "high"
+        },
+        {
+          "id": "P38-3",
+          "description": "Memory profiling helpers",
+          "package": "mcptest",
+          "status": "planned",
+          "depends_on": [
+            "P38-1"
+          ],
+          "priority": "medium"
+        },
+        {
+          "id": "P38-4",
+          "description": "CI regression threshold checks",
+          "status": "planned",
+          "depends_on": [
+            "P38-1"
+          ],
+          "priority": "medium"
+        },
+        {
+          "id": "P38-5",
+          "description": "Benchmark result comparison tool",
+          "package": "mcptest",
+          "status": "planned",
+          "depends_on": [
+            "P38-1"
+          ],
+          "priority": "medium"
+        }
+      ]
+    },
+    {
+      "id": "P39",
+      "name": "A2A Protocol Bridge",
+      "status": "planned",
+      "items": [
+        {
+          "id": "P39-1",
+          "description": "A2A type definitions (AgentCard, Task, Message)",
+          "package": "a2a",
+          "status": "planned",
+          "priority": "high"
+        },
+        {
+          "id": "P39-2",
+          "description": "AgentCard generation from MCP server metadata",
+          "package": "a2a",
+          "status": "planned",
+          "depends_on": [
+            "P39-1"
+          ],
+          "priority": "high"
+        },
+        {
+          "id": "P39-3",
+          "description": "A2A task lifecycle (create, status, cancel)",
+          "package": "a2a",
+          "status": "planned",
+          "depends_on": [
+            "P39-1"
+          ],
+          "priority": "high"
+        },
+        {
+          "id": "P39-4",
+          "description": "MCP-to-A2A bridge (tool calls as A2A tasks)",
+          "package": "a2a",
+          "status": "planned",
+          "depends_on": [
+            "P39-3"
+          ],
+          "priority": "high"
+        },
+        {
+          "id": "P39-5",
+          "description": "A2A-to-MCP bridge (A2A tasks as tool calls)",
+          "package": "a2a",
+          "status": "planned",
+          "depends_on": [
+            "P39-3"
+          ],
+          "priority": "medium"
+        },
+        {
+          "id": "P39-6",
+          "description": "Push notification support",
+          "package": "a2a",
+          "status": "planned",
+          "depends_on": [
+            "P39-3"
+          ],
+          "priority": "low"
+        }
+      ]
+    },
+    {
+      "id": "P40",
+      "name": "Enhanced Orchestration",
+      "status": "planned",
+      "items": [
+        {
+          "id": "P40-1",
+          "description": "Swarm mesh topology",
+          "package": "orchestrator",
+          "status": "planned",
+          "priority": "medium"
+        },
+        {
+          "id": "P40-2",
+          "description": "Hierarchical delegation patterns",
+          "package": "orchestrator",
+          "status": "planned",
+          "priority": "medium"
+        },
+        {
+          "id": "P40-3",
+          "description": "Dynamic pattern selector",
+          "package": "orchestrator",
+          "status": "planned",
+          "depends_on": [
+            "P40-1",
+            "P40-2"
+          ],
+          "priority": "medium"
+        },
+        {
+          "id": "P40-4",
+          "description": "Orchestrator performance benchmarks",
+          "package": "orchestrator",
+          "status": "planned",
+          "depends_on": [
+            "P40-1"
+          ],
+          "priority": "low"
+        },
+        {
+          "id": "P40-5",
+          "description": "Multi-agent workflow templates",
+          "package": "workflow",
+          "status": "planned",
+          "depends_on": [
+            "P40-3"
+          ],
+          "priority": "medium"
+        }
+      ]
+    },
+    {
+      "id": "P41",
+      "name": "Example Gallery + Migration Guides",
+      "status": "planned",
+      "items": [
+        {
+          "id": "P41-1",
+          "description": "Example gallery index with categorization",
+          "status": "planned",
+          "priority": "high"
+        },
+        {
+          "id": "P41-2",
+          "description": "FastMCP migration guide",
+          "status": "planned",
+          "priority": "medium"
+        },
+        {
+          "id": "P41-3",
+          "description": "Docker-compose multi-server example",
+          "status": "planned",
+          "priority": "medium"
+        },
+        {
+          "id": "P41-4",
+          "description": "CONTRIBUTING.md with development workflow",
+          "status": "planned",
+          "priority": "high"
+        },
+        {
+          "id": "P41-5",
+          "description": "Video/tutorial content outline",
+          "status": "planned",
+          "priority": "low"
+        }
+      ]
+    },
+    {
+      "id": "P42",
+      "name": "User Feedback + Telemetry",
+      "status": "planned",
+      "items": [
+        {
+          "id": "P42-1",
+          "description": "Feedback tool for in-server issue reporting",
+          "package": "feedback",
+          "status": "planned",
+          "priority": "medium"
+        },
+        {
+          "id": "P42-2",
+          "description": "Anonymous usage telemetry with opt-in",
+          "package": "feedback",
+          "status": "planned",
+          "priority": "medium"
+        },
+        {
+          "id": "P42-3",
+          "description": "rdcycle integration for feedback-driven prioritization",
+          "package": "rdcycle",
+          "status": "planned",
+          "depends_on": [
+            "P42-1"
+          ],
+          "priority": "medium"
+        },
+        {
+          "id": "P42-4",
+          "description": "Telemetry dashboard data export",
+          "package": "feedback",
+          "status": "planned",
+          "depends_on": [
+            "P42-2"
+          ],
+          "priority": "low"
+        }
+      ]
+    }
+  ],
+  "tiers": [
+    {
+      "id": "T5",
+      "name": "Spec Forward-Compatibility",
+      "items": [
+        {
+          "id": "P31-1",
+          "description": "Define Session/SessionStore interfaces",
+          "package": "session",
+          "status": "complete",
+          "priority": "high"
+        },
+        {
+          "id": "P31-2",
+          "description": "In-memory session store implementation",
+          "package": "session",
+          "status": "complete",
+          "priority": "high"
+        },
+        {
+          "id": "P31-3",
+          "description": "Session middleware for request scoping",
+          "package": "session",
+          "status": "planned",
+          "depends_on": [
+            "P31-1"
+          ],
+          "priority": "high"
+        },
+        {
+          "id": "P31-4",
+          "description": "Session migration helpers for existing stateful servers",
+          "package": "session",
+          "status": "planned",
+          "depends_on": [
+            "P31-2"
+          ],
+          "priority": "medium"
+        },
+        {
+          "id": "P31-5",
+          "description": "Session TTL and eviction policies",
+          "package": "session",
+          "status": "planned",
+          "depends_on": [
+            "P31-2"
+          ],
+          "priority": "medium"
+        },
+        {
+          "id": "P31-6",
+          "description": "Gateway session affinity routing",
+          "package": "gateway",
+          "status": "planned",
+          "depends_on": [
+            "P31-3"
+          ],
+          "priority": "medium"
+        },
+        {
+          "id": "P31-7",
+          "description": "Session integration tests with mcptest",
+          "package": "mcptest",
+          "status": "planned",
+          "depends_on": [
+            "P31-3"
+          ],
+          "priority": "high"
+        },
+        {
+          "id": "P32-1",
+          "description": "External session store interface (Redis adapter)",
+          "package": "session",
+          "status": "planned",
+          "depends_on": [
+            "P31-2"
+          ],
+          "priority": "high"
+        },
+        {
+          "id": "P32-2",
+          "description": "Session token extraction middleware",
+          "package": "session",
+          "status": "planned",
+          "depends_on": [
+            "P31-3"
+          ],
+          "priority": "high"
+        },
+        {
+          "id": "P32-3",
+          "description": "Stateless request routing in gateway",
+          "package": "gateway",
+          "status": "planned",
+          "depends_on": [
+            "P32-1",
+            "P32-2"
+          ],
+          "priority": "high"
+        },
+        {
+          "id": "P32-4",
+          "description": "Session serialization format (JSON + gob)",
+          "package": "session",
+          "status": "planned",
+          "depends_on": [
+            "P32-1"
+          ],
+          "priority": "medium"
+        },
+        {
+          "id": "P32-5",
+          "description": "Load balancer compatibility tests",
+          "package": "session",
+          "status": "planned",
+          "depends_on": [
+            "P32-3"
+          ],
+          "priority": "medium"
+        },
+        {
+          "id": "P32-6",
+          "description": "Session store health checks",
+          "package": "health",
+          "status": "planned",
+          "depends_on": [
+            "P32-1"
+          ],
+          "priority": "low"
+        },
+        {
+          "id": "P33-1",
+          "description": "Transport abstraction layer interfaces",
+          "package": "transport",
+          "status": "planned",
+          "priority": "high"
+        },
+        {
+          "id": "P33-2",
+          "description": "Stdio transport adapter",
+          "package": "transport",
+          "status": "planned",
+          "depends_on": [
+            "P33-1"
+          ],
+          "priority": "high"
+        },
+        {
+          "id": "P33-3",
+          "description": "HTTP transport adapter",
+          "package": "transport",
+          "status": "planned",
+          "depends_on": [
+            "P33-1"
+          ],
+          "priority": "high"
+        },
+        {
+          "id": "P33-4",
+          "description": "WebSocket transport stub",
+          "package": "transport",
+          "status": "planned",
+          "depends_on": [
+            "P33-1"
+          ],
+          "priority": "medium"
+        },
+        {
+          "id": "P33-5",
+          "description": "Transport middleware chain",
+          "package": "transport",
+          "status": "planned",
+          "depends_on": [
+            "P33-1"
+          ],
+          "priority": "medium"
+        },
+        {
+          "id": "P33-6",
+          "description": "Transport integration tests",
+          "package": "transport",
+          "status": "planned",
+          "depends_on": [
+            "P33-2",
+            "P33-3"
+          ],
+          "priority": "high"
+        }
+      ]
+    },
+    {
+      "id": "T6",
+      "name": "SDK Migration",
+      "items": [
+        {
+          "id": "P34-1",
+          "description": "Audit all compat.go aliases for go-sdk coverage",
+          "package": "registry",
+          "status": "planned",
+          "priority": "high"
+        },
+        {
+          "id": "P34-2",
+          "description": "Create _official_test.go files for core packages",
+          "package": "registry",
+          "status": "planned",
+          "depends_on": [
+            "P34-1"
+          ],
+          "priority": "high"
+        },
+        {
+          "id": "P34-3",
+          "description": "Dual-SDK CI matrix (mcp-go + go-sdk)",
+          "status": "planned",
+          "depends_on": [
+            "P34-2"
+          ],
+          "priority": "high"
+        },
+        {
+          "id": "P34-4",
+          "description": "Migration guide document",
+          "status": "planned",
+          "depends_on": [
+            "P34-1"
+          ],
+          "priority": "medium"
+        },
+        {
+          "id": "P34-5",
+          "description": "Bump mcp-go to latest",
+          "status": "planned",
+          "priority": "medium"
+        },
+        {
+          "id": "P34-6",
+          "description": "go-sdk v2.0 compatibility assessment",
+          "package": "registry",
+          "status": "planned",
+          "depends_on": [
+            "P34-1"
+          ],
+          "priority": "low"
+        }
+      ]
+    },
+    {
+      "id": "T7",
+      "name": "Research Enhancement",
+      "items": [
+        {
+          "id": "P35-1",
+          "description": "PlatformMonitor interface definition",
+          "package": "research",
+          "status": "planned",
+          "priority": "high"
+        },
+        {
+          "id": "P35-2",
+          "description": "Cloudflare Workers MCP monitor",
+          "package": "research",
+          "status": "planned",
+          "depends_on": [
+            "P35-1"
+          ],
+          "priority": "high"
+        },
+        {
+          "id": "P35-3",
+          "description": "Vercel MCP adapter monitor",
+          "package": "research",
+          "status": "planned",
+          "depends_on": [
+            "P35-1"
+          ],
+          "priority": "medium"
+        },
+        {
+          "id": "P35-4",
+          "description": "Azure MCP Center monitor",
+          "package": "research",
+          "status": "planned",
+          "depends_on": [
+            "P35-1"
+          ],
+          "priority": "medium"
+        },
+        {
+          "id": "P35-5",
+          "description": "Platform activity aggregation",
+          "package": "research",
+          "status": "planned",
+          "depends_on": [
+            "P35-2",
+            "P35-3",
+            "P35-4"
+          ],
+          "priority": "medium"
+        },
+        {
+          "id": "P35-6",
+          "description": "Cloud platform integration tests",
+          "package": "research",
+          "status": "planned",
+          "depends_on": [
+            "P35-5"
+          ],
+          "priority": "high"
+        },
+        {
+          "id": "P36-1",
+          "description": "A2AMonitor for protocol spec changes",
+          "package": "research",
+          "status": "planned",
+          "priority": "high"
+        },
+        {
+          "id": "P36-2",
+          "description": "SDKCompare cross-framework analysis",
+          "package": "research",
+          "status": "planned",
+          "priority": "medium"
+        },
+        {
+          "id": "P36-3",
+          "description": "Template report generation",
+          "package": "research",
+          "status": "planned",
+          "depends_on": [
+            "P36-1",
+            "P36-2"
+          ],
+          "priority": "medium"
+        },
+        {
+          "id": "P36-4",
+          "description": "Competitive landscape dashboard data",
+          "package": "research",
+          "status": "planned",
+          "depends_on": [
+            "P36-2"
+          ],
+          "priority": "low"
+        },
+        {
+          "id": "P36-5",
+          "description": "Integration with rdcycle scan",
+          "package": "rdcycle",
+          "status": "planned",
+          "depends_on": [
+            "P36-1"
+          ],
+          "priority": "medium"
+        }
+      ]
+    },
+    {
+      "id": "T8",
+      "name": "Production DX",
+      "items": [
+        {
+          "id": "P37-1",
+          "description": "PublishWorkflow with validation pipeline",
+          "package": "discovery",
+          "status": "planned",
+          "priority": "high"
+        },
+        {
+          "id": "P37-2",
+          "description": "Server card schema compliance checker",
+          "package": "discovery",
+          "status": "planned",
+          "depends_on": [
+            "P37-1"
+          ],
+          "priority": "high"
+        },
+        {
+          "id": "P37-3",
+          "description": "CLI helper for interactive publishing",
+          "package": "cmd",
+          "status": "planned",
+          "depends_on": [
+            "P37-1"
+          ],
+          "priority": "medium"
+        },
+        {
+          "id": "P37-4",
+          "description": "Registry authentication flow",
+          "package": "discovery",
+          "status": "planned",
+          "depends_on": [
+            "P37-1"
+          ],
+          "priority": "high"
+        },
+        {
+          "id": "P37-5",
+          "description": "Publish/unpublish integration tests",
+          "package": "discovery",
+          "status": "planned",
+          "depends_on": [
+            "P37-1",
+            "P37-4"
+          ],
+          "priority": "high"
+        },
+        {
+          "id": "P38-1",
+          "description": "Baseline benchmark suite for core packages",
+          "package": "mcptest",
+          "status": "planned",
+          "priority": "high"
+        },
+        {
+          "id": "P38-2",
+          "description": "Middleware overhead measurement",
+          "package": "mcptest",
+          "status": "planned",
+          "depends_on": [
+            "P38-1"
+          ],
+          "priority": "high"
+        },
+        {
+          "id": "P38-3",
+          "description": "Memory profiling helpers",
+          "package": "mcptest",
+          "status": "planned",
+          "depends_on": [
+            "P38-1"
+          ],
+          "priority": "medium"
+        },
+        {
+          "id": "P38-4",
+          "description": "CI regression threshold checks",
+          "status": "planned",
+          "depends_on": [
+            "P38-1"
+          ],
+          "priority": "medium"
+        },
+        {
+          "id": "P38-5",
+          "description": "Benchmark result comparison tool",
+          "package": "mcptest",
+          "status": "planned",
+          "depends_on": [
+            "P38-1"
+          ],
+          "priority": "medium"
+        }
+      ]
+    },
+    {
+      "id": "T9",
+      "name": "Agent Protocol Evolution",
+      "items": [
+        {
+          "id": "P39-1",
+          "description": "A2A type definitions (AgentCard, Task, Message)",
+          "package": "a2a",
+          "status": "planned",
+          "priority": "high"
+        },
+        {
+          "id": "P39-2",
+          "description": "AgentCard generation from MCP server metadata",
+          "package": "a2a",
+          "status": "planned",
+          "depends_on": [
+            "P39-1"
+          ],
+          "priority": "high"
+        },
+        {
+          "id": "P39-3",
+          "description": "A2A task lifecycle (create, status, cancel)",
+          "package": "a2a",
+          "status": "planned",
+          "depends_on": [
+            "P39-1"
+          ],
+          "priority": "high"
+        },
+        {
+          "id": "P39-4",
+          "description": "MCP-to-A2A bridge (tool calls as A2A tasks)",
+          "package": "a2a",
+          "status": "planned",
+          "depends_on": [
+            "P39-3"
+          ],
+          "priority": "high"
+        },
+        {
+          "id": "P39-5",
+          "description": "A2A-to-MCP bridge (A2A tasks as tool calls)",
+          "package": "a2a",
+          "status": "planned",
+          "depends_on": [
+            "P39-3"
+          ],
+          "priority": "medium"
+        },
+        {
+          "id": "P39-6",
+          "description": "Push notification support",
+          "package": "a2a",
+          "status": "planned",
+          "depends_on": [
+            "P39-3"
+          ],
+          "priority": "low"
+        },
+        {
+          "id": "P40-1",
+          "description": "Swarm mesh topology",
+          "package": "orchestrator",
+          "status": "planned",
+          "priority": "medium"
+        },
+        {
+          "id": "P40-2",
+          "description": "Hierarchical delegation patterns",
+          "package": "orchestrator",
+          "status": "planned",
+          "priority": "medium"
+        },
+        {
+          "id": "P40-3",
+          "description": "Dynamic pattern selector",
+          "package": "orchestrator",
+          "status": "planned",
+          "depends_on": [
+            "P40-1",
+            "P40-2"
+          ],
+          "priority": "medium"
+        },
+        {
+          "id": "P40-4",
+          "description": "Orchestrator performance benchmarks",
+          "package": "orchestrator",
+          "status": "planned",
+          "depends_on": [
+            "P40-1"
+          ],
+          "priority": "low"
+        },
+        {
+          "id": "P40-5",
+          "description": "Multi-agent workflow templates",
+          "package": "workflow",
+          "status": "planned",
+          "depends_on": [
+            "P40-3"
+          ],
+          "priority": "medium"
+        }
+      ]
+    },
+    {
+      "id": "T10",
+      "name": "Community",
+      "items": [
+        {
+          "id": "P41-1",
+          "description": "Example gallery index with categorization",
+          "status": "planned",
+          "priority": "high"
+        },
+        {
+          "id": "P41-2",
+          "description": "FastMCP migration guide",
+          "status": "planned",
+          "priority": "medium"
+        },
+        {
+          "id": "P41-3",
+          "description": "Docker-compose multi-server example",
+          "status": "planned",
+          "priority": "medium"
+        },
+        {
+          "id": "P41-4",
+          "description": "CONTRIBUTING.md with development workflow",
+          "status": "planned",
+          "priority": "high"
+        },
+        {
+          "id": "P41-5",
+          "description": "Video/tutorial content outline",
+          "status": "planned",
+          "priority": "low"
+        },
+        {
+          "id": "P42-1",
+          "description": "Feedback tool for in-server issue reporting",
+          "package": "feedback",
+          "status": "planned",
+          "priority": "medium"
+        },
+        {
+          "id": "P42-2",
+          "description": "Anonymous usage telemetry with opt-in",
+          "package": "feedback",
+          "status": "planned",
+          "priority": "medium"
+        },
+        {
+          "id": "P42-3",
+          "description": "rdcycle integration for feedback-driven prioritization",
+          "package": "rdcycle",
+          "status": "planned",
+          "depends_on": [
+            "P42-1"
+          ],
+          "priority": "medium"
+        },
+        {
+          "id": "P42-4",
+          "description": "Telemetry dashboard data export",
+          "package": "feedback",
+          "status": "planned",
+          "depends_on": [
+            "P42-2"
+          ],
+          "priority": "low"
+        }
+      ]
+    }
+  ],
+  "updated_at": "2026-03-15"
+}
