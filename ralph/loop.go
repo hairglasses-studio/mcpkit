@@ -131,9 +131,30 @@ func (l *Loop) Run(ctx context.Context) error {
 		}
 		req := sampling.CompletionRequest(messages, opts...)
 
-		result, err := l.config.Sampler.CreateMessage(ctx, req)
-		if err != nil {
-			l.recordIteration(iteration, "", nil, fmt.Sprintf("sampler error: %v", err))
+		// Sampler call with retry/backoff.
+		var result *sampling.CreateMessageResult
+		var samplerErr error
+		for attempt := 0; attempt <= l.config.SamplerRetries; attempt++ {
+			if attempt > 0 {
+				backoff := l.config.SamplerBackoff * time.Duration(1<<(attempt-1))
+				select {
+				case <-ctx.Done():
+					l.setStatus(StatusStopped)
+					return ctx.Err()
+				case <-l.stopCh:
+					l.setStatus(StatusStopped)
+					return nil
+				case <-time.After(backoff):
+				}
+			}
+			result, samplerErr = l.config.Sampler.CreateMessage(ctx, req)
+			if samplerErr == nil {
+				break
+			}
+		}
+		if samplerErr != nil {
+			l.recordIteration(iteration, "", nil,
+				fmt.Sprintf("sampler error (after %d retries): %v", l.config.SamplerRetries, samplerErr))
 			continue
 		}
 
@@ -154,7 +175,12 @@ func (l *Loop) Run(ctx context.Context) error {
 		// Parse decision.
 		decision, err := parseDecision(responseText)
 		if err != nil {
-			l.recordIteration(iteration, "", nil, fmt.Sprintf("parse error: %v", err))
+			preview := responseText
+			if len(preview) > 200 {
+				preview = preview[:200] + "..."
+			}
+			l.recordIteration(iteration, "", nil,
+				fmt.Sprintf("parse error: %v\nRaw response (truncated):\n%s", err, preview))
 			continue
 		}
 
@@ -171,8 +197,9 @@ func (l *Loop) Run(ctx context.Context) error {
 					readySet[id] = true
 				}
 				if !readySet[decision.TaskID] {
+					readyList := strings.Join(readyIDs, ", ")
 					l.recordIteration(iteration, decision.TaskID, nil,
-						fmt.Sprintf("task %q is blocked (dependencies not met)", decision.TaskID))
+						fmt.Sprintf("task %q is blocked (dependencies not met). Ready tasks: [%s]", decision.TaskID, readyList))
 					continue
 				}
 			}
@@ -203,13 +230,17 @@ func (l *Loop) Run(ctx context.Context) error {
 			if !found {
 				l.config.Hooks.callError(iteration, fmt.Errorf("tool %q not found", call.Name))
 				toolNames = append(toolNames, call.Name)
-				resultParts = append(resultParts, fmt.Sprintf("tool %q not found", call.Name))
+				availableNames := l.config.ToolRegistry.ListTools()
+				resultParts = append(resultParts,
+					fmt.Sprintf("tool %q not found. Available tools: [%s]", call.Name, strings.Join(availableNames, ", ")))
 				toolResults = append(toolResults, nil)
 				continue
 			}
 
 			toolReq := makeCallToolRequest(call.Name, call.Arguments)
-			toolResult, err := td.Handler(ctx, toolReq)
+			toolCtx, toolCancel := context.WithTimeout(ctx, l.config.ToolTimeout)
+			toolResult, err := td.Handler(toolCtx, toolReq)
+			toolCancel()
 
 			toolNames = append(toolNames, call.Name)
 			toolResults = append(toolResults, toolResult)
@@ -303,6 +334,15 @@ func (l *Loop) Run(ctx context.Context) error {
 
 		l.recordIteration(iteration, decision.TaskID, toolNames, combinedResult)
 		l.recordCost(iteration, prompt, responseText, calls, toolResults)
+
+		// Budget guard: stop if token budget exceeded.
+		if l.config.BudgetLimit > 0 && l.config.CostTracker != nil {
+			if l.config.CostTracker.Total() > l.config.BudgetLimit {
+				l.setStatus(StatusFailed)
+				return fmt.Errorf("ralph: token budget exceeded (limit=%d, used=%d)",
+					l.config.BudgetLimit, l.config.CostTracker.Total())
+			}
+		}
 	}
 }
 
