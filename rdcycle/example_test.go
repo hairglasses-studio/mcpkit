@@ -8,7 +8,7 @@ import (
 )
 
 // ExampleNewModule demonstrates creating an rdcycle Module and registering it
-// with a ToolRegistry so all nine R&D cycle tools become available.
+// with a ToolRegistry so all R&D cycle tools become available.
 func ExampleNewModule() {
 	cfg := rdcycle.CycleConfig{
 		RoadmapPath: "roadmap.json",
@@ -27,8 +27,8 @@ func ExampleNewModule() {
 
 	// Output:
 	// rdcycle
-	// 9 tools registered
-	// 9 tools in registry
+	// 12 tools registered
+	// 12 tools in registry
 }
 
 // ExampleNewInMemoryArtifactStore demonstrates saving and listing artifacts
