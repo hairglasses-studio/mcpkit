@@ -23,13 +23,14 @@ type RunnerState struct {
 
 // CycleSummary records what happened in a single R&D cycle.
 type CycleSummary struct {
-	Number   int           `json:"number"`
-	SpecFile string        `json:"spec_file"`
-	Status   string        `json:"status"`
-	Iters    int           `json:"iterations"`
-	Cost     float64       `json:"cost_dollars"`
-	Duration time.Duration `json:"duration"`
-	Tasks    []string      `json:"completed_tasks"`
+	Number     int           `json:"number"`
+	SpecFile   string        `json:"spec_file"`
+	Status     string        `json:"status"`
+	Iters      int           `json:"iterations"`
+	Cost       float64       `json:"cost_dollars"`
+	Duration   time.Duration `json:"duration"`
+	Tasks      []string      `json:"completed_tasks"`
+	Downgraded bool          `json:"downgraded,omitempty"`
 }
 
 // LoadState reads runner state from a JSON file.
