@@ -167,10 +167,10 @@ func buildIterationPrompt(spec Spec, progress Progress, tools []registry.ToolDef
 		fmt.Fprintf(&b, "\n## !! Stuck Loop Detected !!\n\n%s\n", stuckHint[0])
 	}
 
-	// Recent log (last 10)
+	// Recent log (last 5, truncated to avoid prompt bloat).
 	if len(progress.Log) > 0 {
 		b.WriteString("\n## Recent Activity\n\n")
-		start := len(progress.Log) - 10
+		start := len(progress.Log) - 5
 		if start < 0 {
 			start = 0
 		}
@@ -182,7 +182,12 @@ func buildIterationPrompt(spec Spec, progress Progress, tools []registry.ToolDef
 			if len(entry.ToolCalls) > 0 {
 				fmt.Fprintf(&b, " called %s", strings.Join(entry.ToolCalls, ", "))
 			}
-			fmt.Fprintf(&b, ": %s\n", entry.Result)
+			// Truncate long results to prevent prompt explosion.
+			result := entry.Result
+			if len(result) > 500 {
+				result = result[:500] + "... [truncated]"
+			}
+			fmt.Fprintf(&b, ": %s\n", result)
 		}
 	}
 
@@ -227,7 +232,15 @@ func BuildMessages(history []ConversationTurn, windowSize int, currentPrompt str
 		messages = append(messages, sampling.TextMessage("user", turn.UserPrompt))
 		messages = append(messages, sampling.TextMessage("assistant", turn.AssistantText))
 		if len(turn.ToolResults) > 0 {
-			messages = append(messages, sampling.TextMessage("user", "Tool results:\n"+strings.Join(turn.ToolResults, "\n")))
+			// Truncate each tool result to prevent prompt explosion from large scan outputs.
+			var truncated []string
+			for _, r := range turn.ToolResults {
+				if len(r) > 2000 {
+					r = r[:2000] + "\n... [truncated, " + fmt.Sprintf("%d", len(r)) + " chars total]"
+				}
+				truncated = append(truncated, r)
+			}
+			messages = append(messages, sampling.TextMessage("user", "Tool results:\n"+strings.Join(truncated, "\n")))
 		}
 	}
 	messages = append(messages, sampling.TextMessage("user", currentPrompt))
