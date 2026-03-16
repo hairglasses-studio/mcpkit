@@ -209,6 +209,9 @@ type Config struct {
 	CostGovernor *CostGovernor
 	// ExitGate controls extra conditions for accepting a completion decision.
 	ExitGate ExitGate
+	// MaxConsecutiveSamplerFailures stops the loop after this many consecutive
+	// sampler errors (no successful LLM response). Default 5. Set 0 to disable.
+	MaxConsecutiveSamplerFailures int
 }
 
 // Loop is the autonomous iteration runner.
@@ -223,6 +226,7 @@ type Loop struct {
 	checkpointFile   string             // resolved checkpoint file path
 	stuckHint        string             // corrective hint injected by stuck detector
 	costDowngrade    bool               // set when CostGovernor requests a downgrade
+	consecutiveSamplerFails int         // consecutive sampler errors without success
 }
 
 // CostDowngradeRequested reports whether the CostGovernor has issued a downgrade
@@ -372,6 +376,9 @@ func NewLoop(config Config) (*Loop, error) {
 	}
 	if config.SamplerBackoff <= 0 {
 		config.SamplerBackoff = 2 * time.Second
+	}
+	if config.MaxConsecutiveSamplerFailures == 0 {
+		config.MaxConsecutiveSamplerFailures = 5
 	}
 	return &Loop{
 		config: config,

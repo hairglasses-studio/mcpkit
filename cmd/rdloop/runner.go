@@ -132,6 +132,16 @@ func (r *MultiCycleRunner) Run(ctx context.Context) error {
 			}
 		}
 
+		// Brief pause between cycles to avoid API hammering and allow rate limits to clear.
+		if cycleNum > 1 {
+			log.Printf("rdloop: pausing 10s between cycles...")
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(10 * time.Second):
+			}
+		}
+
 		log.Printf("rdloop: === Cycle %d starting (spec: %s) ===", cycleNum, specFile)
 		cycleStart := time.Now()
 
@@ -163,14 +173,21 @@ func (r *MultiCycleRunner) Run(ctx context.Context) error {
 		}
 
 		// Back off on consecutive failures to avoid tight error loops.
+		// Allow up to 5 consecutive failures before giving up — over 12h,
+		// transient API errors, circuit breaker trips, and network blips
+		// are expected and recoverable.
 		if summary.Status == "failed" {
 			consecutiveFails++
-			if consecutiveFails >= 3 {
+			if consecutiveFails >= 5 {
 				log.Printf("rdloop: %d consecutive failures, stopping", consecutiveFails)
 				return fmt.Errorf("rdloop: %d consecutive cycle failures", consecutiveFails)
 			}
+			// Exponential backoff: 30s, 60s, 120s, 240s...
 			backoff := time.Duration(consecutiveFails) * 30 * time.Second
-			log.Printf("rdloop: backing off %s before next cycle", backoff)
+			if backoff > 5*time.Minute {
+				backoff = 5 * time.Minute
+			}
+			log.Printf("rdloop: backing off %s before next cycle (fail %d/5)", backoff, consecutiveFails)
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
@@ -245,16 +262,20 @@ func (r *MultiCycleRunner) runOneCycle(ctx context.Context, cycleNum int, specFi
 	progressFile := fmt.Sprintf(".rdloop_cycle_%d.progress.json", cycleNum)
 
 	// Configure ralph-level loop hardening.
+	// Circuit breaker: trip after 8 no-progress iters (generous for implement phase
+	// which may need several write_file attempts), 10-min cooldown.
 	circuitBreaker := ralph.NewCircuitBreaker(ralph.CircuitBreakerConfig{
-		NoProgressThreshold: 5,
+		NoProgressThreshold: 8,
 		SameErrorThreshold:  5,
 		CooldownDuration:    10 * time.Minute,
 	})
+	// Cost governor: per-cycle token budget, velocity alarm at 60% unproductive
+	// over last 8 iterations, halt after 8 consecutive unproductive iterations.
 	costGovernor := ralph.NewCostGovernor(ralph.CostGovernorConfig{
 		HardBudgetTokens:  int64(r.cfg.Profile.TokenBudget),
-		VelocityWindow:    5,
-		VelocityAlarmRate: float64(r.cfg.Profile.MaxTokensPerReq) * 3,
-		UnproductiveMax:   5,
+		VelocityWindow:    8,
+		VelocityAlarmRate: 0.6,
+		UnproductiveMax:   8,
 	})
 
 	loopCfg := ralph.Config{
@@ -336,11 +357,13 @@ func (r *MultiCycleRunner) runOneCycle(ctx context.Context, cycleNum int, specFi
 	return summary, err
 }
 
-// estimateDollarCost converts a UsageSummary to dollar cost using profile pricing.
+// estimateDollarCost converts a UsageSummary to dollar cost using a blended rate.
+// Since the loop uses sonnet for heavy tasks and haiku for light ones,
+// we use sonnet pricing as the conservative upper bound — the actual spend
+// will be lower when haiku handles scan/verify/reflect/report/schedule phases.
 func estimateDollarCost(us finops.UsageSummary, profile rdcycle.BudgetProfile) float64 {
-	// Use sonnet pricing as default (most common model in the loop).
-	inputRate := 0.003  // per 1K tokens
-	outputRate := 0.015 // per 1K tokens
+	inputRate := 0.003  // sonnet per 1K tokens
+	outputRate := 0.015 // sonnet per 1K tokens
 	for _, mp := range profile.ModelPricing {
 		if mp.Model == "claude-sonnet-4-6" {
 			inputRate = mp.InputPer1KTokens

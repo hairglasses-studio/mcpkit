@@ -3,6 +3,8 @@ package rdcycle
 import (
 	"context"
 	"fmt"
+	"log"
+	"sync"
 	"time"
 
 	"github.com/hairglasses-studio/mcpkit/handler"
@@ -40,6 +42,7 @@ type perpetualStatusOutput struct {
 	CycleNum     int     `json:"cycle_num"`
 	BreakerState string  `json:"breaker_state"`
 	TotalCost    float64 `json:"total_cost"`
+	LastError    string  `json:"last_error,omitempty"`
 	Message      string  `json:"message"`
 }
 
@@ -49,6 +52,8 @@ type orchestratorState struct {
 	cancel       context.CancelFunc
 	breaker      *CircuitBreaker
 	governor     *CostVelocityGovernor
+	lastErr      error
+	lastErrMu    sync.Mutex
 }
 
 func (m *Module) perpetualStartTool() registry.ToolDefinition {
@@ -119,18 +124,25 @@ func (m *Module) handlePerpetualStart(_ context.Context, input perpetualStartInp
 		MaxCycles:      input.MaxCycles,
 		ImproveCadence: input.ImproveCadence,
 		RalphStarter:   m.ralphStarter,
+		CostReader:     m.costReader,
 	})
 
 	ctx, cancel := context.WithCancel(context.Background())
-	m.orchState = &orchestratorState{
+	state := &orchestratorState{
 		orchestrator: orch,
 		cancel:       cancel,
 		breaker:      breaker,
 		governor:     governor,
 	}
+	m.orchState = state
 
 	go func() {
-		_ = orch.Run(ctx)
+		if err := orch.Run(ctx); err != nil {
+			log.Printf("[perpetual] orchestrator stopped: %v", err)
+			state.lastErrMu.Lock()
+			state.lastErr = err
+			state.lastErrMu.Unlock()
+		}
 	}()
 
 	return perpetualStartOutput{
@@ -184,11 +196,20 @@ func (m *Module) handlePerpetualStatus(_ context.Context, _ perpetualStatusInput
 		totalCost = governor.TotalCost()
 	}
 
+	state := m.orchState
+	state.lastErrMu.Lock()
+	lastErrStr := ""
+	if state.lastErr != nil {
+		lastErrStr = state.lastErr.Error()
+	}
+	state.lastErrMu.Unlock()
+
 	return perpetualStatusOutput{
 		Running:      orch.Running(),
 		CycleNum:     orch.CycleNum(),
 		BreakerState: breakerState,
 		TotalCost:    totalCost,
+		LastError:    lastErrStr,
 		Message:      fmt.Sprintf("cycle %d, breaker=%s, cost=$%.2f", orch.CycleNum(), breakerState, totalCost),
 	}, nil
 }

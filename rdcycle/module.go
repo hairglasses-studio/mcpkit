@@ -17,6 +17,7 @@ type Module struct {
 	orchMu       sync.Mutex
 	orchState    *orchestratorState
 	ralphStarter func(ctx context.Context, specPath string) error
+	costReader   func() float64
 }
 
 // ModuleOption configures optional Module settings.
@@ -59,6 +60,11 @@ func (m *Module) Description() string {
 // SetRalphStarter sets the function used by the perpetual orchestrator to run ralph loops.
 func (m *Module) SetRalphStarter(starter func(ctx context.Context, specPath string) error) {
 	m.ralphStarter = starter
+}
+
+// SetCostReader sets the function used to read cumulative dollar cost for the governor.
+func (m *Module) SetCostReader(reader func() float64) {
+	m.costReader = reader
 }
 
 // Tools returns all rdcycle tool definitions.
