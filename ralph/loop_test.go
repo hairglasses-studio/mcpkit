@@ -390,16 +390,17 @@ func TestLoop_ToolNotFound(t *testing.T) {
 	if status.Status != StatusCompleted {
 		t.Errorf("Status = %q, want %q", status.Status, StatusCompleted)
 	}
-	// Should have logged the tool-not-found.
+	// Should have logged the tool-not-found with available tools list.
 	found := false
 	for _, entry := range status.Log {
-		if entry.Result == `tool "nonexistent_tool" not found` {
+		if strings.Contains(entry.Result, `tool "nonexistent_tool" not found`) &&
+			strings.Contains(entry.Result, "Available tools:") {
 			found = true
 			break
 		}
 	}
 	if !found {
-		t.Error("expected tool-not-found log entry")
+		t.Error("expected tool-not-found log entry with available tools list")
 	}
 }
 
@@ -841,17 +842,18 @@ func TestLoop_SkipsBlockedTask(t *testing.T) {
 		t.Errorf("echo called %d times, want 0 (task was blocked)", echoCallCount)
 	}
 
-	// The iteration log should record the blocked message.
+	// The iteration log should record the blocked message with ready tasks hint.
 	status := loop.Status()
 	found := false
 	for _, entry := range status.Log {
-		if strings.Contains(entry.Result, "blocked") && entry.TaskID == "t2" {
+		if strings.Contains(entry.Result, "blocked") && entry.TaskID == "t2" &&
+			strings.Contains(entry.Result, "Ready tasks:") {
 			found = true
 			break
 		}
 	}
 	if !found {
-		t.Errorf("expected blocked log entry for t2, got log: %v", status.Log)
+		t.Errorf("expected blocked log entry for t2 with ready tasks hint, got log: %v", status.Log)
 	}
 }
 
@@ -1332,4 +1334,392 @@ func min(a, b int) int {
 		return a
 	}
 	return b
+}
+
+// --- Per-tool timeout tests (Commit 1) ---
+
+// slowModule provides a tool that blocks until context is cancelled.
+type slowModule struct{}
+
+func (m *slowModule) Name() string        { return "slow" }
+func (m *slowModule) Description() string { return "Slow tools" }
+func (m *slowModule) Tools() []registry.ToolDefinition {
+	return []registry.ToolDefinition{
+		{
+			Tool: registry.Tool{Name: "slow_tool", Description: "Blocks for a while"},
+			Handler: func(ctx context.Context, req registry.CallToolRequest) (*registry.CallToolResult, error) {
+				select {
+				case <-ctx.Done():
+					return nil, ctx.Err()
+				case <-time.After(5 * time.Second):
+					return registry.MakeTextResult("slow done"), nil
+				}
+			},
+		},
+	}
+}
+
+func TestLoop_ToolTimeout(t *testing.T) {
+	dir := t.TempDir()
+	spec := Spec{
+		Name: "test", Description: "timeout test", Completion: "done",
+		Tasks: []Task{{ID: "t1", Description: "slow task"}},
+	}
+	specFile := writeSpec(t, dir, spec)
+
+	sampler := &scriptedSampler{
+		responses: []string{
+			`{"complete": false, "task_id": "t1", "tool_name": "slow_tool", "arguments": {}, "reasoning": "slow"}`,
+			`{"complete": true, "reasoning": "done"}`,
+		},
+	}
+
+	reg := registry.NewToolRegistry()
+	reg.RegisterModule(&slowModule{})
+
+	loop, err := NewLoop(Config{
+		SpecFile:     specFile,
+		ToolRegistry: reg,
+		Sampler:      sampler,
+		ToolTimeout:  100 * time.Millisecond,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := loop.Run(context.Background()); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	// The tool should have timed out, and the loop should have continued.
+	status := loop.Status()
+	if status.Status != StatusCompleted {
+		t.Errorf("Status = %q, want %q", status.Status, StatusCompleted)
+	}
+	// First iteration should have a tool error from timeout.
+	found := false
+	for _, entry := range status.Log {
+		if strings.Contains(entry.Result, "error") || strings.Contains(entry.Result, "deadline") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("expected timeout error in iteration log")
+	}
+}
+
+func TestLoop_ToolTimeoutDefault(t *testing.T) {
+	reg := registry.NewToolRegistry()
+	echoTool(reg)
+
+	dir := t.TempDir()
+	spec := Spec{Name: "test", Description: "desc", Completion: "done",
+		Tasks: []Task{{ID: "t1", Description: "x"}}}
+	specFile := writeSpec(t, dir, spec)
+
+	loop, err := NewLoop(Config{
+		SpecFile:     specFile,
+		ToolRegistry: reg,
+		Sampler:      &scriptedSampler{responses: []string{`{"complete": true}`}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loop.config.ToolTimeout != 30*time.Second {
+		t.Errorf("default ToolTimeout = %v, want 30s", loop.config.ToolTimeout)
+	}
+}
+
+// --- Sampler retry tests (Commit 2) ---
+
+// failingSampler fails a specified number of times then delegates to a scriptedSampler.
+type failingSampler struct {
+	failCount  int
+	calls      int
+	inner      *scriptedSampler
+}
+
+func (s *failingSampler) CreateMessage(ctx context.Context, req sampling.CreateMessageRequest) (*sampling.CreateMessageResult, error) {
+	s.calls++
+	if s.calls <= s.failCount {
+		return nil, fmt.Errorf("transient error %d", s.calls)
+	}
+	return s.inner.CreateMessage(ctx, req)
+}
+
+func TestLoop_SamplerRetry_Recovers(t *testing.T) {
+	dir := t.TempDir()
+	spec := Spec{
+		Name: "test", Description: "retry test", Completion: "done",
+		Tasks: []Task{{ID: "t1", Description: "do it"}},
+	}
+	specFile := writeSpec(t, dir, spec)
+
+	inner := &scriptedSampler{
+		responses: []string{
+			`{"complete": false, "task_id": "t1", "tool_name": "echo", "arguments": {"message": "hi"}, "mark_done": true}`,
+			`{"complete": true, "reasoning": "done"}`,
+		},
+	}
+
+	// Fails twice, then succeeds. With SamplerRetries=2, the first call
+	// will fail twice and succeed on the third attempt (attempt 0, 1, 2).
+	sampler := &failingSampler{failCount: 2, inner: inner}
+
+	reg := registry.NewToolRegistry()
+	echoTool(reg)
+
+	loop, err := NewLoop(Config{
+		SpecFile:       specFile,
+		ToolRegistry:   reg,
+		Sampler:        sampler,
+		SamplerRetries: 2,
+		SamplerBackoff: 10 * time.Millisecond, // fast for tests
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := loop.Run(context.Background()); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	status := loop.Status()
+	if status.Status != StatusCompleted {
+		t.Errorf("Status = %q, want %q", status.Status, StatusCompleted)
+	}
+	// No "sampler error" entries should be in the log (retry succeeded).
+	for _, entry := range status.Log {
+		if strings.Contains(entry.Result, "sampler error") {
+			t.Errorf("unexpected sampler error in log: %s", entry.Result)
+		}
+	}
+}
+
+func TestLoop_SamplerRetry_Exhausted(t *testing.T) {
+	dir := t.TempDir()
+	spec := Spec{
+		Name: "test", Description: "retry exhausted", Completion: "done",
+		Tasks: []Task{{ID: "t1", Description: "fail"}},
+	}
+	specFile := writeSpec(t, dir, spec)
+
+	// Always fails — inner sampler has no responses either.
+	sampler := &failingSampler{failCount: 100, inner: &scriptedSampler{}}
+
+	reg := registry.NewToolRegistry()
+	echoTool(reg)
+
+	loop, err := NewLoop(Config{
+		SpecFile:       specFile,
+		ToolRegistry:   reg,
+		Sampler:        sampler,
+		SamplerRetries: 1,
+		SamplerBackoff: 10 * time.Millisecond,
+		MaxIterations:  2,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = loop.Run(context.Background())
+	// Should hit max iterations since every iteration exhausts retries.
+	if err == nil {
+		t.Fatal("expected error from max iterations")
+	}
+
+	status := loop.Status()
+	found := false
+	for _, entry := range status.Log {
+		if strings.Contains(entry.Result, "after 1 retries") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("expected log entry with retry count")
+	}
+}
+
+func TestLoop_SamplerRetry_RespectsStop(t *testing.T) {
+	dir := t.TempDir()
+	spec := Spec{
+		Name: "test", Description: "stop during retry", Completion: "done",
+		Tasks: []Task{{ID: "t1", Description: "stoppable"}},
+	}
+	specFile := writeSpec(t, dir, spec)
+
+	// Always fails to trigger backoff.
+	sampler := &failingSampler{failCount: 100, inner: &scriptedSampler{}}
+
+	reg := registry.NewToolRegistry()
+	echoTool(reg)
+
+	loop, err := NewLoop(Config{
+		SpecFile:       specFile,
+		ToolRegistry:   reg,
+		Sampler:        sampler,
+		SamplerRetries: 5,
+		SamplerBackoff: 10 * time.Second, // long backoff
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	done := make(chan error, 1)
+	go func() {
+		done <- loop.Run(context.Background())
+	}()
+
+	// Give the loop time to start the first iteration and enter backoff.
+	time.Sleep(100 * time.Millisecond)
+	loop.Stop()
+
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("Run after Stop should return nil, got: %v", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("loop did not stop within 5s")
+	}
+
+	status := loop.Status()
+	if status.Status != StatusStopped {
+		t.Errorf("Status = %q, want %q", status.Status, StatusStopped)
+	}
+}
+
+// --- Budget guard tests (Commit 3) ---
+
+func TestLoop_BudgetGuard_Stops(t *testing.T) {
+	dir := t.TempDir()
+	spec := Spec{
+		Name: "test", Description: "budget test", Completion: "done",
+		Tasks: []Task{{ID: "t1", Description: "expensive"}},
+	}
+	specFile := writeSpec(t, dir, spec)
+
+	sampler := &scriptedSampler{
+		responses: []string{
+			`{"complete": false, "task_id": "t1", "tool_name": "echo", "arguments": {"message": "hello"}, "reasoning": "go"}`,
+			`{"complete": false, "task_id": "t1", "tool_name": "echo", "arguments": {"message": "again"}, "reasoning": "go"}`,
+		},
+	}
+
+	reg := registry.NewToolRegistry()
+	echoTool(reg)
+
+	tracker := finops.NewTracker()
+	loop, err := NewLoop(Config{
+		SpecFile:     specFile,
+		ToolRegistry: reg,
+		Sampler:      sampler,
+		CostTracker:  tracker,
+		BudgetLimit:  1, // extremely low — will trigger after first iteration
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = loop.Run(context.Background())
+	if err == nil {
+		t.Fatal("expected budget exceeded error")
+	}
+	if !strings.Contains(err.Error(), "budget exceeded") {
+		t.Errorf("error = %q, want contains 'budget exceeded'", err.Error())
+	}
+
+	status := loop.Status()
+	if status.Status != StatusFailed {
+		t.Errorf("Status = %q, want %q", status.Status, StatusFailed)
+	}
+}
+
+func TestLoop_BudgetGuard_ZeroUnlimited(t *testing.T) {
+	dir := t.TempDir()
+	spec := Spec{
+		Name: "test", Description: "no budget limit", Completion: "done",
+		Tasks: []Task{{ID: "t1", Description: "cheap"}},
+	}
+	specFile := writeSpec(t, dir, spec)
+
+	sampler := &scriptedSampler{
+		responses: []string{
+			`{"complete": false, "task_id": "t1", "tool_name": "echo", "arguments": {"message": "hi"}, "mark_done": true}`,
+			`{"complete": true, "reasoning": "done"}`,
+		},
+	}
+
+	reg := registry.NewToolRegistry()
+	echoTool(reg)
+
+	tracker := finops.NewTracker()
+	loop, err := NewLoop(Config{
+		SpecFile:     specFile,
+		ToolRegistry: reg,
+		Sampler:      sampler,
+		CostTracker:  tracker,
+		BudgetLimit:  0, // unlimited
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := loop.Run(context.Background()); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	status := loop.Status()
+	if status.Status != StatusCompleted {
+		t.Errorf("Status = %q, want %q", status.Status, StatusCompleted)
+	}
+}
+
+// --- Parse error test (Commit 4) ---
+
+func TestLoop_ParseError_ShowsRawText(t *testing.T) {
+	dir := t.TempDir()
+	spec := Spec{
+		Name: "test", Description: "parse error test", Completion: "done",
+		Tasks: []Task{{ID: "t1", Description: "parse fail"}},
+	}
+	specFile := writeSpec(t, dir, spec)
+
+	sampler := &scriptedSampler{
+		responses: []string{
+			"this is not JSON at all, it's just random text from the LLM",
+			`{"complete": true, "reasoning": "done"}`,
+		},
+	}
+
+	reg := registry.NewToolRegistry()
+
+	loop, err := NewLoop(Config{
+		SpecFile:     specFile,
+		ToolRegistry: reg,
+		Sampler:      sampler,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := loop.Run(context.Background()); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	status := loop.Status()
+	found := false
+	for _, entry := range status.Log {
+		if strings.Contains(entry.Result, "parse error") &&
+			strings.Contains(entry.Result, "Raw response (truncated)") &&
+			strings.Contains(entry.Result, "not JSON") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("expected parse error log with truncated raw response")
+	}
 }

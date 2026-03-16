@@ -138,6 +138,19 @@ func buildIterationPrompt(spec Spec, progress Progress, tools []registry.ToolDef
 	}
 	b.WriteString("\n")
 
+	// Last Error section: highlight the most recent error so the LLM fixes it first.
+	if len(progress.Log) > 0 {
+		last := progress.Log[len(progress.Log)-1]
+		if isErrorResult(last.Result) {
+			fmt.Fprintf(&b, "\n## !! Last Error (fix this first) !!\n\n")
+			fmt.Fprintf(&b, "Iteration %d", last.Iteration)
+			if last.TaskID != "" {
+				fmt.Fprintf(&b, " [%s]", last.TaskID)
+			}
+			fmt.Fprintf(&b, ": %s\n", last.Result)
+		}
+	}
+
 	// Recent log (last 10)
 	if len(progress.Log) > 0 {
 		b.WriteString("\n## Recent Activity\n\n")
@@ -169,6 +182,18 @@ func buildIterationPrompt(spec Spec, progress Progress, tools []registry.ToolDef
 
 	b.WriteString("\nRespond with a JSON decision.")
 	return b.String()
+}
+
+// isErrorResult returns true if the iteration result text indicates an error.
+func isErrorResult(result string) bool {
+	lower := strings.ToLower(result)
+	errorSignals := []string{"error", "not found", "blocked", "parse error", "no tool specified", "budget exceeded"}
+	for _, sig := range errorSignals {
+		if strings.Contains(lower, sig) {
+			return true
+		}
+	}
+	return false
 }
 
 // BuildMessages constructs a multi-turn message slice from conversation history.
