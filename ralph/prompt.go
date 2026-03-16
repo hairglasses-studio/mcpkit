@@ -47,11 +47,22 @@ Rules:
 - After successfully completing a task, set "mark_done": true in the same response
 - If a tool returns an error with "Expected schema:", use it to correct your arguments
 - If a tool fails, try a different approach
-- Always include reasoning`
+- Always include reasoning
+- Tool commands (rdcycle_verify, etc.) run WITHOUT a shell — do NOT use pipes (|), redirects (>), or chained commands (&&). Each command is exec'd directly.
+- Always use absolute paths when referencing files — see the "Project Context" section for the project root`
 
 // buildIterationPrompt constructs the user-role prompt for a single iteration.
-func buildIterationPrompt(spec Spec, progress Progress, tools []registry.ToolDefinition) string {
+// An optional stuckHint string may be passed to inject a corrective message
+// when a stuck-loop pattern has been detected.
+func buildIterationPrompt(spec Spec, progress Progress, tools []registry.ToolDefinition, stuckHint ...string) string {
 	var b strings.Builder
+
+	// Project context (if available)
+	if progress.ProjectRoot != "" {
+		fmt.Fprintf(&b, "## Project Context\n\n")
+		fmt.Fprintf(&b, "**Project root:** `%s`\n", progress.ProjectRoot)
+		fmt.Fprintf(&b, "**Spec file:** `%s`\n\n", progress.SpecFile)
+	}
 
 	// Spec header
 	fmt.Fprintf(&b, "# Task: %s\n\n%s\n\n", spec.Name, spec.Description)
@@ -149,6 +160,11 @@ func buildIterationPrompt(spec Spec, progress Progress, tools []registry.ToolDef
 			}
 			fmt.Fprintf(&b, ": %s\n", last.Result)
 		}
+	}
+
+	// Stuck loop hint — injected by detector when patterns are found.
+	if len(stuckHint) > 0 && stuckHint[0] != "" {
+		fmt.Fprintf(&b, "\n## !! Stuck Loop Detected !!\n\n%s\n", stuckHint[0])
 	}
 
 	// Recent log (last 10)
