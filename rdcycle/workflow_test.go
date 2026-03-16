@@ -130,6 +130,38 @@ func TestRDCycleGraph_Validation(t *testing.T) {
 	}
 }
 
+func TestRDCycleGraph_CompensableImplement(t *testing.T) {
+	t.Parallel()
+	rmPath := writeTestRoadmap(t)
+
+	g, err := NewRDCycleGraph(CycleConfig{
+		RoadmapPath: rmPath,
+		ScanRepos:   []string{"test/repo"},
+	})
+	if err != nil {
+		t.Fatalf("NewRDCycleGraph: %v", err)
+	}
+
+	// Run the graph — verify implement_complete is set.
+	engine, err := workflow.NewEngine(g, workflow.EngineConfig{
+		CompensateOnFailure: true,
+	})
+	if err != nil {
+		t.Fatalf("NewEngine: %v", err)
+	}
+
+	result, err := engine.Run(context.Background(), "comp-test", workflow.NewState())
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if result.Status != workflow.RunStatusCompleted {
+		t.Errorf("status = %v; want completed", result.Status)
+	}
+	if v, ok := workflow.Get[bool](result.FinalState, "implement_complete"); !ok || !v {
+		t.Error("expected implement_complete=true")
+	}
+}
+
 // writeTestRoadmap creates a temporary roadmap file with active work items.
 func writeTestRoadmap(t *testing.T) string {
 	t.Helper()

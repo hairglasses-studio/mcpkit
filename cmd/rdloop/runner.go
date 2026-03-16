@@ -240,9 +240,13 @@ func (r *MultiCycleRunner) runOneCycle(ctx context.Context, cycleNum int, specFi
 		CostTracker:   tracker,
 		ForceRestart:  true,
 		TemplateVars:  templateVars,
-		ModelSelector: r.cfg.ModelTier.Selector(),
+		ModelSelector: rdcycle.CombineSelectors(
+			r.cfg.ModelTier.Selector(),
+			rdcycle.NewCostAdapter(int64(r.cfg.Profile.MaxIterations)*int64(r.cfg.Profile.MaxTokensPerReq), r.cfg.Profile.MaxIterations),
+			tracker,
+		),
 		HistoryWindow: 5,
-		AutoVerify:    true,
+		AutoVerifyLevel: ralph.AutoVerifyFull,
 		ProjectRoot:   ".",
 		PhaseMaxTokens: map[string]int{
 			"scan": 2048, "plan": 4096, "implement": 16384,

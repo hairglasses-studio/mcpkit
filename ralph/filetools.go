@@ -3,9 +3,11 @@
 package ralph
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -29,6 +31,8 @@ func (m *FileToolModule) Tools() []registry.ToolDefinition {
 		m.writeFileTool(),
 		m.readFileTool(),
 		m.listDirTool(),
+		m.testPackageTool(),
+		m.checkCoverageTool(),
 	}
 }
 
@@ -195,4 +199,151 @@ func (m *FileToolModule) handleListDir(ctx context.Context, input ListDirInput) 
 		Entries: names,
 		Count:   len(names),
 	}, nil
+}
+
+// --- test_package ---
+
+type TestPackageInput struct {
+	Package string `json:"package" jsonschema:"required,description=Go package path relative to project root (e.g. ralph or ./ralph/...)"`
+}
+
+type TestPackageOutput struct {
+	Passed bool   `json:"passed"`
+	Output string `json:"output"`
+}
+
+func (m *FileToolModule) testPackageTool() registry.ToolDefinition {
+	desc := "Run go test -count=1 -v on a package and return the output. " +
+		"Package path is relative to the project root (e.g. 'ralph' or './ralph/...'). " +
+		"Use this to verify that tests pass after making changes."
+
+	td := handler.TypedHandler[TestPackageInput, TestPackageOutput](
+		"test_package",
+		desc,
+		m.handleTestPackage,
+	)
+	td.Category = "test"
+	td.Timeout = 120 * time.Second
+	return td
+}
+
+func (m *FileToolModule) handleTestPackage(ctx context.Context, input TestPackageInput) (TestPackageOutput, error) {
+	if input.Package == "" {
+		return TestPackageOutput{}, fmt.Errorf("package is required")
+	}
+
+	pkg := input.Package
+	if !strings.HasPrefix(pkg, "./") {
+		pkg = "./" + pkg
+	}
+	if !strings.HasSuffix(pkg, "/...") && !strings.HasSuffix(pkg, "/") {
+		pkg += "/"
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, 120*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "go", "test", "-count=1", "-v", pkg)
+	cmd.Dir = m.Root
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &out
+	err := cmd.Run()
+
+	output := out.String()
+	if len(output) > 8000 {
+		output = output[:8000] + "\n... (truncated)"
+	}
+
+	return TestPackageOutput{
+		Passed: err == nil,
+		Output: output,
+	}, nil
+}
+
+// --- check_coverage ---
+
+type CheckCoverageInput struct {
+	Package string `json:"package" jsonschema:"required,description=Go package path relative to project root (e.g. ralph)"`
+}
+
+type CheckCoverageOutput struct {
+	Package  string  `json:"package"`
+	Coverage float64 `json:"coverage"`
+	Output   string  `json:"output"`
+}
+
+func (m *FileToolModule) checkCoverageTool() registry.ToolDefinition {
+	desc := "Run go test -cover on a package and parse the coverage percentage. " +
+		"Package path is relative to the project root (e.g. 'ralph'). " +
+		"Returns the coverage percentage and full output."
+
+	td := handler.TypedHandler[CheckCoverageInput, CheckCoverageOutput](
+		"check_coverage",
+		desc,
+		m.handleCheckCoverage,
+	)
+	td.Category = "test"
+	td.Timeout = 120 * time.Second
+	return td
+}
+
+func (m *FileToolModule) handleCheckCoverage(ctx context.Context, input CheckCoverageInput) (CheckCoverageOutput, error) {
+	if input.Package == "" {
+		return CheckCoverageOutput{}, fmt.Errorf("package is required")
+	}
+
+	pkg := input.Package
+	if !strings.HasPrefix(pkg, "./") {
+		pkg = "./" + pkg
+	}
+	if !strings.HasSuffix(pkg, "/...") && !strings.HasSuffix(pkg, "/") {
+		pkg += "/"
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, 120*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "go", "test", "-count=1", "-cover", pkg)
+	cmd.Dir = m.Root
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &out
+	err := cmd.Run()
+
+	output := out.String()
+	coverage := parseCoverage(output)
+
+	if err != nil && coverage == 0 {
+		return CheckCoverageOutput{
+			Package:  pkg,
+			Coverage: 0,
+			Output:   output,
+		}, nil
+	}
+
+	return CheckCoverageOutput{
+		Package:  pkg,
+		Coverage: coverage,
+		Output:   output,
+	}, nil
+}
+
+// parseCoverage extracts the coverage percentage from `go test -cover` output.
+// Looks for patterns like "coverage: 85.2% of statements".
+func parseCoverage(output string) float64 {
+	// Find "coverage: XX.X% of statements"
+	idx := strings.Index(output, "coverage: ")
+	if idx < 0 {
+		return 0
+	}
+	rest := output[idx+len("coverage: "):]
+	pctIdx := strings.Index(rest, "%")
+	if pctIdx < 0 {
+		return 0
+	}
+	pctStr := rest[:pctIdx]
+	var pct float64
+	fmt.Sscanf(pctStr, "%f", &pct)
+	return pct
 }
