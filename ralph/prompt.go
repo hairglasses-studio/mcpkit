@@ -14,7 +14,7 @@ Each iteration, you MUST respond with a single JSON object (no other text).
 You may call one or more tools per iteration using the tool_calls array:
 {
   "complete": false,
-  "task_id": "task-1",
+  "task_id": "<id of the task you are working on>",
   "tool_calls": [
     {"name": "tool_a", "arguments": {"param": "value"}},
     {"name": "tool_b", "arguments": {"other": "value"}}
@@ -26,7 +26,7 @@ You may call one or more tools per iteration using the tool_calls array:
 For a single tool, the shorthand "tool_name"/"arguments" also works:
 {
   "complete": false,
-  "task_id": "task-1",
+  "task_id": "<id of the task you are working on>",
   "tool_name": "tool_to_call",
   "arguments": {"param": "value"},
   "reasoning": "brief explanation of why this step",
@@ -37,7 +37,11 @@ When a task is finished, set "mark_done": true.
 When ALL tasks are done, set "complete": true (no tool call needed).
 
 Rules:
+- The task_id MUST exactly match one of the task IDs from the "Ready" section (e.g. "scan", "plan", etc.) — never invent task IDs
+- Only work on tasks listed under "Ready" — never attempt blocked tasks
 - Use only the tools listed below
+- To create or modify files, use write_file with full file content in the "content" argument. To read existing files, use read_file. To explore directories, use list_dir.
+- IMPORTANT: Do not spend more than 2 iterations exploring/reading. After reading what you need, immediately call write_file to create files. If a directory is empty, that means you need to create files there — don't keep listing it.
 - If a tool fails, try a different approach
 - Always include reasoning`
 

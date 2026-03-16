@@ -1,25 +1,25 @@
 {
-  "name": "R&D Cycle: {{cycle_name}}",
-  "description": "Autonomous R&D cycle scanning MCP ecosystem changes since {{since_date}}, planning roadmap updates, implementing changes, and verifying quality.",
+  "name": "R&D Cycle: {{.cycle_name}}",
+  "description": "Autonomous R&D cycle scanning MCP ecosystem changes since {{.since_date}}, planning roadmap updates, implementing changes, and verifying quality.",
   "completion": "All planned work items are implemented, tests pass, and roadmap is updated.",
   "tasks": [
     {
       "id": "scan",
-      "description": "Run rdcycle_scan to check ecosystem activity for repos since {{since_date}}. Store the scan artifact."
+      "description": "Run rdcycle_scan to check ecosystem activity for repos since {{.since_date}}. Store the scan artifact."
     },
     {
       "id": "plan",
-      "description": "Run rdcycle_plan with scan results and roadmap at {{roadmap_path}} to identify gaps and ready work items.",
+      "description": "Run rdcycle_plan with scan results and roadmap at {{.roadmap_path}} to identify gaps and ready work items.",
       "depends_on": ["scan"]
     },
     {
       "id": "implement",
-      "description": "For each ready work item from the plan, implement the changes. Use one tool call per package. Follow dependency layers.",
+      "description": "Create new Go source files for the planned work. MANDATORY STEPS: 1) read_file on a similar existing package to use as a template (e.g. memory/memory.go for interfaces+store, or handler/handler.go for typed handlers), 2) call write_file with path and complete Go source code in the content field to create each .go file, 3) call write_file to create _test.go files. If a directory is empty or does not exist, you must CREATE the files — they will not appear by listing. Every iteration in this phase MUST include at least one write_file call.",
       "depends_on": ["plan"]
     },
     {
       "id": "verify",
-      "description": "Run rdcycle_verify to execute make check. If it fails, fix issues and re-verify.",
+      "description": "Run rdcycle_verify to execute 'go build ./...' then 'go test ./... -count=1 -short'. If it fails, use read_file and write_file to fix issues, then re-verify.",
       "depends_on": ["implement"]
     },
     {
