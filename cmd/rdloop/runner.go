@@ -217,7 +217,7 @@ func (r *MultiCycleRunner) runOneCycle(ctx context.Context, cycleNum int, specFi
 	})
 	reg.RegisterModule(roadmapMod)
 
-	fileMod := &fileToolModule{root: "."}
+	fileMod := &ralph.FileToolModule{Root: "."}
 	reg.RegisterModule(fileMod)
 
 	rdcycleMod := rdcycle.NewModule(rdcycle.CycleConfig{
@@ -241,6 +241,13 @@ func (r *MultiCycleRunner) runOneCycle(ctx context.Context, cycleNum int, specFi
 		ForceRestart:  true,
 		TemplateVars:  templateVars,
 		ModelSelector: r.cfg.ModelTier.Selector(),
+		HistoryWindow: 5,
+		AutoVerify:    true,
+		ProjectRoot:   ".",
+		PhaseMaxTokens: map[string]int{
+			"scan": 2048, "plan": 4096, "implement": 16384,
+			"verify": 2048, "reflect": 2048, "report": 4096, "schedule": 2048,
+		},
 		Hooks: ralph.Hooks{
 			OnIterationStart: func(iter int) {
 				log.Printf("  [cycle %d] iteration %d starting", cycleNum, iter)

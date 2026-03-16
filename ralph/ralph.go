@@ -80,6 +80,13 @@ type Decision struct {
 	MarkDone  bool                   `json:"mark_done,omitempty"`
 }
 
+// ConversationTurn records one full iteration for multi-turn conversation history.
+type ConversationTurn struct {
+	UserPrompt    string   // the prompt sent to the LLM
+	AssistantText string   // the raw LLM response text
+	ToolResults   []string // full tool output per call in that iteration
+}
+
 // ResolvedToolCalls returns the effective list of tool calls for this decision.
 // If ToolCalls is populated it is returned directly. If only ToolName is set,
 // it wraps the single tool into a one-element slice. Otherwise returns nil.
@@ -154,6 +161,23 @@ type Config struct {
 	// Called each iteration with the current iteration number and completed task IDs.
 	// Return empty string for no preference.
 	ModelSelector func(iteration int, completedIDs []string) string
+	// HistoryWindow is the number of previous conversation turns to include in the
+	// prompt context. When > 0, enables multi-turn conversation mode where the LLM
+	// sees previous turns instead of the "Recent Activity" summary.
+	// Default 0 means legacy single-turn mode.
+	HistoryWindow int
+	// PhaseMaxTokens maps task IDs to max token overrides for the sampling request.
+	// If a task ID is found here, its value is used instead of Config.MaxTokens.
+	PhaseMaxTokens map[string]int
+	// AutoVerify when true runs `go build` after write_file calls and includes
+	// the result in the conversation history so the LLM sees compilation errors.
+	AutoVerify bool
+	// ProjectRoot is the working directory for auto-verify commands.
+	// Required when AutoVerify is true.
+	ProjectRoot string
+	// TaskDecomposer is called after a task is marked done, allowing injection
+	// of sub-tasks into the spec. Return nil to make no changes.
+	TaskDecomposer func(taskID string, progress Progress, spec *Spec) []Task
 }
 
 // Loop is the autonomous iteration runner.
@@ -163,6 +187,8 @@ type Loop struct {
 	progress Progress
 	stopCh   chan struct{}
 	stopped  bool
+	history      []ConversationTurn // multi-turn conversation history
+	specModified bool               // true when TaskDecomposer has modified the spec
 }
 
 // DefaultProgressFile returns the default progress file path for a spec file.
