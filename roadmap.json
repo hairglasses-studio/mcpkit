@@ -25,7 +25,7 @@
           "id": "P31-3",
           "description": "Session middleware for request scoping",
           "package": "session",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P31-1"
           ],
@@ -35,7 +35,7 @@
           "id": "P31-4",
           "description": "Session migration helpers for existing stateful servers",
           "package": "session",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P31-2"
           ],
@@ -45,7 +45,7 @@
           "id": "P31-5",
           "description": "Session TTL and eviction policies",
           "package": "session",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P31-2"
           ],
@@ -55,7 +55,7 @@
           "id": "P31-6",
           "description": "Gateway session affinity routing",
           "package": "gateway",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P31-3"
           ],
@@ -65,7 +65,7 @@
           "id": "P31-7",
           "description": "Session integration tests with mcptest",
           "package": "mcptest",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P31-3"
           ],
@@ -708,7 +708,7 @@
           "id": "P31-3",
           "description": "Session middleware for request scoping",
           "package": "session",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P31-1"
           ],
@@ -718,7 +718,7 @@
           "id": "P31-4",
           "description": "Session migration helpers for existing stateful servers",
           "package": "session",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P31-2"
           ],
@@ -728,7 +728,7 @@
           "id": "P31-5",
           "description": "Session TTL and eviction policies",
           "package": "session",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P31-2"
           ],
@@ -738,7 +738,7 @@
           "id": "P31-6",
           "description": "Gateway session affinity routing",
           "package": "gateway",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P31-3"
           ],
@@ -748,7 +748,7 @@
           "id": "P31-7",
           "description": "Session integration tests with mcptest",
           "package": "mcptest",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P31-3"
           ],

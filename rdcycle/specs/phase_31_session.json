@@ -1,0 +1,48 @@
+{
+  "name": "Phase 31: Session Management Foundation",
+  "description": "Implement session/ package with Session/SessionStore interfaces, in-memory store, middleware, TTL/eviction policies, gateway affinity, and integration tests.",
+  "completion": "session/ package exists with full test coverage, gateway affinity works, mcptest integration passes.",
+  "tasks": [
+    {
+      "id": "interfaces",
+      "description": "Define Session and SessionStore interfaces in session/session.go. Include Session (ID, Get, Set, Delete, Keys, CreatedAt, ExpiresAt), SessionStore (Create, Get, Delete, List), and SessionMiddleware function signature.",
+      "done": false
+    },
+    {
+      "id": "memstore",
+      "description": "Implement InMemorySessionStore in session/store_mem.go with sync.RWMutex, TTL-based eviction on access, and background cleanup goroutine.",
+      "done": false,
+      "depends_on": ["interfaces"]
+    },
+    {
+      "id": "middleware",
+      "description": "Implement SessionMiddleware in session/middleware.go that extracts session ID from request context, loads/creates sessions, and injects into context for downstream handlers.",
+      "done": false,
+      "depends_on": ["interfaces"]
+    },
+    {
+      "id": "ttl",
+      "description": "Add TTL and eviction policy configuration to SessionStore. Support absolute TTL, sliding window TTL, and max sessions limit with LRU eviction.",
+      "done": false,
+      "depends_on": ["memstore"]
+    },
+    {
+      "id": "gateway",
+      "description": "Add session affinity routing to gateway/. When a session is bound to an upstream, route subsequent requests to the same upstream.",
+      "done": false,
+      "depends_on": ["middleware"]
+    },
+    {
+      "id": "tests",
+      "description": "Write comprehensive tests: session/session_test.go (interfaces), session/store_mem_test.go (store lifecycle, concurrent access, TTL, eviction), session/middleware_test.go. Target 90%+ coverage.",
+      "done": false,
+      "depends_on": ["ttl", "gateway"]
+    },
+    {
+      "id": "docs",
+      "description": "Add session/doc.go package documentation, update CLAUDE.md package map and dependency layers, update ROADMAP.md to mark P31 items complete.",
+      "done": false,
+      "depends_on": ["tests"]
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "name": "Phase 34: Dual-SDK Test Hardening",
+  "description": "Audit and harden dual-SDK support. Ensure all compat.go aliases cover go-sdk types, create _official_test.go files, set up dual-SDK CI, and document migration path.",
+  "completion": "All compat aliases verified, official SDK tests pass, CI runs both SDK variants, migration guide exists.",
+  "tasks": [
+    {
+      "id": "audit",
+      "description": "Audit registry/compat.go and all _official.go files. List every mcp-go type alias and verify go-sdk equivalents exist. Document gaps in a tracking table.",
+      "done": false
+    },
+    {
+      "id": "compat",
+      "description": "Fix any compat.go gaps found in audit. Add missing type aliases, adapter functions, or build-tagged implementations.",
+      "done": false,
+      "depends_on": ["audit"]
+    },
+    {
+      "id": "tests",
+      "description": "Create _official_test.go files for registry, handler, and mcptest packages. These files use //go:build official_sdk tags and verify all public APIs work with go-sdk types.",
+      "done": false,
+      "depends_on": ["compat"]
+    },
+    {
+      "id": "ci",
+      "description": "Set up CI matrix that runs 'go test ./...' with both default (mcp-go) and 'official_sdk' build tags. Both must pass for PR merge.",
+      "done": false,
+      "depends_on": ["tests"]
+    },
+    {
+      "id": "bump",
+      "description": "Bump mcp-go dependency from v0.43.2 to latest stable. Fix any breaking changes. Run full test suite.",
+      "done": false,
+      "depends_on": ["audit"]
+    },
+    {
+      "id": "guide",
+      "description": "Write migration guide documenting: (1) which compat.go aliases to use, (2) how to switch from mcp-go to go-sdk, (3) dual-SDK build tag usage, (4) known limitations.",
+      "done": false,
+      "depends_on": ["compat", "tests"]
+    }
+  ]
+}

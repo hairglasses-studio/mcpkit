@@ -1,6 +1,16 @@
 # Claude Code personal settings (not shared with team)
 .claude/settings.local.json
 
+# Environment secrets
+.env
+
+# rdloop runtime artifacts
+.rdloop_state.json
+.rdloop_cycle_*.progress.json
+.rdloop_debug_*.txt
+rdloop.log
+/rdloop
+
 # Compiled binaries
 /minimal
 /full

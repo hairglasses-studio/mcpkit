@@ -50,12 +50,16 @@ make check-dual          # Full check + official SDK build
 | `eval` | Evaluation framework: cases, scorers (exact/contains/regex/jsonpath/custom/not-empty/latency), JSON suite loading, runner | `registry` |
 | `roadmap` | Machine-readable roadmap management, XML-tagged markdown rendering, gap analysis, query functions | `registry`, `handler` |
 | `rdcycle` | R&D cycle orchestration tools: scan, plan, verify, commit, report, schedule, notes, improve, workflow graph, budget profiles, model tiers | `registry`, `handler`, `research`, `roadmap`, `workflow`, `finops` |
+| `session` | Session management: Session/SessionStore interfaces, middleware, TTL/eviction, migration | `registry` |
+| `transport` | Transport abstraction layer: stdio, HTTP, WebSocket adapters, middleware chain | none |
+| `feedback` | User feedback collection, anonymous telemetry, opt-in usage tracking | `registry`, `handler` |
+| `cmd` | CLI helpers for server publishing, configuration, management | `discovery`, `registry` |
 
 ## Dependency Layers
 
-- **Layer 1** (no internal deps): `registry`, `health`, `sanitize`, `secrets`, `client`
-- **Layer 2** (depend on Layer 1): `resources`, `prompts`, `handler`, `resilience`, `mcptest`, `auth`, `observability`, `logging`, `sampling`, `roots`, `research`, `discovery`, `dispatcher`, `extensions`, `memory`, `finops`, `lifecycle`, `eval`, `roadmap`
-- **Layer 3** (depend on Layer 2): `security`, `gateway`, `ralph`, `skills`, `a2a`, `rdcycle`
+- **Layer 1** (no internal deps): `registry`, `health`, `sanitize`, `secrets`, `client`, `transport`
+- **Layer 2** (depend on Layer 1): `resources`, `prompts`, `handler`, `resilience`, `mcptest`, `auth`, `observability`, `logging`, `sampling`, `roots`, `research`, `discovery`, `dispatcher`, `extensions`, `memory`, `finops`, `lifecycle`, `eval`, `roadmap`, `session`, `feedback`
+- **Layer 3** (depend on Layer 2): `security`, `gateway`, `ralph`, `skills`, `a2a`, `rdcycle`, `cmd`
 - **Layer 4** (depend on Layer 3): `orchestrator`, `handoff`, `workflow`, `bootstrap`
 
 ## Coding Conventions
@@ -86,7 +90,7 @@ make check-dual          # Full check + official SDK build
 ## Roadmap
 
 Current spec coverage: **100%** (all MCP 2025-11-25 features implemented).
-All Tier 1 and Tier 2 roadmap items complete. Tier 3 mostly complete.
+All Tiers 1-4 complete. Phases 31-42 planned across Tiers 5-10 (spec forward-compat, SDK migration, research, production DX, agent protocols, community).
 
 See [ROADMAP.md](ROADMAP.md) for detailed phased plan and [RESEARCH.md](RESEARCH.md) for full analysis.
 
@@ -268,3 +272,62 @@ See [ROADMAP.md](ROADMAP.md) for detailed phased plan and [RESEARCH.md](RESEARCH
 - ~~`observability/*_test.go`~~ — 89.3% → 91.0%: Prometheus health endpoint
 - ~~`roadmap/*_test.go`~~ — 89.6% → 94.5%: handler path overrides, gap analysis tiers
 - All 35 non-example packages now at 90%+ coverage (min 90.0%, max 100.0%)
+
+### Phase 31 — Session Management Foundation (PLANNED)
+- `session/` — Session/SessionStore interfaces, in-memory store, middleware, TTL/eviction
+- Gateway session affinity routing
+- Session integration tests with mcptest
+
+### Phase 32 — Stateless HTTP (PLANNED)
+- External session store interface (Redis adapter)
+- Session token extraction middleware
+- Stateless gateway routing, serialization formats
+
+### Phase 33 — WebSocket Transport Prep (PLANNED)
+- `transport/` — Transport abstraction layer (stdio, HTTP, WebSocket stub)
+- Transport middleware chain
+- Transport integration tests
+
+### Phase 34 — Dual-SDK Test Hardening (PLANNED)
+- Audit compat.go aliases for go-sdk coverage
+- `_official_test.go` files for core packages
+- Dual-SDK CI matrix, migration guide, mcp-go bump
+
+### Phase 35 — Cloud Platform Monitoring (PLANNED)
+- PlatformMonitor interface in `research/`
+- Cloudflare Workers, Vercel, Azure MCP monitors
+- Platform activity aggregation
+
+### Phase 36 — A2A Tracking + Competitive Analysis (PLANNED)
+- A2AMonitor for protocol spec changes
+- SDKCompare cross-framework analysis
+- Template report generation, rdcycle integration
+
+### Phase 37 — Server Registry Publishing (PLANNED)
+- PublishWorkflow with validation pipeline in `discovery/`
+- Schema compliance checker, registry auth flow
+- `cmd/` CLI helper for interactive publishing
+
+### Phase 38 — Performance Benchmarking (PLANNED)
+- Baseline benchmark suite in `mcptest/`
+- Middleware overhead measurement, memory profiling
+- CI regression threshold checks
+
+### Phase 39 — A2A Protocol Bridge (PLANNED, gated on spec v0.9+)
+- `a2a/` — A2A types, AgentCard generation, task lifecycle
+- MCP↔A2A bridges (tool calls as tasks, tasks as tool calls)
+- Push notification support
+
+### Phase 40 — Enhanced Orchestration (PLANNED)
+- Swarm mesh topology, hierarchical delegation
+- Dynamic pattern selector
+- Multi-agent workflow templates
+
+### Phase 41 — Example Gallery + Migration Guides (PLANNED)
+- Example gallery index with categorization
+- FastMCP migration guide, Docker-compose example
+- CONTRIBUTING.md with development workflow
+
+### Phase 42 — User Feedback + Telemetry (PLANNED)
+- `feedback/` — Feedback tool, anonymous telemetry with opt-in
+- rdcycle integration for feedback-driven prioritization
