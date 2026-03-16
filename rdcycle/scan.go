@@ -57,12 +57,23 @@ func (m *Module) handleScan(ctx context.Context, input ScanInput) (ScanOutput, e
 		since = time.Now().UTC().AddDate(0, 0, -7).Format(time.RFC3339)
 	}
 
-	// Build action items from the configured repos. In production this tool is
-	// invoked by a Ralph Loop that pre-populates repos with live data; here we
-	// generate structured placeholders that the loop can fill in.
+	// Try real GitHub scan first.
+	scanner := &Scanner{Repos: repos}
+	results, err := scanner.Scan(ctx, since)
+
 	var actionItems []string
-	for _, repo := range repos {
-		actionItems = append(actionItems, fmt.Sprintf("Review recent activity in %s since %s", repo, since))
+	commitCount := 0
+	issueCount := 0
+
+	if err == nil && len(results) > 0 {
+		commitCount = TotalCommits(results)
+		issueCount = TotalIssues(results)
+		actionItems = ActionItems(results)
+	} else {
+		// Fallback: generate structured placeholders.
+		for _, repo := range repos {
+			actionItems = append(actionItems, fmt.Sprintf("Review recent activity in %s since %s", repo, since))
+		}
 	}
 
 	summary := buildScanSummary(repos, since)
@@ -70,8 +81,8 @@ func (m *Module) handleScan(ctx context.Context, input ScanInput) (ScanOutput, e
 	output := ScanOutput{
 		Summary:     summary,
 		RepoCount:   len(repos),
-		CommitCount: 0,
-		IssueCount:  0,
+		CommitCount: commitCount,
+		IssueCount:  issueCount,
 		ActionItems: actionItems,
 		ArtifactID:  fmt.Sprintf("scan-%d", time.Now().UnixNano()),
 	}

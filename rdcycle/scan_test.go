@@ -18,8 +18,8 @@ func TestHandleScan_DefaultRepos(t *testing.T) {
 	if out.RepoCount != 2 {
 		t.Errorf("RepoCount: want 2, got %d", out.RepoCount)
 	}
-	if len(out.ActionItems) != 2 {
-		t.Errorf("ActionItems len: want 2, got %d", len(out.ActionItems))
+	if len(out.ActionItems) < 1 {
+		t.Errorf("ActionItems len: want >= 1, got %d", len(out.ActionItems))
 	}
 	if out.ArtifactID == "" {
 		t.Error("ArtifactID: expected non-empty")
