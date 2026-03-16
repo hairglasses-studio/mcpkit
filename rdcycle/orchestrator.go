@@ -33,6 +33,9 @@ type OrchestratorConfig struct {
 	OnCycleStart  func(cycleNum int, specPath string)
 	OnCycleEnd    func(cycleNum int, result CycleResult)
 	RalphStarter  func(ctx context.Context, specPath string) error
+	// CostReader returns the cumulative dollar cost so far.
+	// Used to compute per-cycle cost deltas for the governor.
+	CostReader    func() float64
 }
 
 // Orchestrator runs the perpetual R&D cycle loop.
@@ -225,15 +228,32 @@ func (o *Orchestrator) RunOneCycle(ctx context.Context) (CycleResult, error) {
 	}
 
 	// 6. Run ralph loop (blocks until completion).
+	// Snapshot cost before ralph starts so we can compute the delta.
+	costBefore := 0.0
+	if o.cfg.CostReader != nil {
+		costBefore = o.cfg.CostReader()
+	}
+
 	if o.cfg.RalphStarter != nil {
 		if err := o.cfg.RalphStarter(ctx, specPath); err != nil {
+			cycleCost := 0.0
+			if o.cfg.CostReader != nil {
+				cycleCost = o.cfg.CostReader() - costBefore
+			}
+			result.Cost = cycleCost
 			result.FinishedAt = time.Now()
 			result.Progress = false
 			o.recordBreakerResult(false, false)
-			o.recordGovernor(cycleNum, 0, false)
+			o.recordGovernor(cycleNum, cycleCost, false)
 			return result, fmt.Errorf("ralph: %w", err)
 		}
 	}
+
+	cycleCost := 0.0
+	if o.cfg.CostReader != nil {
+		cycleCost = o.cfg.CostReader() - costBefore
+	}
+	result.Cost = cycleCost
 	result.Progress = true
 
 	// 7. Record retrospective notes.
@@ -252,7 +272,7 @@ func (o *Orchestrator) RunOneCycle(ctx context.Context) (CycleResult, error) {
 
 	// 9. Record in breaker and governor.
 	o.recordBreakerResult(true, false)
-	o.recordGovernor(cycleNum, result.Cost, true)
+	o.recordGovernor(cycleNum, cycleCost, true)
 
 	result.FinishedAt = time.Now()
 	return result, nil

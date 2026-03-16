@@ -36,20 +36,30 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Resolve API keys
+# Resolve API keys: env var > .env file > 1Password CLI
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+
+# Source .env file if present (key=value lines, no export needed).
+if [[ -f "$REPO_ROOT/.env" ]]; then
+    set -a
+    # shellcheck disable=SC1091
+    source "$REPO_ROOT/.env"
+    set +a
+fi
+
 if [[ -z "${ANTHROPIC_API_KEY:-}" ]]; then
-    if command -v op &>/dev/null; then
+    if command -v op &>/dev/null && op whoami &>/dev/null; then
         echo "Loading ANTHROPIC_API_KEY from 1Password..."
         export ANTHROPIC_API_KEY=$(op item get "Anthropic API Key (Work - 10K credits)" \
             --account my.1password.com --vault Personal --fields password --reveal)
     else
-        echo "error: ANTHROPIC_API_KEY not set and op CLI not available" >&2
+        echo "error: ANTHROPIC_API_KEY not set. Set it via env, .env file, or configure 1Password CLI." >&2
         exit 1
     fi
 fi
 
 if [[ -z "${GITHUB_TOKEN:-}" ]]; then
-    if command -v op &>/dev/null; then
+    if command -v op &>/dev/null && op whoami &>/dev/null; then
         echo "Loading GITHUB_TOKEN from 1Password..."
         export GITHUB_TOKEN=$(op item get "AFTRS MCP - mcpkit GitHub PAT" \
             --account my.1password.com --vault Personal --fields credential --reveal)
@@ -58,8 +68,7 @@ if [[ -z "${GITHUB_TOKEN:-}" ]]; then
     fi
 fi
 
-# Ensure we're in the repo root
-REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# Ensure we're in the repo root (REPO_ROOT already set above for .env loading).
 cd "$REPO_ROOT"
 
 # Verify build

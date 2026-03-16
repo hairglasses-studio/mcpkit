@@ -10,6 +10,8 @@ import (
 	"io"
 	"math"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/hairglasses-studio/mcpkit/registry"
@@ -31,7 +33,7 @@ func NewClaudeClient(apiKey, model string) *ClaudeClient {
 	return &ClaudeClient{
 		apiKey: apiKey,
 		httpClient: &http.Client{
-			Timeout: 5 * time.Minute,
+			Timeout: 10 * time.Minute, // generous for long implement prompts
 		},
 		model: model,
 	}
@@ -117,12 +119,20 @@ func (c *ClaudeClient) CreateMessage(ctx context.Context, req sampling.CreateMes
 		Messages:  msgs,
 	}
 
-	// Retry with exponential backoff on 429.
+	// Retry with exponential backoff on transient errors (429, 5xx, network).
 	var resp *claudeResponse
 	var lastErr error
-	for attempt := 0; attempt < 4; attempt++ {
+	for attempt := 0; attempt < 6; attempt++ {
 		if attempt > 0 {
 			backoff := time.Duration(math.Pow(2, float64(attempt))) * time.Second
+			// Cap backoff at 60s to avoid long waits.
+			if backoff > 60*time.Second {
+				backoff = 60 * time.Second
+			}
+			// Use Retry-After header if available.
+			if rle, ok := lastErr.(*transientError); ok && rle.retryAfter > 0 {
+				backoff = rle.retryAfter
+			}
 			select {
 			case <-ctx.Done():
 				return nil, ctx.Err()
@@ -134,8 +144,8 @@ func (c *ClaudeClient) CreateMessage(ctx context.Context, req sampling.CreateMes
 		if lastErr == nil {
 			break
 		}
-		// Only retry on rate limit errors.
-		if !isRateLimitError(lastErr) {
+		// Only retry on transient errors (429, 5xx, network timeouts).
+		if !isTransientError(lastErr) {
 			return nil, lastErr
 		}
 	}
@@ -187,8 +197,15 @@ func (c *ClaudeClient) doRequest(ctx context.Context, body claudeRequest) (*clau
 		return nil, fmt.Errorf("claude: read response: %w", err)
 	}
 
-	if httpResp.StatusCode == http.StatusTooManyRequests {
-		return nil, &rateLimitError{status: httpResp.StatusCode, body: string(respBody)}
+	// Transient: 429 (rate limit), 500, 502, 503, 529 (overloaded).
+	if httpResp.StatusCode == http.StatusTooManyRequests ||
+		httpResp.StatusCode >= 500 {
+		retryAfter := parseRetryAfter(httpResp.Header.Get("Retry-After"))
+		return nil, &transientError{
+			status:     httpResp.StatusCode,
+			body:       string(respBody),
+			retryAfter: retryAfter,
+		}
 	}
 
 	if httpResp.StatusCode != http.StatusOK {
@@ -207,16 +224,49 @@ func (c *ClaudeClient) doRequest(ctx context.Context, body claudeRequest) (*clau
 	return &resp, nil
 }
 
-type rateLimitError struct {
-	status int
-	body   string
+// transientError represents a retryable API error (429, 5xx, network).
+type transientError struct {
+	status     int
+	body       string
+	retryAfter time.Duration
 }
 
-func (e *rateLimitError) Error() string {
-	return fmt.Sprintf("claude: rate limited (status %d): %s", e.status, e.body)
+func (e *transientError) Error() string {
+	return fmt.Sprintf("claude: transient error (status %d): %s", e.status, e.body)
 }
 
-func isRateLimitError(err error) bool {
-	_, ok := err.(*rateLimitError)
-	return ok
+func isTransientError(err error) bool {
+	if _, ok := err.(*transientError); ok {
+		return true
+	}
+	// Also retry on context-independent network errors (connection refused, reset, etc.)
+	// but NOT on context.Canceled or context.DeadlineExceeded.
+	if err == context.Canceled || err == context.DeadlineExceeded {
+		return false
+	}
+	// Network errors from http.Client (DNS, TCP, TLS) are wrapped — retry them.
+	errStr := err.Error()
+	for _, sub := range []string{"connection refused", "connection reset", "EOF", "i/o timeout", "no such host"} {
+		if strings.Contains(errStr, sub) {
+			return true
+		}
+	}
+	return false
+}
+
+// parseRetryAfter parses the Retry-After header value (seconds).
+func parseRetryAfter(val string) time.Duration {
+	if val == "" {
+		return 0
+	}
+	secs, err := strconv.Atoi(val)
+	if err != nil {
+		return 0
+	}
+	d := time.Duration(secs) * time.Second
+	// Cap at 2 minutes to avoid extreme waits.
+	if d > 2*time.Minute {
+		d = 2 * time.Minute
+	}
+	return d
 }

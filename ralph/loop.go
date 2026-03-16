@@ -178,10 +178,22 @@ func (l *Loop) Run(ctx context.Context) error {
 			}
 		}
 		if samplerErr != nil {
+			l.mu.Lock()
+			l.consecutiveSamplerFails++
+			fails := l.consecutiveSamplerFails
+			l.mu.Unlock()
 			l.recordIteration(iteration, "", nil,
-				fmt.Sprintf("sampler error (after %d retries): %v", l.config.SamplerRetries, samplerErr))
+				fmt.Sprintf("sampler error (after %d retries, %d consecutive): %v", l.config.SamplerRetries, fails, samplerErr))
+			if l.config.MaxConsecutiveSamplerFailures > 0 && fails >= l.config.MaxConsecutiveSamplerFailures {
+				l.setStatus(StatusFailed)
+				return fmt.Errorf("ralph: %d consecutive sampler failures, last error: %v", fails, samplerErr)
+			}
 			continue
 		}
+		// Reset consecutive failure counter on success.
+		l.mu.Lock()
+		l.consecutiveSamplerFails = 0
+		l.mu.Unlock()
 
 		// Extract text from result.
 		// result.Content is SamplingMessage.Content which is typed as `any`.

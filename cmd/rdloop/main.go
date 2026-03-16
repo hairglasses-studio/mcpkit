@@ -28,6 +28,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/hairglasses-studio/mcpkit/finops"
 	"github.com/hairglasses-studio/mcpkit/rdcycle"
 )
 
@@ -105,13 +106,27 @@ func main() {
 	log.Printf("  Runtime:          %s", time.Since(state.StartedAt).Truncate(time.Second))
 }
 
-// workProfile returns a budget profile tuned for autonomous code generation.
-// Higher token limits than PersonalProfile to accommodate file writing.
+// workProfile returns a budget profile tuned for autonomous code generation
+// on a direct API key. Sized to sustain ~20 cycles over 12h on $100.
+//
+// Per-cycle dollar budget: $5 (generous for 7-task R&D cycles).
+// Token budget: 2M per cycle (enough for ~100 iterations at 8K max output).
+// Max iterations: 100 per cycle (scan through schedule with retries).
+// Daily cap: $100 (matches the global budget — single-session use).
 func workProfile() rdcycle.BudgetProfile {
-	p := rdcycle.PersonalProfile()
-	p.MaxTokensPerReq = 8192
-	p.DollarBudget = 10.0 // $10 per cycle with work API key
-	return p
+	return rdcycle.BudgetProfile{
+		Name:            "work-12h",
+		MaxIterations:   100,
+		DollarBudget:    5.0,
+		DailyDollarCap:  100.0,
+		TokenBudget:     2_000_000,
+		MaxTokensPerReq: 8192,
+		ModelPricing: []finops.ModelPricing{
+			{Model: "claude-opus-4-6", InputPer1KTokens: 0.015, OutputPer1KTokens: 0.075},
+			{Model: "claude-sonnet-4-6", InputPer1KTokens: 0.003, OutputPer1KTokens: 0.015},
+			{Model: "claude-haiku-4-5", InputPer1KTokens: 0.0008, OutputPer1KTokens: 0.004},
+		},
+	}
 }
 
 func envOr(key, fallback string) string {
