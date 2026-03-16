@@ -33,8 +33,8 @@ func TestModule_Tools_Count(t *testing.T) {
 	t.Parallel()
 	m := NewModule(CycleConfig{})
 	tools := m.Tools()
-	if len(tools) != 9 {
-		t.Errorf("Tools len: want 9, got %d", len(tools))
+	if len(tools) != 12 {
+		t.Errorf("Tools len: want 12, got %d", len(tools))
 	}
 }
 
@@ -112,8 +112,8 @@ func TestModule_RegisterWithRegistry(t *testing.T) {
 	m := NewModule(CycleConfig{})
 	reg.RegisterModule(m)
 
-	if reg.ToolCount() != 9 {
-		t.Errorf("ToolCount: want 9, got %d", reg.ToolCount())
+	if reg.ToolCount() != 12 {
+		t.Errorf("ToolCount: want 12, got %d", reg.ToolCount())
 	}
 	if reg.ModuleCount() != 1 {
 		t.Errorf("ModuleCount: want 1, got %d", reg.ModuleCount())

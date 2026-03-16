@@ -3,6 +3,7 @@ package rdcycle
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/hairglasses-studio/mcpkit/handler"
@@ -11,17 +12,40 @@ import (
 
 // Module implements registry.ToolModule for R&D cycle orchestration tools.
 type Module struct {
-	config CycleConfig
-	store  ArtifactStore
+	config       CycleConfig
+	store        ArtifactStore
+	orchMu       sync.Mutex
+	orchState    *orchestratorState
+	ralphStarter func(ctx context.Context, specPath string) error
+}
+
+// ModuleOption configures optional Module settings.
+type ModuleOption func(*Module)
+
+// WithArtifactStore sets the artifact store for the module.
+// If not provided, an InMemoryArtifactStore is used.
+func WithArtifactStore(store ArtifactStore) ModuleOption {
+	return func(m *Module) {
+		m.store = store
+	}
 }
 
 // NewModule creates a new rdcycle Module with the given configuration.
-// It uses an InMemoryArtifactStore by default.
-func NewModule(cfg CycleConfig) *Module {
-	return &Module{
+// It uses an InMemoryArtifactStore by default. Use WithArtifactStore to override.
+func NewModule(cfg CycleConfig, opts ...ModuleOption) *Module {
+	m := &Module{
 		config: cfg,
 		store:  NewInMemoryArtifactStore(),
 	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// Store returns the module's artifact store.
+func (m *Module) Store() ArtifactStore {
+	return m.store
 }
 
 // Name returns the module name.
@@ -30,6 +54,11 @@ func (m *Module) Name() string { return "rdcycle" }
 // Description returns the module description.
 func (m *Module) Description() string {
 	return "R&D cycle orchestration tools: ecosystem scan, roadmap planning, build verification, and artifact management"
+}
+
+// SetRalphStarter sets the function used by the perpetual orchestrator to run ralph loops.
+func (m *Module) SetRalphStarter(starter func(ctx context.Context, specPath string) error) {
+	m.ralphStarter = starter
 }
 
 // Tools returns all rdcycle tool definitions.
@@ -44,6 +73,9 @@ func (m *Module) Tools() []registry.ToolDefinition {
 		m.scheduleTool(),
 		m.notesTool(),
 		m.improveTool(),
+		m.perpetualStartTool(),
+		m.perpetualStopTool(),
+		m.perpetualStatusTool(),
 	}
 }
 
@@ -84,6 +116,31 @@ func (m *Module) handleArtifacts(ctx context.Context, input ArtifactsInput) (Art
 		Artifacts: artifacts,
 		Count:     len(artifacts),
 	}, nil
+}
+
+// Config returns the module's cycle configuration.
+func (m *Module) Config() CycleConfig {
+	return m.config
+}
+
+// HandleScan delegates to the scan handler.
+func (m *Module) HandleScan(ctx context.Context, input ScanInput) (ScanOutput, error) {
+	return m.handleScan(ctx, input)
+}
+
+// HandlePlan delegates to the plan handler.
+func (m *Module) HandlePlan(ctx context.Context, input PlanInput) (PlanOutput, error) {
+	return m.handlePlan(ctx, input)
+}
+
+// HandleNotes delegates to the notes handler.
+func (m *Module) HandleNotes(ctx context.Context, input NotesInput) (NotesOutput, error) {
+	return m.handleNotes(ctx, input)
+}
+
+// HandleImprove delegates to the improve handler.
+func (m *Module) HandleImprove(ctx context.Context, input ImproveInput) (ImproveOutput, error) {
+	return m.handleImprove(ctx, input)
 }
 
 // artifactID generates a unique artifact ID for the given type.
