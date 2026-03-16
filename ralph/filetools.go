@@ -1,6 +1,6 @@
 //go:build !official_sdk
 
-package main
+package ralph
 
 import (
 	"context"
@@ -14,16 +14,17 @@ import (
 	"github.com/hairglasses-studio/mcpkit/registry"
 )
 
-// fileToolModule provides read_file, write_file, and list_dir tools
+// FileToolModule provides read_file, write_file, and list_dir tools
 // so the autonomous loop can create and modify source code.
-type fileToolModule struct {
-	root string // project root — all paths are resolved relative to this
+// Root is the project root — all paths are resolved relative to it.
+type FileToolModule struct {
+	Root string
 }
 
-func (m *fileToolModule) Name() string        { return "file_tools" }
-func (m *fileToolModule) Description() string { return "File I/O tools for reading, writing, and listing project files" }
+func (m *FileToolModule) Name() string        { return "file_tools" }
+func (m *FileToolModule) Description() string { return "File I/O tools for reading, writing, and listing project files" }
 
-func (m *fileToolModule) Tools() []registry.ToolDefinition {
+func (m *FileToolModule) Tools() []registry.ToolDefinition {
 	return []registry.ToolDefinition{
 		m.writeFileTool(),
 		m.readFileTool(),
@@ -44,7 +45,7 @@ type WriteFileOutput struct {
 	Bytes   int    `json:"bytes"`
 }
 
-func (m *fileToolModule) writeFileTool() registry.ToolDefinition {
+func (m *FileToolModule) writeFileTool() registry.ToolDefinition {
 	desc := "Write content to a file, creating directories as needed. " +
 		"Path is relative to the project root. Overwrites existing files. " +
 		"Use this to create new Go source files, test files, or config files."
@@ -60,17 +61,16 @@ func (m *fileToolModule) writeFileTool() registry.ToolDefinition {
 	return td
 }
 
-func (m *fileToolModule) handleWriteFile(ctx context.Context, input WriteFileInput) (WriteFileOutput, error) {
+func (m *FileToolModule) handleWriteFile(ctx context.Context, input WriteFileInput) (WriteFileOutput, error) {
 	if input.Path == "" {
 		return WriteFileOutput{}, fmt.Errorf("path is required")
 	}
-	// Prevent path traversal.
 	clean := filepath.Clean(input.Path)
 	if strings.HasPrefix(clean, "..") || filepath.IsAbs(clean) {
 		return WriteFileOutput{}, fmt.Errorf("path must be relative and within project root")
 	}
 
-	full := filepath.Join(m.root, clean)
+	full := filepath.Join(m.Root, clean)
 
 	if err := os.MkdirAll(filepath.Dir(full), 0755); err != nil {
 		return WriteFileOutput{}, fmt.Errorf("create directory: %w", err)
@@ -99,7 +99,7 @@ type ReadFileOutput struct {
 	Bytes   int    `json:"bytes"`
 }
 
-func (m *fileToolModule) readFileTool() registry.ToolDefinition {
+func (m *FileToolModule) readFileTool() registry.ToolDefinition {
 	desc := "Read the contents of a file. Path is relative to the project root. " +
 		"Use this to inspect existing source files before modifying them."
 
@@ -113,7 +113,7 @@ func (m *fileToolModule) readFileTool() registry.ToolDefinition {
 	return td
 }
 
-func (m *fileToolModule) handleReadFile(ctx context.Context, input ReadFileInput) (ReadFileOutput, error) {
+func (m *FileToolModule) handleReadFile(ctx context.Context, input ReadFileInput) (ReadFileOutput, error) {
 	if input.Path == "" {
 		return ReadFileOutput{}, fmt.Errorf("path is required")
 	}
@@ -122,14 +122,13 @@ func (m *fileToolModule) handleReadFile(ctx context.Context, input ReadFileInput
 		return ReadFileOutput{}, fmt.Errorf("path must be relative and within project root")
 	}
 
-	full := filepath.Join(m.root, clean)
+	full := filepath.Join(m.Root, clean)
 	data, err := os.ReadFile(full)
 	if err != nil {
 		return ReadFileOutput{}, fmt.Errorf("read file: %w", err)
 	}
 
 	content := string(data)
-	// Truncate very large files to avoid blowing up context.
 	const maxLen = 32000
 	if len(content) > maxLen {
 		content = content[:maxLen] + "\n... (truncated)"
@@ -153,7 +152,7 @@ type ListDirOutput struct {
 	Count   int      `json:"count"`
 }
 
-func (m *fileToolModule) listDirTool() registry.ToolDefinition {
+func (m *FileToolModule) listDirTool() registry.ToolDefinition {
 	desc := "List files and directories in a path. Returns entries as 'name' for files and 'name/' for directories. " +
 		"Path is relative to the project root. Defaults to root if empty."
 
@@ -167,7 +166,7 @@ func (m *fileToolModule) listDirTool() registry.ToolDefinition {
 	return td
 }
 
-func (m *fileToolModule) handleListDir(ctx context.Context, input ListDirInput) (ListDirOutput, error) {
+func (m *FileToolModule) handleListDir(ctx context.Context, input ListDirInput) (ListDirOutput, error) {
 	dir := input.Path
 	if dir == "" {
 		dir = "."
@@ -177,7 +176,7 @@ func (m *fileToolModule) handleListDir(ctx context.Context, input ListDirInput) 
 		return ListDirOutput{}, fmt.Errorf("path must be relative and within project root")
 	}
 
-	full := filepath.Join(m.root, clean)
+	full := filepath.Join(m.Root, clean)
 	entries, err := os.ReadDir(full)
 	if err != nil {
 		return ListDirOutput{}, fmt.Errorf("list dir: %w", err)
