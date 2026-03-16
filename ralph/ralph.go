@@ -157,6 +157,10 @@ type Config struct {
 	EstimateFunc  func(string) int      // optional: override token estimation (default: len/4)
 	ForceRestart  bool              // if true, ignore existing progress and start fresh
 	TemplateVars  map[string]string // optional: template variable substitution for spec file
+	ToolTimeout   time.Duration     // max time per tool call (default 30s)
+	SamplerRetries int              // max retry attempts on sampler error (default 2)
+	SamplerBackoff time.Duration    // initial backoff, doubles each retry (default 2s)
+	BudgetLimit    int64            // max total tokens before stopping (0 = unlimited)
 	// ModelSelector optionally returns a model hint for sampling requests.
 	// Called each iteration with the current iteration number and completed task IDs.
 	// Return empty string for no preference.
@@ -317,6 +321,17 @@ func NewLoop(config Config) (*Loop, error) {
 	}
 	if config.ProgressFile == "" {
 		config.ProgressFile = DefaultProgressFile(config.SpecFile)
+	}
+	if config.ToolTimeout <= 0 {
+		config.ToolTimeout = 30 * time.Second
+	}
+	if config.SamplerRetries < 0 {
+		config.SamplerRetries = 0
+	} else if config.SamplerRetries == 0 {
+		config.SamplerRetries = 2
+	}
+	if config.SamplerBackoff <= 0 {
+		config.SamplerBackoff = 2 * time.Second
 	}
 	return &Loop{
 		config: config,

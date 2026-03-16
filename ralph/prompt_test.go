@@ -491,6 +491,65 @@ func TestBuildIterationPrompt_DepLabelShowsDoneAndPending(t *testing.T) {
 	}
 }
 
+func TestBuildIterationPrompt_LastErrorSection(t *testing.T) {
+	t.Parallel()
+	spec := minimalSpec()
+	progress := Progress{
+		Log: []IterationLog{
+			{Iteration: 1, TaskID: "t1", Result: "tool error: something broke"},
+		},
+	}
+	prompt := buildIterationPrompt(spec, progress, nil)
+
+	if !strings.Contains(prompt, "## !! Last Error (fix this first) !!") {
+		t.Errorf("prompt missing Last Error section; got:\n%s", prompt)
+	}
+	if !strings.Contains(prompt, "tool error: something broke") {
+		t.Errorf("prompt missing error details in Last Error section; got:\n%s", prompt)
+	}
+}
+
+func TestBuildIterationPrompt_NoLastErrorOnSuccess(t *testing.T) {
+	t.Parallel()
+	spec := minimalSpec()
+	progress := Progress{
+		Log: []IterationLog{
+			{Iteration: 1, TaskID: "t1", ToolCalls: []string{"echo"}, Result: "echo: hello"},
+		},
+	}
+	prompt := buildIterationPrompt(spec, progress, nil)
+
+	if strings.Contains(prompt, "!! Last Error") {
+		t.Errorf("prompt should not have Last Error section on success; got:\n%s", prompt)
+	}
+}
+
+func TestIsErrorResult(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		result string
+		want   bool
+	}{
+		{"tool error: timeout", true},
+		{`tool "foo" not found`, true},
+		{"task blocked (dependencies not met)", true},
+		{"parse error: could not parse", true},
+		{"no tool specified in decision", true},
+		{"budget exceeded (limit=100)", true},
+		{"echo: hello world", false},
+		{"loop completed", false},
+		{"write_file: wrote 42 bytes", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.result, func(t *testing.T) {
+			got := isErrorResult(tt.result)
+			if got != tt.want {
+				t.Errorf("isErrorResult(%q) = %v, want %v", tt.result, got, tt.want)
+			}
+		})
+	}
+}
+
 // itoa is a minimal int-to-string helper for test assertions.
 func itoa(n int) string {
 	if n == 0 {
