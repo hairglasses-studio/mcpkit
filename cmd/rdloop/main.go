@@ -9,8 +9,8 @@
 //
 // Optional env vars:
 //
-//	RDLOOP_DURATION  — max runtime (default: 12h)
-//	RDLOOP_BUDGET    — total $ budget across all cycles (default: 60.0)
+//	RDLOOP_DURATION  — max runtime (default: 24h)
+//	RDLOOP_BUDGET    — total $ budget across all cycles (default: 200.0)
 //	RDLOOP_MODEL     — default Claude model (default: claude-sonnet-4-6)
 //	RDLOOP_SPEC      — initial spec file (default: rdcycle/specs/rd_cycle.json)
 //	RDLOOP_ROADMAP   — roadmap JSON path (default: roadmap.json)
@@ -43,8 +43,8 @@ func main() {
 	}
 
 	model := envOr("RDLOOP_MODEL", "claude-sonnet-4-6")
-	duration := envDuration("RDLOOP_DURATION", 12*time.Hour)
-	budget := envFloat("RDLOOP_BUDGET", 60.0)
+	duration := envDuration("RDLOOP_DURATION", 24*time.Hour)
+	budget := envFloat("RDLOOP_BUDGET", 200.0)
 	specFile := envOr("RDLOOP_SPEC", "rdcycle/specs/rd_cycle.json")
 	roadmapPath := envOr("RDLOOP_ROADMAP", "roadmap.json")
 	statePath := envOr("RDLOOP_STATE", ".rdloop_state.json")
@@ -55,13 +55,13 @@ func main() {
 	modelTier := rdcycle.ModelTierConfig{
 		Default: model,
 		TaskOverrides: map[string]string{
-			"scan":      model,
-			"verify":    "claude-haiku-4-5",
-			"reflect":   "claude-haiku-4-5",
-			"report":    "claude-haiku-4-5",
-			"schedule":  "claude-haiku-4-5",
-			"plan":      model,
-			"implement": model,
+			"scan":      model,                // sonnet — fast ecosystem scan
+			"plan":      "claude-opus-4-6",    // opus — detailed planning
+			"implement": "claude-opus-4-6",    // opus — complex code generation
+			"verify":    "claude-haiku-4-5",   // haiku — build/test checks
+			"reflect":   "claude-haiku-4-5",   // haiku — lightweight reflection
+			"report":    "claude-haiku-4-5",   // haiku — markdown generation
+			"schedule":  "claude-haiku-4-5",   // haiku — next cycle spec
 		},
 	}
 
@@ -76,11 +76,13 @@ func main() {
 		Duration:     duration,
 		Sampler:      sampler,
 		ModelTier:    modelTier,
-		Profile:      workProfile(),
+		Profile:      marathonProfile(),
 		RoadmapPath:  roadmapPath,
 		StatePath:    statePath,
 		GitHubToken:  githubToken,
 	})
+
+	LogPreflight(statePath, budget)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
@@ -106,21 +108,22 @@ func main() {
 	log.Printf("  Runtime:          %s", time.Since(state.StartedAt).Truncate(time.Second))
 }
 
-// workProfile returns a budget profile tuned for autonomous code generation
-// on a direct API key. Sized to sustain ~20 cycles over 12h on $100.
+// marathonProfile returns a budget profile tuned for 24hr fully-autonomous
+// operation with Opus on plan+implement phases.
 //
-// Per-cycle dollar budget: $5 (generous for 7-task R&D cycles).
-// Token budget: 2M per cycle (enough for ~100 iterations at 8K max output).
-// Max iterations: 100 per cycle (scan through schedule with retries).
-// Daily cap: $100 (matches the global budget — single-session use).
-func workProfile() rdcycle.BudgetProfile {
+// Per-cycle dollar budget: $8 (generous for Opus-heavy 7-task R&D cycles).
+// Token budget: 4M per cycle (Opus generates longer output).
+// Max iterations: 120 per cycle (scan through schedule with retries + longer phases).
+// Daily cap: $200 (matches the global budget — single-session use).
+// MaxTokensPerReq: 16384 (Opus generates longer, more detailed output).
+func marathonProfile() rdcycle.BudgetProfile {
 	return rdcycle.BudgetProfile{
-		Name:            "work-12h",
-		MaxIterations:   100,
-		DollarBudget:    5.0,
-		DailyDollarCap:  100.0,
-		TokenBudget:     2_000_000,
-		MaxTokensPerReq: 8192,
+		Name:            "marathon-24h",
+		MaxIterations:   120,
+		DollarBudget:    8.0,
+		DailyDollarCap:  200.0,
+		TokenBudget:     4_000_000,
+		MaxTokensPerReq: 16384,
 		ModelPricing: []finops.ModelPricing{
 			{Model: "claude-opus-4-6", InputPer1KTokens: 0.015, OutputPer1KTokens: 0.075},
 			{Model: "claude-sonnet-4-6", InputPer1KTokens: 0.003, OutputPer1KTokens: 0.015},
