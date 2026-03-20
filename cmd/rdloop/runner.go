@@ -24,7 +24,7 @@ import (
 type RunnerConfig struct {
 	InitialSpec  string
 	TemplateVars map[string]string
-	GlobalBudget float64 // total $ across all cycles (default: $60)
+	GlobalBudget float64 // total $ across all cycles (default: $200)
 	Duration     time.Duration
 	Sampler      sampling.SamplingClient
 	ModelTier    rdcycle.ModelTierConfig
@@ -46,10 +46,10 @@ type MultiCycleRunner struct {
 // NewMultiCycleRunner creates a runner from the given config.
 func NewMultiCycleRunner(cfg RunnerConfig) *MultiCycleRunner {
 	if cfg.GlobalBudget <= 0 {
-		cfg.GlobalBudget = 60.0
+		cfg.GlobalBudget = 200.0
 	}
 	if cfg.Duration <= 0 {
-		cfg.Duration = 12 * time.Hour
+		cfg.Duration = 24 * time.Hour
 	}
 	if cfg.StatePath == "" {
 		cfg.StatePath = ".rdloop_state.json"
@@ -133,12 +133,13 @@ func (r *MultiCycleRunner) Run(ctx context.Context) error {
 		}
 
 		// Brief pause between cycles to avoid API hammering and allow rate limits to clear.
+		// 30s gives ample headroom for Opus rate limits during 24hr operation.
 		if cycleNum > 1 {
-			log.Printf("rdloop: pausing 10s between cycles...")
+			log.Printf("rdloop: pausing 30s between cycles...")
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
-			case <-time.After(10 * time.Second):
+			case <-time.After(30 * time.Second):
 			}
 		}
 
@@ -159,6 +160,17 @@ func (r *MultiCycleRunner) Run(ctx context.Context) error {
 		r.state.TotalIterations += summary.Iters
 		r.state.LastCycleAt = time.Now()
 		r.state.History = append(r.state.History, summary)
+		// Update monitoring stats.
+		if summary.Cost > r.state.PeakCostPerCycle {
+			r.state.PeakCostPerCycle = summary.Cost
+		}
+		completedCycles := len(r.state.History)
+		if completedCycles > 0 {
+			r.state.AvgCostPerCycle = r.state.TotalCost / float64(completedCycles)
+		}
+		if summary.Downgraded {
+			r.state.TotalDowngrades++
+		}
 		r.mu.Unlock()
 
 		if saveErr := SaveState(r.cfg.StatePath, r.state); saveErr != nil {
@@ -172,22 +184,31 @@ func (r *MultiCycleRunner) Run(ctx context.Context) error {
 			log.Printf("rdloop: WARNING: cycle %d triggered cost-velocity downgrade — next cycle will use lighter model hints", cycleNum)
 		}
 
+		// Periodic checkpoint: log aggregate stats every 10 cycles.
+		if cycleNum%10 == 0 {
+			r.mu.Lock()
+			elapsed := time.Since(r.state.StartedAt).Truncate(time.Second)
+			log.Printf("rdloop: === CHECKPOINT (cycle %d) === elapsed=%s total_cost=$%.2f avg_cost=$%.4f peak_cost=$%.4f iters=%d downgrades=%d",
+				cycleNum, elapsed, r.state.TotalCost, r.state.AvgCostPerCycle, r.state.PeakCostPerCycle, r.state.TotalIterations, r.state.TotalDowngrades)
+			r.mu.Unlock()
+		}
+
 		// Back off on consecutive failures to avoid tight error loops.
-		// Allow up to 5 consecutive failures before giving up — over 12h,
+		// Allow up to 8 consecutive failures before giving up — over 24h,
 		// transient API errors, circuit breaker trips, and network blips
 		// are expected and recoverable.
 		if summary.Status == "failed" {
 			consecutiveFails++
-			if consecutiveFails >= 5 {
+			if consecutiveFails >= 8 {
 				log.Printf("rdloop: %d consecutive failures, stopping", consecutiveFails)
 				return fmt.Errorf("rdloop: %d consecutive cycle failures", consecutiveFails)
 			}
-			// Exponential backoff: 30s, 60s, 120s, 240s...
-			backoff := time.Duration(consecutiveFails) * 30 * time.Second
-			if backoff > 5*time.Minute {
-				backoff = 5 * time.Minute
+			// Exponential backoff: 60s, 120s, 240s, 480s...
+			backoff := time.Duration(consecutiveFails) * 60 * time.Second
+			if backoff > 10*time.Minute {
+				backoff = 10 * time.Minute
 			}
-			log.Printf("rdloop: backing off %s before next cycle (fail %d/5)", backoff, consecutiveFails)
+			log.Printf("rdloop: backing off %s before next cycle (fail %d/8)", backoff, consecutiveFails)
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
@@ -262,20 +283,21 @@ func (r *MultiCycleRunner) runOneCycle(ctx context.Context, cycleNum int, specFi
 	progressFile := fmt.Sprintf(".rdloop_cycle_%d.progress.json", cycleNum)
 
 	// Configure ralph-level loop hardening.
-	// Circuit breaker: trip after 8 no-progress iters (generous for implement phase
-	// which may need several write_file attempts), 10-min cooldown.
+	// Circuit breaker: trip after 12 no-progress iters (Opus multi-step planning
+	// takes longer), 15-min cooldown for API rate limit recovery.
 	circuitBreaker := ralph.NewCircuitBreaker(ralph.CircuitBreakerConfig{
-		NoProgressThreshold: 8,
-		SameErrorThreshold:  5,
-		CooldownDuration:    10 * time.Minute,
+		NoProgressThreshold: 12,
+		SameErrorThreshold:  6,
+		CooldownDuration:    15 * time.Minute,
 	})
-	// Cost governor: per-cycle token budget, velocity alarm at 60% unproductive
-	// over last 8 iterations, halt after 8 consecutive unproductive iterations.
+	// Cost governor: per-cycle token budget, velocity alarm at 50% unproductive
+	// (tighter since Opus is expensive) over last 10 iterations, halt after 10
+	// consecutive unproductive iterations.
 	costGovernor := ralph.NewCostGovernor(ralph.CostGovernorConfig{
 		HardBudgetTokens:  int64(r.cfg.Profile.TokenBudget),
-		VelocityWindow:    8,
-		VelocityAlarmRate: 0.6,
-		UnproductiveMax:   8,
+		VelocityWindow:    10,
+		VelocityAlarmRate: 0.5,
+		UnproductiveMax:   10,
 	})
 
 	loopCfg := ralph.Config{
@@ -300,8 +322,8 @@ func (r *MultiCycleRunner) runOneCycle(ctx context.Context, cycleNum int, specFi
 		AutoVerifyLevel: ralph.AutoVerifyFull,
 		ProjectRoot:   ".",
 		PhaseMaxTokens: map[string]int{
-			"scan": 2048, "plan": 4096, "implement": 16384,
-			"verify": 2048, "reflect": 2048, "report": 4096, "schedule": 2048,
+			"scan": 4096, "plan": 8192, "implement": 16384,
+			"verify": 4096, "reflect": 2048, "report": 4096, "schedule": 2048,
 		},
 		Hooks: ralph.Hooks{
 			OnIterationStart: func(iter int) {
@@ -358,14 +380,14 @@ func (r *MultiCycleRunner) runOneCycle(ctx context.Context, cycleNum int, specFi
 }
 
 // estimateDollarCost converts a UsageSummary to dollar cost using a blended rate.
-// Since the loop uses sonnet for heavy tasks and haiku for light ones,
-// we use sonnet pricing as the conservative upper bound — the actual spend
-// will be lower when haiku handles scan/verify/reflect/report/schedule phases.
+// Since the loop uses Opus for plan+implement (the most expensive phases),
+// we use Opus pricing as the conservative upper bound — the actual spend
+// will be lower when haiku handles verify/reflect/report/schedule phases.
 func estimateDollarCost(us finops.UsageSummary, profile rdcycle.BudgetProfile) float64 {
-	inputRate := 0.003  // sonnet per 1K tokens
-	outputRate := 0.015 // sonnet per 1K tokens
+	inputRate := 0.015  // opus per 1K tokens
+	outputRate := 0.075 // opus per 1K tokens
 	for _, mp := range profile.ModelPricing {
-		if mp.Model == "claude-sonnet-4-6" {
+		if mp.Model == "claude-opus-4-6" {
 			inputRate = mp.InputPer1KTokens
 			outputRate = mp.OutputPer1KTokens
 			break

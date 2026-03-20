@@ -19,6 +19,9 @@ type RunnerState struct {
 	StartedAt       time.Time      `json:"started_at"`
 	LastCycleAt     time.Time      `json:"last_cycle_at"`
 	History         []CycleSummary `json:"history"`
+	PeakCostPerCycle float64       `json:"peak_cost_per_cycle,omitempty"`
+	AvgCostPerCycle  float64       `json:"avg_cost_per_cycle,omitempty"`
+	TotalDowngrades  int           `json:"total_downgrades,omitempty"`
 }
 
 // CycleSummary records what happened in a single R&D cycle.
