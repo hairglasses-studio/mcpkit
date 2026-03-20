@@ -9,6 +9,8 @@
 .rdloop_cycle_*.progress.json
 .rdloop_debug_*.txt
 rdloop.log
+rdloop_*.log
+logs/
 /rdloop
 
 # Compiled binaries

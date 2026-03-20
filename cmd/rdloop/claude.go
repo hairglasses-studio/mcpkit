@@ -33,7 +33,7 @@ func NewClaudeClient(apiKey, model string) *ClaudeClient {
 	return &ClaudeClient{
 		apiKey: apiKey,
 		httpClient: &http.Client{
-			Timeout: 10 * time.Minute, // generous for long implement prompts
+			Timeout: 15 * time.Minute, // generous for Opus implement prompts
 		},
 		model: model,
 	}
@@ -120,14 +120,15 @@ func (c *ClaudeClient) CreateMessage(ctx context.Context, req sampling.CreateMes
 	}
 
 	// Retry with exponential backoff on transient errors (429, 5xx, network).
+	// 8 attempts with 120s cap provides ~7min total retry window for 24hr resilience.
 	var resp *claudeResponse
 	var lastErr error
-	for attempt := 0; attempt < 6; attempt++ {
+	for attempt := 0; attempt < 8; attempt++ {
 		if attempt > 0 {
 			backoff := time.Duration(math.Pow(2, float64(attempt))) * time.Second
-			// Cap backoff at 60s to avoid long waits.
-			if backoff > 60*time.Second {
-				backoff = 60 * time.Second
+			// Cap backoff at 120s for longer recovery during 24hr runs.
+			if backoff > 120*time.Second {
+				backoff = 120 * time.Second
 			}
 			// Use Retry-After header if available.
 			if rle, ok := lastErr.(*transientError); ok && rle.retryAfter > 0 {
