@@ -1,0 +1,52 @@
+{
+  "name": "R\u0026D Cycle: cycle-2",
+  "description": "Autonomous R\u0026D cycle 'cycle-2' (strategy: full, since: 2026-03-21T03:55:10Z).",
+  "completion": "All planned work items are implemented, tests pass, and roadmap is updated.",
+  "tasks": [
+    {
+      "id": "scan",
+      "description": "Run rdcycle_scan to check ecosystem activity since 2026-03-21T03:55:10Z.",
+      "done": false
+    },
+    {
+      "id": "plan",
+      "description": "Run rdcycle_plan with scan results and roadmap at /tmp/TestPerpetualStartAndStop545101148/001/roadmap.json.",
+      "done": false,
+      "depends_on": [
+        "scan"
+      ]
+    },
+    {
+      "id": "item-1",
+      "description": "Test item",
+      "done": false,
+      "depends_on": [
+        "plan"
+      ]
+    },
+    {
+      "id": "verify",
+      "description": "Run rdcycle_verify to execute make check. Fix issues and re-verify if needed.",
+      "done": false,
+      "depends_on": [
+        "item-1"
+      ]
+    },
+    {
+      "id": "reflect",
+      "description": "Record improvement notes for this cycle using rdcycle_notes.",
+      "done": false,
+      "depends_on": [
+        "verify"
+      ]
+    },
+    {
+      "id": "schedule",
+      "description": "Run rdcycle_schedule to write the next cycle's spec.",
+      "done": false,
+      "depends_on": [
+        "reflect"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "name": "R\u0026D Cycle: cycle-1",
+  "description": "Autonomous R\u0026D cycle 'cycle-1' (strategy: meta_improve, since: 2026-03-21T03:55:09Z).",
+  "completion": "All planned work items are implemented, tests pass, and roadmap is updated.",
+  "tasks": [
+    {
+      "id": "self_improve",
+      "description": "Run rdcycle_improve to analyze accumulated notes and apply recommendations.",
+      "done": false,
+      "depends_on": [
+        "plan"
+      ]
+    },
+    {
+      "id": "verify",
+      "description": "Run rdcycle_verify to execute make check. Fix issues and re-verify if needed.",
+      "done": false,
+      "depends_on": [
+        "self_improve"
+      ]
+    },
+    {
+      "id": "reflect",
+      "description": "Record improvement notes for this cycle using rdcycle_notes.",
+      "done": false,
+      "depends_on": [
+        "verify"
+      ]
+    },
+    {
+      "id": "schedule",
+      "description": "Run rdcycle_schedule to write the next cycle's spec.",
+      "done": false,
+      "depends_on": [
+        "reflect"
+      ]
+    }
+  ]
+}

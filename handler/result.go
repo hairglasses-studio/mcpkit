@@ -8,6 +8,10 @@ import (
 )
 
 // Structured error codes for programmatic categorization.
+//
+// The first block contains specific error codes for common failure modes.
+// The second block contains generic codes aligned with the Python workspace
+// taxonomy (mcp_workspace.runtime.WorkspaceErrorCode) for cross-ecosystem parity.
 const (
 	ErrClientInit   = "CLIENT_INIT_FAILED"
 	ErrInvalidParam = "INVALID_PARAM"
@@ -16,6 +20,12 @@ const (
 	ErrAPIError     = "API_ERROR"
 	ErrPermission   = "PERMISSION_DENIED"
 	ErrValidation   = "OUTPUT_VALIDATION_FAILED"
+
+	// Generic codes for cross-ecosystem alignment with Python workspace taxonomy.
+	ErrInternal      = "INTERNAL"
+	ErrRateLimited   = "RATE_LIMITED"
+	ErrUpstreamError = "UPSTREAM_ERROR"
+	ErrConflict      = "CONFLICT"
 )
 
 // TextResult creates a text result for a tool response.
