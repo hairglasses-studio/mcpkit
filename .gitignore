@@ -20,3 +20,4 @@ logs/
 /examples/gateway/gateway
 /examples/elicitation/elicitation
 /examples/rdcycle/rdcycle
+.ralph/
