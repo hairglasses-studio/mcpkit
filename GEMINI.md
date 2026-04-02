@@ -1,29 +1,29 @@
 # mcpkit — Gemini CLI Instructions
 
-Production-grade MCP toolkit for Go. 35+ packages: registry, handlers, resilience, auth, security, observability, workflows, multi-agent orchestration. 100% MCP spec coverage.
+MCP toolkit for building production-grade MCP servers. Built on `github.com/mark3labs/mcp-go`.
 
 ## Build & Test
 
 ```bash
 go build ./...           # Build all packages
 go vet ./...             # Static analysis
-go test ./... -count=1   # Run all tests
+go test ./... -count=1   # Run all tests (no cache)
 make check               # All three above
+make build-official      # Verify official SDK build
+make check-dual          # Full check + official SDK build
 ```
 
 ## Architecture
 
-4 dependency layers (lower never imports upper):
-1. `registry`, `health`, `sanitize`, `secrets`, `client`, `transport`
-2. `handler`, `resilience`, `mcptest`, `auth`, `observability`, `logging`, `discovery`, `memory`, `finops`, `eval`, `session`
-3. `security`, `gateway`, `ralph`, `skills`, `rdcycle`
-4. `orchestrator`, `handoff`, `workflow`, `bootstrap`
 
 ## Key Conventions
 
-- Middleware: `func(name string, td registry.ToolDefinition, next registry.ToolHandlerFunc) registry.ToolHandlerFunc`
-- Params: `handler.GetStringParam(req, "name")`, `handler.GetIntParam(req, "name", default)`
-- Results: `handler.TextResult()`, `handler.JSONResult()`, `handler.ErrorResult()`
-- Thread safety: `sync.RWMutex` on all registries
-- Dual-SDK: build tags for mcp-go vs official go-sdk
-- Tests: `*_test.go` in same package, 90%+ coverage
+- Middleware signature: `func(name string, td registry.ToolDefinition, next registry.ToolHandlerFunc) registry.ToolHandlerFunc`
+- Error codes: `handler.CodedErrorResult(handler.ErrInvalidParam, err)` — codes defined in `handler/result.go`
+- Param extraction: `handler.GetStringParam(req, "name")`, `handler.GetIntParam(req, "name", default)`
+- Result builders: `handler.TextResult()`, `handler.JSONResult()`, `handler.ErrorResult()`, `handler.StructuredResult()`
+- Thread safety: all registries use `sync.RWMutex` — `RLock` for reads, `Lock` for writes
+- SDK compat: import MCP types through `registry/compat.go` aliases when building tool modules
+- Dual-SDK: `//go:build !official_sdk` tags on mcp-go specific files; `//go:build official_sdk` for go-sdk variants
+- Adapter functions: use `registry.MakeTextContent()`, `registry.MakeErrorResult()`, `registry.ExtractArguments()` instead of SDK-specific constructors
+
