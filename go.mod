@@ -1,6 +1,6 @@
 module github.com/hairglasses-studio/mcpkit
 
-go 1.25.0
+go 1.26.1
 
 require (
 	github.com/invopop/jsonschema v0.13.0
