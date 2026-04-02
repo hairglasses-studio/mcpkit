@@ -50,3 +50,5 @@ print(f'Peak/cycle: \$${s.get(\"peak_cost_per_cycle\",0):.4f}'); \
 print(f'Downgrades: {s.get(\"total_downgrades\",0)}'); \
 print(f'Last cycle: {s[\"last_cycle_at\"]}'); \
 " 2>/dev/null || echo "No state file found. Run 'make rdloop' first."
+
+-include $(HOME)/hairglasses-studio/dotfiles/make/pipeline.mk
