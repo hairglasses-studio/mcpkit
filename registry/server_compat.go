@@ -9,7 +9,9 @@ package registry
 
 import (
 	"context"
+	"os"
 
+	"github.com/hairglasses-studio/mcpkit/transport"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
@@ -51,6 +53,17 @@ func AddPromptToServer(s *MCPServer, prompt mcp.Prompt, handler PromptHandlerFun
 // ServeStdio starts the MCP server on stdin/stdout.
 func ServeStdio(s *MCPServer) error {
 	return server.ServeStdio(s)
+}
+
+// ServeAuto starts the MCP server via Unix socket if MCP_SOCKET_PATH is set,
+// otherwise falls back to stdio. This allows existing servers to opt-in to
+// socket pooling by setting a single environment variable.
+func ServeAuto(s *MCPServer) error {
+	if socketPath := os.Getenv("MCP_SOCKET_PATH"); socketPath != "" {
+		srv := transport.NewUnixSocketServer(s, socketPath)
+		return srv.Serve(context.Background())
+	}
+	return ServeStdio(s)
 }
 
 // RemoveToolsFromServer removes tools from the MCP server by name.
