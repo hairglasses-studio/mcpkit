@@ -1,5 +1,10 @@
 # mcpkit
 
+[![Go](https://img.shields.io/badge/Go-1.26+-00ADD8?logo=go&logoColor=white)](https://go.dev/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![CI](https://github.com/hairglasses-studio/mcpkit/actions/workflows/ci.yml/badge.svg)](https://github.com/hairglasses-studio/mcpkit/actions/workflows/ci.yml)
+[![MCP](https://img.shields.io/badge/MCP-2025--11--25-blue)](https://modelcontextprotocol.io/specification/2025-11-25)
+
 The Go toolkit for production-grade MCP servers.
 
 Built on [github.com/mark3labs/mcp-go](https://github.com/mark3labs/mcp-go), mcpkit provides the middleware, type safety, and operational patterns needed to run MCP servers in production. It targets the [MCP 2025-11-25 spec](https://modelcontextprotocol.io/specification/2025-11-25) with 100% feature coverage.
