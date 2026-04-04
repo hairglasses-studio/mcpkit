@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -55,13 +56,15 @@ type AuditLoggerConfig struct {
 
 // AuditLogger handles audit event logging.
 type AuditLogger struct {
-	mu         sync.Mutex
-	events     []AuditEvent
-	maxEvents  int
-	logFile    string
-	writeQueue chan AuditEvent
-	stopCh     chan struct{}
-	exporters  []AuditExporter
+	mu           sync.Mutex
+	events       []AuditEvent
+	maxEvents    int
+	logFile      string
+	writeQueue   chan AuditEvent
+	stopCh       chan struct{}
+	exporters    []AuditExporter
+	dropped      atomic.Int64
+	exportErrors atomic.Int64
 }
 
 // NewAuditLogger creates a new audit logger.
@@ -110,11 +113,14 @@ func (l *AuditLogger) Log(event AuditEvent) {
 		select {
 		case l.writeQueue <- event:
 		default:
+			l.dropped.Add(1)
 		}
 	}
 
 	for _, exp := range l.exporters {
-		_ = exp.Export(event)
+		if err := exp.Export(event); err != nil {
+			l.exportErrors.Add(1)
+		}
 	}
 }
 
@@ -216,6 +222,8 @@ type AuditStats struct {
 	AccessDenied   int            `json:"access_denied"`
 	TopTools       map[string]int `json:"top_tools"`
 	AverageLatency time.Duration  `json:"average_latency_ms"`
+	DroppedEvents  int64          `json:"dropped_events"`
+	ExportErrors   int64          `json:"export_errors"`
 }
 
 // GetStats returns summary statistics.
@@ -251,6 +259,8 @@ func (l *AuditLogger) GetStats() AuditStats {
 	if latencyCount > 0 {
 		stats.AverageLatency = totalLatency / time.Duration(latencyCount)
 	}
+	stats.DroppedEvents = l.dropped.Load()
+	stats.ExportErrors = l.exportErrors.Load()
 	return stats
 }
 
@@ -265,6 +275,7 @@ func (l *AuditLogger) Close() {
 func (l *AuditLogger) backgroundWriter() {
 	dir := filepath.Dir(l.logFile)
 	if err := os.MkdirAll(dir, 0750); err != nil {
+		fmt.Fprintf(os.Stderr, "audit: backgroundWriter: failed to create directory %q: %v\n", dir, err)
 		return
 	}
 	for {
