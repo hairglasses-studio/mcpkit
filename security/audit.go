@@ -65,6 +65,7 @@ type AuditLogger struct {
 	exporters    []AuditExporter
 	dropped      atomic.Int64
 	exportErrors atomic.Int64
+	seq          atomic.Uint64
 }
 
 // NewAuditLogger creates a new audit logger.
@@ -99,7 +100,7 @@ func NewAuditLogger(config AuditLoggerConfig) *AuditLogger {
 func (l *AuditLogger) Log(event AuditEvent) {
 	event.Timestamp = time.Now()
 	if event.ID == "" {
-		event.ID = fmt.Sprintf("%d-%d", event.Timestamp.UnixNano(), time.Now().Nanosecond())
+		event.ID = fmt.Sprintf("%d-%d", event.Timestamp.UnixNano(), l.seq.Add(1))
 	}
 
 	l.mu.Lock()
