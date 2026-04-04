@@ -6,7 +6,7 @@ Last updated: 2026-03-15.
 
 - **Spec coverage**: 100% (all MCP 2025-11-25 features implemented)
 - **Tiers 1–4**: Complete (A2A deferred — spec not stable)
-- **Test coverage**: All 35 non-example packages at 90%+ (min 90.0%, max 100.0%)
+- **Test coverage**: All Phase 1–30 packages at 90%+ coverage. `transport` (added Phase 33) at 16% — pending test hardening
 - **Documentation**: All 33 packages have `doc.go`, 28+ `example_test.go` files
 
 See [RESEARCH.md](RESEARCH.md) for detailed analysis and evidence.
@@ -52,7 +52,7 @@ Dispatcher/sampling unit tests, core registry/workflow/auth test coverage, disco
 
 ### Phases 25–30: Coverage Hardening + Documentation (COMPLETE)
 
-All 35 non-example packages raised to 90%+ coverage. All 33 packages documented with `doc.go`. Phase 30 pushed 11 packages past the 90% threshold (auth, eval, ralph, research, gateway, mcptest, secrets/providers, handler, rdcycle, observability, roadmap).
+All Phase 1–30 packages raised to 90%+ coverage. All 33 packages documented with `doc.go`. Phase 30 pushed 11 packages past the 90% threshold (auth, eval, ralph, research, gateway, mcptest, secrets/providers, handler, rdcycle, observability, roadmap). Note: `transport` (Phase 33) was added after this milestone and requires separate test hardening.
 
 ---
 
