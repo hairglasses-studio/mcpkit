@@ -325,6 +325,22 @@ func createJSONRPCError(id interface{}, code int, message string) jsonRPCError {
 	}
 }
 
+// WriteJSONLine marshals v as JSON and writes it as a newline-terminated line to w.
+// The write is protected by mu if non-nil.
+func WriteJSONLine(w io.Writer, mu *sync.Mutex, v any) error {
+	data, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	data = append(data, '\n')
+	if mu != nil {
+		mu.Lock()
+		defer mu.Unlock()
+	}
+	_, err = w.Write(data)
+	return err
+}
+
 // DefaultSocketPath returns the default socket path for a given server name.
 // It uses $XDG_RUNTIME_DIR/mcpkit/<name>.sock, falling back to /tmp/mcpkit/<name>.sock.
 func DefaultSocketPath(name string) string {
