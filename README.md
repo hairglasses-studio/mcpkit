@@ -1,5 +1,7 @@
 # mcpkit
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/hairglasses-studio/mcpkit.svg)](https://pkg.go.dev/github.com/hairglasses-studio/mcpkit)
+[![Go Report Card](https://goreportcard.com/badge/github.com/hairglasses-studio/mcpkit)](https://goreportcard.com/report/github.com/hairglasses-studio/mcpkit)
 [![Go](https://img.shields.io/badge/Go-1.26+-00ADD8?logo=go&logoColor=white)](https://go.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![CI](https://github.com/hairglasses-studio/mcpkit/actions/workflows/ci.yml/badge.svg)](https://github.com/hairglasses-studio/mcpkit/actions/workflows/ci.yml)
