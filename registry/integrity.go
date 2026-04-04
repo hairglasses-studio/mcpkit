@@ -33,6 +33,8 @@ func Fingerprint(td ToolDefinition) ToolFingerprint {
 	schemaBytes, err := json.Marshal(td.Tool.InputSchema)
 	if err == nil {
 		h.Write(schemaBytes)
+	} else {
+		_, _ = fmt.Fprintf(h, "%v", td.Tool.InputSchema)
 	}
 	h.Write([]byte{0x00})
 
