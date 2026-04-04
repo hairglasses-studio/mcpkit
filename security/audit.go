@@ -66,6 +66,8 @@ type AuditLogger struct {
 	dropped      atomic.Int64
 	exportErrors atomic.Int64
 	seq          atomic.Uint64
+	closeOnce    sync.Once
+	wg           sync.WaitGroup
 }
 
 // NewAuditLogger creates a new audit logger.
@@ -90,6 +92,7 @@ func NewAuditLogger(config AuditLoggerConfig) *AuditLogger {
 	}
 
 	if config.LogFile != "" {
+		logger.wg.Add(1)
 		go logger.backgroundWriter()
 	}
 
@@ -265,15 +268,20 @@ func (l *AuditLogger) GetStats() AuditStats {
 	return stats
 }
 
-// Close stops the background writer and closes all exporters.
+// Close stops the background writer and closes all exporters. It is safe
+// to call multiple times; only the first call has effect.
 func (l *AuditLogger) Close() {
-	close(l.stopCh)
-	for _, exp := range l.exporters {
-		_ = exp.Close()
-	}
+	l.closeOnce.Do(func() {
+		close(l.stopCh)
+		l.wg.Wait()
+		for _, exp := range l.exporters {
+			_ = exp.Close()
+		}
+	})
 }
 
 func (l *AuditLogger) backgroundWriter() {
+	defer l.wg.Done()
 	dir := filepath.Dir(l.logFile)
 	if err := os.MkdirAll(dir, 0750); err != nil {
 		fmt.Fprintf(os.Stderr, "audit: backgroundWriter: failed to create directory %q: %v\n", dir, err)
