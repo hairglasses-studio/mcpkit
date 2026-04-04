@@ -147,6 +147,9 @@ type Options struct {
 	// EvictionInterval controls how often expired sessions are swept.
 	// Defaults to TTL/2 when TTL is set, otherwise no background sweeper runs.
 	EvictionInterval time.Duration
+	// Context, when set, stops the eviction loop when cancelled. This provides
+	// an alternative to calling Close() for lifecycle management.
+	Context context.Context
 }
 
 // MemStore is an in-memory implementation of Store with optional TTL eviction.
@@ -174,20 +177,28 @@ func NewMemStore(opts Options) *MemStore {
 	}
 
 	if interval > 0 {
-		go ms.evictLoop(interval)
+		go ms.evictLoop(interval, opts.Context)
 	}
 
 	return ms
 }
 
-func (ms *MemStore) evictLoop(interval time.Duration) {
+func (ms *MemStore) evictLoop(interval time.Duration, ctx context.Context) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
+
+	var ctxDone <-chan struct{}
+	if ctx != nil {
+		ctxDone = ctx.Done()
+	}
+
 	for {
 		select {
 		case <-ticker.C:
 			ms.Evict()
 		case <-ms.done:
+			return
+		case <-ctxDone:
 			return
 		}
 	}
