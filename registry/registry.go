@@ -345,7 +345,9 @@ func (r *ToolRegistry) wrapHandler(toolName string, td ToolDefinition) ToolHandl
 			defer cancel()
 		}
 
-		// Panic recovery
+		// Panic recovery — this is the one case where both result and err are
+		// returned non-nil. The result carries the user-facing error message;
+		// err carries the stack trace for logging and upstream error handlers.
 		defer func() {
 			if r := recover(); r != nil {
 				stack := string(debug.Stack())
