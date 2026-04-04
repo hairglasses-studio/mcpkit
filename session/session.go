@@ -112,6 +112,8 @@ func (s *session) Close() error {
 }
 
 func (s *session) isExpired() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	if s.expiresAt.IsZero() {
 		return false
 	}
