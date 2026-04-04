@@ -3,6 +3,7 @@ package rdcycle
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -75,12 +76,15 @@ func (s *FileArtifactStore) List(artifactType string) []Artifact {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
 			continue
 		}
-		data, err := os.ReadFile(filepath.Join(s.dir, entry.Name()))
+		path := filepath.Join(s.dir, entry.Name())
+		data, err := os.ReadFile(path)
 		if err != nil {
+			slog.Warn("filestore: List: read error", "path", path, "error", err)
 			continue
 		}
 		var a Artifact
 		if err := json.Unmarshal(data, &a); err != nil {
+			slog.Warn("filestore: List: unmarshal error", "path", path, "error", err)
 			continue
 		}
 		if artifactType == "" || a.Type == artifactType {
