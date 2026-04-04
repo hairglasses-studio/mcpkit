@@ -52,14 +52,13 @@ make check-dual          # Full check + official SDK build
 | `rdcycle` | R&D cycle orchestration tools: scan, plan, verify, commit, report, schedule, notes, improve, workflow graph, budget profiles, model tiers | `registry`, `handler`, `research`, `roadmap`, `workflow`, `finops` |
 | `session` | Session management: Session/SessionStore interfaces, middleware, TTL/eviction, migration | `registry` |
 | `transport` | Transport abstraction layer: stdio, HTTP, WebSocket adapters, middleware chain | none |
-| `feedback` | User feedback collection, anonymous telemetry, opt-in usage tracking | `registry`, `handler` |
 | `cmd` | CLI helpers for server publishing, configuration, management | `discovery`, `registry` |
 
 ## Dependency Layers
 
 - **Layer 1** (no internal deps): `registry`, `health`, `sanitize`, `secrets`, `client`, `transport`
-- **Layer 2** (depend on Layer 1): `resources`, `prompts`, `handler`, `resilience`, `mcptest`, `auth`, `observability`, `logging`, `sampling`, `roots`, `research`, `discovery`, `dispatcher`, `extensions`, `memory`, `finops`, `lifecycle`, `eval`, `roadmap`, `session`, `feedback`
-- **Layer 3** (depend on Layer 2): `security`, `gateway`, `ralph`, `skills`, `a2a`, `rdcycle`, `cmd`
+- **Layer 2** (depend on Layer 1): `resources`, `prompts`, `handler`, `resilience`, `mcptest`, `auth`, `observability`, `logging`, `sampling`, `roots`, `research`, `discovery`, `dispatcher`, `extensions`, `memory`, `finops`, `lifecycle`, `eval`, `roadmap`, `session`
+- **Layer 3** (depend on Layer 2): `security`, `gateway`, `ralph`, `skills`, `rdcycle`, `cmd`
 - **Layer 4** (depend on Layer 3): `orchestrator`, `handoff`, `workflow`, `bootstrap`
 
 ## Coding Conventions
