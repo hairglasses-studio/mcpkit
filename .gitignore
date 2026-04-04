@@ -1,5 +1,7 @@
-# Claude Code personal settings (not shared with team)
-.claude/settings.local.json
+# Claude Code
+.claude/
+.codex/
+.gemini/
 
 # Environment secrets
 .env
@@ -23,3 +25,13 @@ logs/
 .ralph/
 .env.*
 .envrc
+
+# Build artifacts
+coverage.out
+cov.out
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
