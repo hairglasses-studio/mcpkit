@@ -464,6 +464,13 @@ var (
 	midiInStart       = winmm.NewProc("midiInStart")
 	midiInStop        = winmm.NewProc("midiInStop")
 	midiInClose       = winmm.NewProc("midiInClose")
+
+	// MIDI output procs for SendMIDI feedback.
+	midiOutGetNumDevs  = winmm.NewProc("midiOutGetNumDevs")
+	midiOutGetDevCapsW = winmm.NewProc("midiOutGetDevCapsW")
+	midiOutOpen        = winmm.NewProc("midiOutOpen")
+	midiOutShortMsg    = winmm.NewProc("midiOutShortMsg")
+	midiOutClose       = winmm.NewProc("midiOutClose")
 )
 
 const (
@@ -476,6 +483,19 @@ type midiInCaps struct {
 	Pid       uint16
 	DriverVer uint32
 	Pname     [32]uint16
+	Support   uint32
+}
+
+// midiOutCaps matches MIDIOUTCAPSW from mmsystem.h.
+type midiOutCaps struct {
+	Mid       uint16
+	Pid       uint16
+	DriverVer uint32
+	Pname     [32]uint16
+	Technology uint16
+	Voices    uint16
+	Notes     uint16
+	ChannelMask uint16
 	Support   uint32
 }
 
@@ -562,6 +582,7 @@ type winmmMIDIConnection struct {
 	msgChan     chan uint32
 	cancel      context.CancelFunc
 	alive       bool
+	feedback    *winmmMIDIFeedback
 }
 
 // winmmInstances maps callback instance data back to connections.
@@ -571,10 +592,15 @@ var (
 	winmmNextID      uintptr
 )
 
-func (c *winmmMIDIConnection) Info() Info               { return c.deviceInfo }
-func (c *winmmMIDIConnection) Events() <-chan Event     { return c.events }
-func (c *winmmMIDIConnection) Feedback() DeviceFeedback { return nil }
-func (c *winmmMIDIConnection) Alive() bool              { return c.alive }
+func (c *winmmMIDIConnection) Info() Info           { return c.deviceInfo }
+func (c *winmmMIDIConnection) Events() <-chan Event { return c.events }
+func (c *winmmMIDIConnection) Feedback() DeviceFeedback {
+	if c.feedback != nil {
+		return c.feedback
+	}
+	return nil
+}
+func (c *winmmMIDIConnection) Alive() bool { return c.alive }
 
 func (c *winmmMIDIConnection) Start(ctx context.Context) error {
 	// Register instance for callback lookup.
@@ -606,6 +632,15 @@ func (c *winmmMIDIConnection) Start(ctx context.Context) error {
 		delete(winmmInstances, instanceID)
 		winmmInstancesMu.Unlock()
 		return fmt.Errorf("midiInStart failed: MMRESULT %d", ret)
+	}
+
+	// Try to open a matching MIDI output device for SendMIDI feedback.
+	// WinMM numbers input and output devices separately, so we match by name.
+	// Non-fatal: many MIDI devices are input-only.
+	if outIdx := findMatchingMIDIOut(c.deviceInfo.Name); outIdx >= 0 {
+		if fb, err := openMIDIOut(uint32(outIdx)); err == nil {
+			c.feedback = fb
+		}
 	}
 
 	ctx, c.cancel = context.WithCancel(ctx)
@@ -742,5 +777,108 @@ func (c *winmmMIDIConnection) Close() error {
 		midiInStop.Call(c.handle)
 		midiInClose.Call(c.handle)
 	}
+	if c.feedback != nil {
+		c.feedback.close()
+	}
 	return nil
+}
+
+// ---------------------------------------------------------------------------
+// WinMM MIDI output feedback — midiOutShortMsg
+// ---------------------------------------------------------------------------
+
+// winmmMIDIFeedback implements DeviceFeedback for MIDI output via winmm.dll.
+// It opens a MIDI output device and sends short messages (up to 3 bytes)
+// packed into a DWORD via midiOutShortMsg.
+type winmmMIDIFeedback struct {
+	handle uintptr
+	mu     sync.Mutex
+}
+
+// openMIDIOut opens a MIDI output device by index.
+func openMIDIOut(deviceIndex uint32) (*winmmMIDIFeedback, error) {
+	var handle uintptr
+	ret, _, _ := midiOutOpen.Call(
+		uintptr(unsafe.Pointer(&handle)),
+		uintptr(deviceIndex),
+		0, // no callback
+		0, // no instance data
+		0, // CALLBACK_NULL
+	)
+	if ret != 0 {
+		return nil, fmt.Errorf("midiOutOpen failed: MMRESULT %d", ret)
+	}
+	return &winmmMIDIFeedback{handle: handle}, nil
+}
+
+// findMatchingMIDIOut scans MIDI output devices for one whose name matches
+// the input device name. WinMM uses separate numbering for input and output
+// devices, so we match by name. Returns the output device index or -1.
+func findMatchingMIDIOut(inputName string) int {
+	numDevs, _, _ := midiOutGetNumDevs.Call()
+	for i := uintptr(0); i < numDevs; i++ {
+		var caps midiOutCaps
+		ret, _, _ := midiOutGetDevCapsW.Call(i, uintptr(unsafe.Pointer(&caps)), unsafe.Sizeof(caps))
+		if ret != 0 {
+			continue
+		}
+		name := syscall.UTF16ToString(caps.Pname[:])
+		if name == inputName {
+			return int(i)
+		}
+	}
+	return -1
+}
+
+// SendMIDI sends a short MIDI message (1-3 bytes) via midiOutShortMsg.
+// The bytes are packed into a DWORD: msg[0] | msg[1]<<8 | msg[2]<<16.
+func (f *winmmMIDIFeedback) SendMIDI(data []byte) error {
+	if len(data) == 0 {
+		return fmt.Errorf("%w: empty MIDI message", ErrNotSupported)
+	}
+	if len(data) > 3 {
+		// midiOutShortMsg only supports messages up to 3 bytes.
+		// SysEx requires midiOutLongMsg which is not yet implemented.
+		return fmt.Errorf("%w: midiOutShortMsg supports max 3 bytes, got %d (use SysEx API for longer messages)", ErrNotSupported, len(data))
+	}
+
+	// Pack bytes into a DWORD: status | data1<<8 | data2<<16
+	var packed uintptr
+	packed = uintptr(data[0])
+	if len(data) > 1 {
+		packed |= uintptr(data[1]) << 8
+	}
+	if len(data) > 2 {
+		packed |= uintptr(data[2]) << 16
+	}
+
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	ret, _, _ := midiOutShortMsg.Call(f.handle, packed)
+	if ret != 0 {
+		return fmt.Errorf("midiOutShortMsg failed: MMRESULT %d", ret)
+	}
+	return nil
+}
+
+func (f *winmmMIDIFeedback) SetLED(index int, r, g, b, a uint8) error {
+	return ErrNotSupported
+}
+
+func (f *winmmMIDIFeedback) SetRumble(motor int, intensity float64, duration time.Duration) error {
+	return ErrNotSupported
+}
+
+func (f *winmmMIDIFeedback) SendRaw(data []byte) error {
+	return ErrNotSupported
+}
+
+func (f *winmmMIDIFeedback) close() {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.handle != 0 {
+		midiOutClose.Call(f.handle)
+		f.handle = 0
+	}
 }
