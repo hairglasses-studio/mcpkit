@@ -1,0 +1,417 @@
+// Copyright 2025 The A2A Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package a2aclient
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"iter"
+	"net/http"
+	"net/url"
+	"strconv"
+	"time"
+
+	"github.com/a2aproject/a2a-go/v2/a2a"
+	"github.com/a2aproject/a2a-go/v2/internal/rest"
+	"github.com/a2aproject/a2a-go/v2/internal/sse"
+	"github.com/a2aproject/a2a-go/v2/log"
+)
+
+// RESTTransport implemetns Transport using RESTful HTTP API.
+type RESTTransport struct {
+	url        *url.URL
+	httpClient *http.Client
+}
+
+// NewRESTTransport creates a new REST Transport for A2A protocol and communication
+// For production deployments, provide a client with appropriate timeout, retry policy,
+// and connection pooling configured for your requirements.
+func NewRESTTransport(u *url.URL, client *http.Client) Transport {
+	t := &RESTTransport{
+		url:        u,
+		httpClient: client,
+	}
+
+	if t.httpClient == nil {
+		t.httpClient = &http.Client{Timeout: defaultRequestTimeout}
+	}
+	return t
+}
+
+// WithRESTTransport returns a Client factory option that enables REST transport support.
+func WithRESTTransport(client *http.Client) FactoryOption {
+	return WithTransport(
+		a2a.TransportProtocolHTTPJSON,
+		TransportFactoryFn(func(ctx context.Context, card *a2a.AgentCard, iface *a2a.AgentInterface) (Transport, error) {
+			u, err := url.Parse(iface.URL)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse endpoint URL: %w", err)
+			}
+			return NewRESTTransport(u, client), nil
+		}),
+	)
+}
+
+type restRequest struct {
+	method    string
+	params    ServiceParams
+	path      string
+	payload   any
+	streaming bool
+	tenant    string
+}
+
+// sendRequest prepares the HTTP request and sends it to the server.
+// It returns the HTTP response with the Body OPEN.
+// The caller is responsible for closing the response body.
+func (t *RESTTransport) sendRequest(ctx context.Context, req *restRequest) (*http.Response, error) {
+	reqBody, err := json.Marshal(req.payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request: %w: %w", err, a2a.ErrInvalidRequest)
+	}
+
+	rel, err := url.Parse(req.path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse path: %w", err)
+	}
+
+	u := t.url
+	if req.tenant != "" {
+		u = u.JoinPath(req.tenant, rel.Path)
+	} else {
+		u = u.JoinPath(rel.Path)
+	}
+	u.RawQuery = rel.RawQuery
+	fullURL := u.String()
+	httpReq, err := http.NewRequestWithContext(ctx, req.method, fullURL, bytes.NewBuffer(reqBody))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	if req.streaming {
+		httpReq.Header.Set("Accept", sse.ContentEventStream)
+	} else {
+		httpReq.Header.Set("Accept", "application/json")
+	}
+
+	for k, vals := range req.params {
+		for _, v := range vals {
+			httpReq.Header.Add(k, v)
+		}
+	}
+
+	httpResp, err := t.httpClient.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send HTTP request: %w", err)
+	}
+
+	if httpResp.StatusCode != http.StatusOK {
+		defer func() {
+			if err := httpResp.Body.Close(); err != nil {
+				log.Error(ctx, "failed to close http response body", err)
+			}
+		}()
+		return nil, rest.ToA2AError(httpResp)
+	}
+
+	return httpResp, nil
+}
+
+// doRequest is an adapter for Single Response calls
+func (t *RESTTransport) doRequest(ctx context.Context, req *restRequest, result any) error {
+	resp, err := t.sendRequest(ctx, req)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Error(ctx, "failed to close http response body", err)
+		}
+	}()
+
+	if result != nil {
+		if err := json.NewDecoder(resp.Body).Decode(result); err != nil {
+			return fmt.Errorf("failed to decode response: %w", err)
+		}
+	}
+	return nil
+}
+
+// doStreamingRequest is an adapter for Streaming Response calls
+func (t *RESTTransport) doStreamingRequest(ctx context.Context, req *restRequest) iter.Seq2[a2a.Event, error] {
+	return func(yield func(a2a.Event, error) bool) {
+		req.streaming = true
+		resp, err := t.sendRequest(ctx, req)
+		if err != nil {
+			yield(nil, err)
+			return
+		}
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				log.Error(ctx, "failed to close http response body", err)
+			}
+		}()
+
+		for data, err := range sse.ParseDataStream(resp.Body) {
+			if err != nil {
+				yield(nil, err)
+				return
+			}
+
+			var sr a2a.StreamResponse
+			if err := json.Unmarshal(data, &sr); err != nil {
+				yield(nil, err)
+				return
+			}
+			event := sr.Event
+
+			if !yield(event, nil) {
+				return
+			}
+		}
+	}
+}
+
+// GetTask implements [a2a.Transport].
+func (t *RESTTransport) GetTask(ctx context.Context, params ServiceParams, req *a2a.GetTaskRequest) (*a2a.Task, error) {
+	path := rest.MakeGetTaskPath(string(req.ID))
+	q := url.Values{}
+	if req.HistoryLength != nil {
+		q.Add("historyLength", strconv.Itoa(*req.HistoryLength))
+	}
+	if encoded := q.Encode(); encoded != "" {
+		path += "?" + encoded
+	}
+	var task a2a.Task
+
+	if err := t.doRequest(ctx, &restRequest{
+		method:  "GET",
+		params:  params,
+		path:    path,
+		tenant:  req.Tenant,
+		payload: nil,
+	}, &task); err != nil {
+		return nil, err
+	}
+	return &task, nil
+}
+
+// ListTasks implements [a2a.Transport].
+func (t *RESTTransport) ListTasks(ctx context.Context, params ServiceParams, req *a2a.ListTasksRequest) (*a2a.ListTasksResponse, error) {
+	path := rest.MakeListTasksPath()
+
+	query := url.Values{}
+	if req.ContextID != "" {
+		query.Add("contextId", string(req.ContextID))
+	}
+	if req.Status != "" {
+		query.Add("status", string(req.Status))
+	}
+	if req.PageSize != 0 {
+		query.Add("pageSize", strconv.Itoa(req.PageSize))
+	}
+	if req.PageToken != "" {
+		query.Add("pageToken", string(req.PageToken))
+	}
+	if req.HistoryLength != nil {
+		query.Add("historyLength", strconv.Itoa(*req.HistoryLength))
+	}
+	if req.StatusTimestampAfter != nil {
+		query.Add("lastUpdatedAfter", req.StatusTimestampAfter.Format(time.RFC3339))
+	}
+	if req.IncludeArtifacts {
+		query.Add("includeArtifacts", "true")
+	}
+
+	if encoded := query.Encode(); encoded != "" {
+		path += "?" + encoded
+	}
+
+	var result a2a.ListTasksResponse
+
+	if err := t.doRequest(ctx, &restRequest{
+		method:  "GET",
+		params:  params,
+		path:    path,
+		tenant:  req.Tenant,
+		payload: nil,
+	}, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// CancelTask implements [a2a.Transport].
+func (t *RESTTransport) CancelTask(ctx context.Context, params ServiceParams, req *a2a.CancelTaskRequest) (*a2a.Task, error) {
+	path := rest.MakeCancelTaskPath(string(req.ID))
+	var result a2a.Task
+
+	if err := t.doRequest(ctx, &restRequest{
+		method:  "POST",
+		params:  params,
+		path:    path,
+		tenant:  req.Tenant,
+		payload: nil,
+	}, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// SendMessage implements [a2a.Transport].
+func (t *RESTTransport) SendMessage(ctx context.Context, params ServiceParams, req *a2a.SendMessageRequest) (a2a.SendMessageResult, error) {
+	path := rest.MakeSendMessagePath()
+
+	var result json.RawMessage
+	if err := t.doRequest(ctx, &restRequest{
+		method:  "POST",
+		params:  params,
+		path:    path,
+		tenant:  req.Tenant,
+		payload: req,
+	}, &result); err != nil {
+		return nil, err
+	}
+
+	var sr a2a.StreamResponse
+	if err := json.Unmarshal(result, &sr); err != nil {
+		return nil, fmt.Errorf("result violates A2A spec - could not determine type: %w; data: %s", err, string(result))
+	}
+	event := sr.Event
+
+	// SendMessage can return either a Task or a Message
+	switch e := event.(type) {
+	case *a2a.Task:
+		return e, nil
+	case *a2a.Message:
+		return e, nil
+	default:
+		return nil, fmt.Errorf("result violates A2A spec - expected Task or Message, got %T: %s", event, string(result))
+	}
+}
+
+// SubscribeToTask implements [a2a.Transport].
+func (t *RESTTransport) SubscribeToTask(ctx context.Context, params ServiceParams, req *a2a.SubscribeToTaskRequest) iter.Seq2[a2a.Event, error] {
+	path := rest.MakeSubscribeTaskPath(string(req.ID))
+	return t.doStreamingRequest(ctx, &restRequest{
+		method:  "POST",
+		params:  params,
+		path:    path,
+		tenant:  req.Tenant,
+		payload: nil,
+	})
+}
+
+// SendStreamingMessage implements [a2a.Transport].
+func (t *RESTTransport) SendStreamingMessage(ctx context.Context, params ServiceParams, req *a2a.SendMessageRequest) iter.Seq2[a2a.Event, error] {
+	path := rest.MakeStreamMessagePath()
+	return t.doStreamingRequest(ctx, &restRequest{
+		method:  "POST",
+		params:  params,
+		path:    path,
+		tenant:  req.Tenant,
+		payload: req,
+	})
+}
+
+// GetTaskPushConfig implements [a2a.Transport].
+func (t *RESTTransport) GetTaskPushConfig(ctx context.Context, params ServiceParams, req *a2a.GetTaskPushConfigRequest) (*a2a.TaskPushConfig, error) {
+	path := rest.MakeGetPushConfigPath(string(req.TaskID), string(req.ID))
+	var config a2a.TaskPushConfig
+
+	if err := t.doRequest(ctx, &restRequest{
+		method:  "GET",
+		params:  params,
+		path:    path,
+		tenant:  req.Tenant,
+		payload: nil,
+	}, &config); err != nil {
+		return nil, err
+	}
+	return &config, nil
+}
+
+// ListTaskPushConfigs implements [a2a.Transport].
+func (t *RESTTransport) ListTaskPushConfigs(ctx context.Context, params ServiceParams, req *a2a.ListTaskPushConfigRequest) ([]*a2a.TaskPushConfig, error) {
+	path := rest.MakeListPushConfigsPath(string(req.TaskID))
+	var configs []*a2a.TaskPushConfig
+
+	if err := t.doRequest(ctx, &restRequest{
+		method:  "GET",
+		params:  params,
+		path:    path,
+		tenant:  req.Tenant,
+		payload: nil,
+	}, &configs); err != nil {
+		return nil, err
+	}
+	return configs, nil
+}
+
+// CreateTaskPushConfig implements [a2a.Transport].
+func (t *RESTTransport) CreateTaskPushConfig(ctx context.Context, params ServiceParams, req *a2a.CreateTaskPushConfigRequest) (*a2a.TaskPushConfig, error) {
+	path := rest.MakeCreatePushConfigPath(string(req.TaskID))
+	var config a2a.TaskPushConfig
+
+	if err := t.doRequest(ctx, &restRequest{
+		method:  "POST",
+		params:  params,
+		path:    path,
+		tenant:  req.Tenant,
+		payload: req,
+	}, &config); err != nil {
+		return nil, err
+	}
+	return &config, nil
+}
+
+// DeleteTaskPushConfig implements [a2a.Transport].
+func (t *RESTTransport) DeleteTaskPushConfig(ctx context.Context, params ServiceParams, req *a2a.DeleteTaskPushConfigRequest) error {
+	path := rest.MakeDeletePushConfigPath(string(req.TaskID), string(req.ID))
+	return t.doRequest(ctx, &restRequest{
+		method:  "DELETE",
+		params:  params,
+		path:    path,
+		tenant:  req.Tenant,
+		payload: nil,
+	}, nil)
+}
+
+// GetExtendedAgentCard implements [a2a.Transport].
+func (t *RESTTransport) GetExtendedAgentCard(ctx context.Context, params ServiceParams, req *a2a.GetExtendedAgentCardRequest) (*a2a.AgentCard, error) {
+	path := rest.MakeGetExtendedAgentCardPath()
+	var card a2a.AgentCard
+
+	if err := t.doRequest(ctx, &restRequest{
+		method:  "GET",
+		params:  params,
+		path:    path,
+		tenant:  req.Tenant,
+		payload: nil,
+	}, &card); err != nil {
+		return nil, err
+	}
+	return &card, nil
+}
+
+// Destroy implements [a2a.Transport].
+func (t *RESTTransport) Destroy() error {
+	// HTTP client doesn't need explicit cleanup in most cases
+	// If a custom client with cleanup is needed, implement via options
+	return nil
+}
