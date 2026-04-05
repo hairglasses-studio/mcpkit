@@ -150,3 +150,59 @@ func TestGetTaskEntry_NotInContext(t *testing.T) {
 		t.Error("GetTaskEntry should return nil when not in context")
 	}
 }
+
+func TestManagerGet_Expired(t *testing.T) {
+	mgr := NewManager()
+	entry := mgr.Create(time.Millisecond) // very short TTL
+	taskID := entry.Task.TaskId
+	time.Sleep(5 * time.Millisecond)
+
+	got := mgr.Get(taskID)
+	if got != nil {
+		t.Error("Get should return nil for expired task")
+	}
+}
+
+func TestManagerList_ExcludesExpired(t *testing.T) {
+	mgr := NewManager()
+	mgr.Create(time.Millisecond) // will expire
+	mgr.Create(time.Hour)        // won't expire
+	time.Sleep(5 * time.Millisecond)
+
+	tasks := mgr.List()
+	if len(tasks) != 1 {
+		t.Errorf("List returned %d tasks, want 1 (expired excluded)", len(tasks))
+	}
+}
+
+func TestIsExpired_NoExpiry(t *testing.T) {
+	entry := &TaskEntry{
+		Task: TaskInfo{TaskId: "test-no-expiry", Status: registry.TaskStatusWorking},
+		// ExpiresAt is zero value — should never expire.
+	}
+	if entry.IsExpired() {
+		t.Error("IsExpired should return false for zero ExpiresAt")
+	}
+}
+
+func TestIsExpired_NotYetExpired(t *testing.T) {
+	entry := &TaskEntry{
+		Task:      TaskInfo{TaskId: "test-future", Status: registry.TaskStatusWorking},
+		ExpiresAt: time.Now().Add(time.Hour),
+	}
+	if entry.IsExpired() {
+		t.Error("IsExpired should return false for future ExpiresAt")
+	}
+}
+
+func TestManagerCreate_DefaultTTL(t *testing.T) {
+	mgr := NewManager()
+	entry := mgr.Create(0) // should use DefaultTTL
+	if entry.ExpiresAt.IsZero() {
+		t.Error("ExpiresAt should not be zero with default TTL")
+	}
+	// Should expire ~5min from now (DefaultTTL).
+	if time.Until(entry.ExpiresAt) < time.Minute {
+		t.Error("default TTL seems too short")
+	}
+}
