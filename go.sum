@@ -1,3 +1,5 @@
+github.com/a2aproject/a2a-go/v2 v2.1.0 h1:mtn3UR+B8RnIRYTVNUHmip8FMCK5Pe3Id2aNATOWEPw=
+github.com/a2aproject/a2a-go/v2 v2.1.0/go.mod h1:nm/NLcGWEQsVf7rgcLy74DyswS5BanPS6ubQhGhiQaA=
 github.com/bahlo/generic-list-go v0.2.0 h1:5sz/EEAK+ls5wF+NeqDpk5+iNdMDXrh3z3nPnH1Wvgk=
 github.com/bahlo/generic-list-go v0.2.0/go.mod h1:2KvAjgMlE5NNynlg/5iLrrCCZ2+5xWbdbCW3pNTGyYg=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
