@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 	"unsafe"
@@ -173,6 +174,8 @@ type absInfo struct {
 const (
 	evIOCGABS  = 0x80184540 // EVIOCGABS(0) base — add ABS code to get specific axis
 	evIOCGRAB  = 0x40044590 // EVIOCGRAB
+	evIOCSFF   = 0x40304580 // EVIOCSFF — upload force-feedback effect
+	evIOCRMFF  = 0x40044581 // EVIOCRMFF — erase force-feedback effect
 )
 
 func evdevIoctl(fd uintptr, req uintptr, arg uintptr) error {
@@ -193,17 +196,28 @@ type linuxEvdevConnection struct {
 	alive      bool
 	absInfos   map[uint16]*absInfo // cached axis info for normalization
 	grabbed    bool
+	feedback   *linuxEvdevFeedback // nil until Start detects FF support
 }
 
-func (c *linuxEvdevConnection) Info() Info               { return c.deviceInfo }
-func (c *linuxEvdevConnection) Events() <-chan Event     { return c.events }
-func (c *linuxEvdevConnection) Feedback() DeviceFeedback { return nil }
-func (c *linuxEvdevConnection) Alive() bool              { return c.alive }
+func (c *linuxEvdevConnection) Info() Info           { return c.deviceInfo }
+func (c *linuxEvdevConnection) Events() <-chan Event { return c.events }
+func (c *linuxEvdevConnection) Feedback() DeviceFeedback {
+	if c.feedback != nil {
+		return c.feedback
+	}
+	return nil
+}
+func (c *linuxEvdevConnection) Alive() bool { return c.alive }
 
 func (c *linuxEvdevConnection) Start(ctx context.Context) error {
-	f, err := os.OpenFile(c.path, os.O_RDONLY, 0)
+	// Open read-write to allow force-feedback (FF) effect upload via ioctl.
+	// Falls back to read-only if read-write fails (e.g. insufficient permissions).
+	f, err := os.OpenFile(c.path, os.O_RDWR, 0)
 	if err != nil {
-		return fmt.Errorf("open %s: %w", c.path, err)
+		f, err = os.OpenFile(c.path, os.O_RDONLY, 0)
+		if err != nil {
+			return fmt.Errorf("open %s: %w", c.path, err)
+		}
 	}
 	c.fd = f
 
@@ -216,6 +230,11 @@ func (c *linuxEvdevConnection) Start(ctx context.Context) error {
 		if err == nil && (ai.Minimum != 0 || ai.Maximum != 0) {
 			c.absInfos[code] = &ai
 		}
+	}
+
+	// Check if the device supports FF_RUMBLE and we have write access.
+	if c.deviceInfo.Capabilities.HasRumble {
+		c.feedback = &linuxEvdevFeedback{fd: f}
 	}
 
 	ctx, c.cancel = context.WithCancel(ctx)
@@ -403,6 +422,128 @@ func (c *linuxEvdevConnection) Close() error {
 }
 
 // ---------------------------------------------------------------------------
+// Linux evdev force-feedback (rumble)
+// ---------------------------------------------------------------------------
+
+// ffRumbleEffect matches struct ff_rumble_effect from linux/input.h.
+type ffRumbleEffect struct {
+	StrongMagnitude uint16
+	WeakMagnitude   uint16
+}
+
+// ffReplay matches struct ff_replay from linux/input.h.
+type ffReplay struct {
+	Length uint16 // duration in ms
+	Delay  uint16 // delay before playback in ms
+}
+
+// ffTrigger matches struct ff_trigger from linux/input.h.
+type ffTrigger struct {
+	Button   uint16
+	Interval uint16
+}
+
+// ffEffect matches struct ff_effect from linux/input.h (48 bytes on x86_64).
+// The size is encoded in the EVIOCSFF ioctl number (0x40304580 → 0x30 = 48).
+// Layout: 14 bytes of header fields + 2 bytes padding (union is 8-byte aligned
+// due to pointer in ff_periodic_effect) + 32 bytes union.
+// For FF_RUMBLE we only write the first 4 bytes of the union.
+type ffEffect struct {
+	Type      uint16
+	ID        int16
+	Direction uint16
+	Trigger   ffTrigger
+	Replay    ffReplay
+	_pad      uint16         // alignment padding before union
+	Rumble    ffRumbleEffect // first 4 bytes of union
+	_         [28]byte       // remaining 28 bytes of 32-byte union
+}
+
+// linuxEvdevFeedback implements DeviceFeedback for evdev force-feedback devices.
+type linuxEvdevFeedback struct {
+	fd       *os.File
+	mu       sync.Mutex
+	effectID int16 // cached effect ID, -1 means no effect uploaded yet
+}
+
+// SetRumble uploads and plays a FF_RUMBLE effect on the evdev device.
+// motor 0 = strong (low-frequency), motor 1 = weak (high-frequency).
+// intensity ranges from 0.0 to 1.0, mapped to uint16 0-65535.
+func (f *linuxEvdevFeedback) SetRumble(motor int, intensity float64, duration time.Duration) error {
+	if motor < 0 || motor > 1 {
+		return fmt.Errorf("%w: motor index must be 0 (strong) or 1 (weak)", ErrNotSupported)
+	}
+	if intensity < 0 {
+		intensity = 0
+	} else if intensity > 1 {
+		intensity = 1
+	}
+
+	mag := uint16(intensity * 65535)
+	durMS := uint16(duration.Milliseconds())
+	if durMS == 0 && duration > 0 {
+		durMS = 1 // minimum 1ms
+	}
+
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	// Erase any previously uploaded effect to avoid effect ID exhaustion.
+	if f.effectID >= 0 {
+		evdevIoctl(f.fd.Fd(), evIOCRMFF, uintptr(f.effectID))
+		f.effectID = -1
+	}
+
+	var effect ffEffect
+	effect.Type = ffRumble
+	effect.ID = -1 // kernel assigns new ID
+	effect.Replay.Length = durMS
+	effect.Replay.Delay = 0
+	if motor == 0 {
+		effect.Rumble.StrongMagnitude = mag
+	} else {
+		effect.Rumble.WeakMagnitude = mag
+	}
+
+	// Upload the effect via ioctl.
+	if err := evdevIoctl(f.fd.Fd(), evIOCSFF, uintptr(unsafe.Pointer(&effect))); err != nil {
+		return fmt.Errorf("EVIOCSFF upload: %w", err)
+	}
+	f.effectID = effect.ID
+
+	// Play the effect by writing an EV_FF input_event.
+	var ev inputEvent
+	ev.Type = evFF
+	ev.Code = uint16(effect.ID)
+	ev.Val = 1 // 1 = play
+
+	buf := make([]byte, inputEventSize)
+	binary.LittleEndian.PutUint64(buf[0:8], uint64(ev.Sec))
+	binary.LittleEndian.PutUint64(buf[8:16], uint64(ev.Usec))
+	binary.LittleEndian.PutUint16(buf[16:18], ev.Type)
+	binary.LittleEndian.PutUint16(buf[18:20], ev.Code)
+	binary.LittleEndian.PutUint32(buf[20:24], uint32(ev.Val))
+
+	if _, err := f.fd.Write(buf); err != nil {
+		return fmt.Errorf("write EV_FF play event: %w", err)
+	}
+
+	return nil
+}
+
+func (f *linuxEvdevFeedback) SetLED(index int, r, g, b, a uint8) error {
+	return ErrNotSupported
+}
+
+func (f *linuxEvdevFeedback) SendMIDI(data []byte) error {
+	return ErrNotSupported
+}
+
+func (f *linuxEvdevFeedback) SendRaw(data []byte) error {
+	return ErrNotSupported
+}
+
+// ---------------------------------------------------------------------------
 // Linux MIDI provider — ALSA MIDI devices
 // ---------------------------------------------------------------------------
 
@@ -531,25 +672,76 @@ type linuxMIDIConnection struct {
 	events     chan Event
 	cancel     context.CancelFunc
 	alive      bool
+	feedback   *linuxMIDIFeedback
 }
 
-func (c *linuxMIDIConnection) Info() Info               { return c.deviceInfo }
-func (c *linuxMIDIConnection) Events() <-chan Event     { return c.events }
-func (c *linuxMIDIConnection) Feedback() DeviceFeedback { return nil }
-func (c *linuxMIDIConnection) Alive() bool              { return c.alive }
+func (c *linuxMIDIConnection) Info() Info           { return c.deviceInfo }
+func (c *linuxMIDIConnection) Events() <-chan Event { return c.events }
+func (c *linuxMIDIConnection) Alive() bool          { return c.alive }
+
+// Feedback returns a DeviceFeedback for MIDI output, or nil if not started.
+func (c *linuxMIDIConnection) Feedback() DeviceFeedback {
+	if c.feedback == nil {
+		return nil
+	}
+	return c.feedback
+}
 
 func (c *linuxMIDIConnection) Start(ctx context.Context) error {
-	f, err := os.OpenFile(c.path, os.O_RDONLY, 0)
+	f, err := os.OpenFile(c.path, os.O_RDWR, 0)
 	if err != nil {
 		return fmt.Errorf("open %s: %w", c.path, err)
 	}
 	c.fd = f
+	c.feedback = &linuxMIDIFeedback{fd: f}
 
 	ctx, c.cancel = context.WithCancel(ctx)
 	c.alive = true
 
 	go c.readLoop(ctx)
 	return nil
+}
+
+// ---------------------------------------------------------------------------
+// Linux MIDI feedback — writes raw MIDI bytes to the ALSA device fd
+// ---------------------------------------------------------------------------
+
+// linuxMIDIFeedback implements DeviceFeedback for Linux ALSA MIDI output.
+// MIDI output is performed by writing raw bytes to the same /dev/snd/midiC*D*
+// file descriptor used for input. A mutex serialises writes so concurrent
+// callers do not interleave partial messages.
+type linuxMIDIFeedback struct {
+	fd *os.File
+	mu sync.Mutex
+}
+
+// SendMIDI writes raw MIDI bytes to the ALSA raw MIDI device.
+func (f *linuxMIDIFeedback) SendMIDI(data []byte) error {
+	if len(data) == 0 {
+		return nil
+	}
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	_, err := f.fd.Write(data)
+	if err != nil {
+		return fmt.Errorf("MIDI write: %w", err)
+	}
+	return nil
+}
+
+// SetLED is not supported on MIDI devices.
+func (f *linuxMIDIFeedback) SetLED(int, uint8, uint8, uint8, uint8) error {
+	return ErrNotSupported
+}
+
+// SetRumble is not supported on MIDI devices.
+func (f *linuxMIDIFeedback) SetRumble(int, float64, time.Duration) error {
+	return ErrNotSupported
+}
+
+// SendRaw is not supported on MIDI devices.
+func (f *linuxMIDIFeedback) SendRaw([]byte) error {
+	return ErrNotSupported
 }
 
 func (c *linuxMIDIConnection) readLoop(ctx context.Context) {
