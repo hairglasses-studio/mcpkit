@@ -31,7 +31,7 @@ func ClassifyDevice(vendorID, productID uint16, name string) DeviceType {
 	// 3. Name-based heuristics (fallback).
 	// MIDI checked before gamepad because "MIDI Controller" contains "controller".
 	lower := strings.ToLower(name)
-	if containsAny(lower, "midi", "launchpad", "apc", "nanocontrol", "beatstep", "mpk", "keystation") {
+	if containsAny(lower, "midi", "launchpad", "apc", "nanocontrol", "beatstep", "mpk", "keystation", "intech", "grid") {
 		return TypeMIDI
 	}
 	if containsAny(lower, "controller", "gamepad", "joystick", "xbox", "dualshock", "dualsense", "pro controller") {
@@ -162,6 +162,11 @@ var knownDevices = map[deviceKey]DeviceType{
 	{0x044f, 0xb66f}: TypeRacingWheel, // T-GT
 	{0x044f, 0xb65d}: TypeRacingWheel, // T150
 	{0x044f, 0xb669}: TypeRacingWheel, // T248
+
+	// --- Intech Studio Grid (03eb for D51/SAMD51, 303a for ESP32-S3) ---
+	{0x03eb, 0xecad}: TypeMIDI, // Grid (Gen1 D51) — EN16, EF44, PO16, BU16, PBF4, TEK2
+	{0x03eb, 0xecac}: TypeMIDI, // Grid (Gen1 D51 legacy)
+	{0x303a, 0x8123}: TypeMIDI, // Grid (Gen2 ESP32-S3) — current production
 
 	// --- Elgato Stream Deck (0fd9) ---
 	{0x0fd9, 0x0060}: TypeGenericHID, // Stream Deck Original
