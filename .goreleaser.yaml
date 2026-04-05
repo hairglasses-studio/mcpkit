@@ -1,0 +1,10 @@
+version: 2
+project_name: mcpkit
+
+# mcpkit is a library — no binaries to build
+builds: []
+
+release:
+  github:
+    owner: hairglasses-studio
+    name: mcpkit
