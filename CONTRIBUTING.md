@@ -1,60 +1,83 @@
-# Contributing
+# Contributing to mcpkit
 
-This project supports development with **Claude Code**, **Gemini CLI**, and **OpenAI Codex CLI**. Any provider can lead development.
+Thank you for your interest in contributing to mcpkit. This document covers
+everything you need to get started.
+
+## Reporting Bugs
+
+Open a [GitHub Issue](https://github.com/hairglasses-studio/mcpkit/issues) with:
+
+- Go version and OS
+- Minimal reproduction steps
+- Expected vs. actual behavior
+- Relevant error output or logs
+
+## Suggesting Features
+
+Open a [GitHub Issue](https://github.com/hairglasses-studio/mcpkit/issues) with
+the `enhancement` label. Describe the use case, not just the solution. If the
+feature involves API changes, include a short code sketch showing how it would
+be called.
+
+## Submitting Pull Requests
+
+1. Fork the repository and clone your fork.
+2. Create a branch from `main`: `git checkout -b feat/my-change`
+3. Make your changes, following the code style below.
+4. Run the full check suite: `make check`
+5. Commit with a clear, descriptive message.
+6. Push your branch and open a PR against `main`.
+
+Keep PRs focused. One logical change per PR is easier to review than a combined
+refactor-plus-feature.
 
 ## Development Setup
 
-### 1. Clone and build
+**Requirements:** Go 1.26.1+
 
 ```bash
 git clone https://github.com/hairglasses-studio/mcpkit
 cd mcpkit
-make build   # or: go build ./...
-make test    # or: go test ./... -count=1
+make build    # go build ./...
+make test     # go test ./... -count=1
+make vet      # go vet ./...
+make check    # build + vet + test
 ```
-
-### 2. Verify
-
-```bash
-make pipeline-check   # build + vet + test (via shared pipeline)
-```
-
-Or use the pipeline script directly:
-
-```bash
-~/hairglasses-studio/dotfiles/scripts/hg-pipeline.sh
-```
-
-## Making Changes
-
-1. Create a branch: `git checkout -b feat/my-change`
-2. Make your changes
-3. Run the pipeline: `make pipeline-check`
-4. Commit with a descriptive message
-5. Push and open a PR
 
 ## Code Style
 
-- **Go**: `gofmt` formatting, `go vet` clean, golangci-lint passing
-- **Node.js**: ESLint/Prettier where configured
-- **Python**: ruff/black formatting
+- Format with `gofmt` (or `goimports`).
+- Pass `go vet ./...` with no warnings.
+- Follow existing patterns in the codebase.
+- Handler functions must return `(*mcp.CallToolResult, nil)` -- never `(nil, error)`.
+- Use `handler.CodedErrorResult` for error responses.
+- Protect shared state with `sync.RWMutex` (`RLock` for reads, `Lock` for writes).
+- Middleware follows the signature:
+  `func(name string, td registry.ToolDefinition, next registry.ToolHandlerFunc) registry.ToolHandlerFunc`
 
-Editor settings are in `.editorconfig` — most editors pick this up automatically.
+## Testing Requirements
 
-## Pre-commit Hooks
+- All existing tests must pass before submitting a PR.
+- Add tests for new features and bug fixes.
+- Run tests with race detection: `go test ./... -count=1 -race`
+- Integration tests use `mcptest.NewServer()`; unit tests use stdlib `testing`.
 
-Install with:
+## Commit Messages
 
-```bash
-make install-hooks
+Use conventional-style prefixes:
+
+```
+feat: add streaming transport support
+fix: handle nil context in middleware chain
+docs: update handler examples in README
+test: add integration tests for registry
 ```
 
-This runs vet + fast tests before each commit.
+## License
 
-## CI
+By contributing, you agree that your contributions will be licensed under the
+[MIT License](LICENSE).
 
-All PRs trigger CI automatically. The pipeline runs lint, test, and build checks.
+## Code of Conduct
 
-## Questions?
-
-Open an issue or tag `@hairglasses` in your PR.
+This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md).
