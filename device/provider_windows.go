@@ -21,10 +21,17 @@ func init() {
 // ---------------------------------------------------------------------------
 
 var (
-	xinput14       = syscall.NewLazyDLL("xinput1_4.dll")
-	xInputGetState = xinput14.NewProc("XInputGetState")
-	xInputGetCaps  = xinput14.NewProc("XInputGetCapabilities")
+	xinput14        = syscall.NewLazyDLL("xinput1_4.dll")
+	xInputGetState  = xinput14.NewProc("XInputGetState")
+	xInputGetCaps   = xinput14.NewProc("XInputGetCapabilities")
+	xInputSetState  = xinput14.NewProc("XInputSetState")
 )
+
+// xinputVibration matches XINPUT_VIBRATION from XInput.h.
+type xinputVibration struct {
+	LeftMotorSpeed  uint16
+	RightMotorSpeed uint16
+}
 
 const (
 	xinputMaxControllers     = 4
@@ -181,12 +188,18 @@ type xinputConnection struct {
 	events     chan Event
 	cancel     context.CancelFunc
 	alive      bool
+	feedback   *xinputFeedback
 }
 
-func (c *xinputConnection) Info() Info               { return c.deviceInfo }
-func (c *xinputConnection) Events() <-chan Event     { return c.events }
-func (c *xinputConnection) Feedback() DeviceFeedback { return nil }
-func (c *xinputConnection) Alive() bool              { return c.alive }
+func (c *xinputConnection) Info() Info           { return c.deviceInfo }
+func (c *xinputConnection) Events() <-chan Event { return c.events }
+func (c *xinputConnection) Feedback() DeviceFeedback {
+	if c.feedback != nil {
+		return c.feedback
+	}
+	return nil
+}
+func (c *xinputConnection) Alive() bool { return c.alive }
 
 func (c *xinputConnection) Start(ctx context.Context) error {
 	// Read initial state.
@@ -194,6 +207,9 @@ func (c *xinputConnection) Start(ctx context.Context) error {
 	if ret != 0 {
 		return fmt.Errorf("%w: XInput slot %d disconnected", ErrDeviceDisconnected, c.index)
 	}
+
+	// All XInput controllers support rumble.
+	c.feedback = &xinputFeedback{index: c.index}
 
 	ctx, c.cancel = context.WithCancel(ctx)
 	c.alive = true
@@ -367,6 +383,73 @@ func xinputDPadToHat(buttons uint16) (hatX, hatY int8) {
 		hatY = 1
 	}
 	return
+}
+
+// ---------------------------------------------------------------------------
+// XInput force-feedback (rumble)
+// ---------------------------------------------------------------------------
+
+// xinputFeedback implements DeviceFeedback for XInput controllers.
+type xinputFeedback struct {
+	index uint32
+	mu    sync.Mutex
+}
+
+// SetRumble sets rumble motor intensity on the XInput controller.
+// motor 0 = left (low-frequency), motor 1 = right (high-frequency).
+// intensity ranges from 0.0 to 1.0, mapped to uint16 0-65535.
+// If duration > 0, a goroutine is spawned to stop the motor after the duration.
+func (f *xinputFeedback) SetRumble(motor int, intensity float64, duration time.Duration) error {
+	if motor < 0 || motor > 1 {
+		return fmt.Errorf("%w: motor index must be 0 (left) or 1 (right)", ErrNotSupported)
+	}
+	if intensity < 0 {
+		intensity = 0
+	} else if intensity > 1 {
+		intensity = 1
+	}
+
+	speed := uint16(intensity * 65535)
+
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	var vib xinputVibration
+	if motor == 0 {
+		vib.LeftMotorSpeed = speed
+	} else {
+		vib.RightMotorSpeed = speed
+	}
+
+	ret, _, _ := xInputSetState.Call(uintptr(f.index), uintptr(unsafe.Pointer(&vib)))
+	if ret != 0 {
+		return fmt.Errorf("XInputSetState failed: error code %d", ret)
+	}
+
+	// If a duration is specified, stop the motor after the duration expires.
+	if duration > 0 && speed > 0 {
+		go func() {
+			time.Sleep(duration)
+			f.mu.Lock()
+			defer f.mu.Unlock()
+			var stop xinputVibration
+			xInputSetState.Call(uintptr(f.index), uintptr(unsafe.Pointer(&stop)))
+		}()
+	}
+
+	return nil
+}
+
+func (f *xinputFeedback) SetLED(index int, r, g, b, a uint8) error {
+	return ErrNotSupported
+}
+
+func (f *xinputFeedback) SendMIDI(data []byte) error {
+	return ErrNotSupported
+}
+
+func (f *xinputFeedback) SendRaw(data []byte) error {
+	return ErrNotSupported
 }
 
 // ---------------------------------------------------------------------------
