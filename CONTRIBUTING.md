@@ -111,7 +111,74 @@ chore: update go.mod dependencies
 | P2 (feature/enhancement) | 3 days |
 | P3 (docs/chore) | 7 days |
 
+## Architecture Overview
+
+mcpkit is organized into 35+ packages across four dependency layers. The core
+packages that most contributors will interact with are:
+
+### `handler`
+
+The type-safe tool authoring layer. Provides `TypedHandler[In, Out]` which
+auto-generates JSON Schema from Go struct tags and populates `structuredContent`.
+Also provides param extraction helpers (`GetStringParam`, `GetIntParam`), result
+builders (`TextResult`, `JSONResult`, `ErrorResult`), and the coded error result
+pattern. All tool handlers flow through this package.
+
+### `registry`
+
+The central tool registry and middleware chain. `ToolRegistry` holds tool
+definitions, applies middleware, and wires everything to an MCP server.
+Defines the canonical `Middleware` type signature, `ToolDefinition`,
+`ToolHandlerFunc`, and SDK compatibility aliases. Also handles tool integrity
+verification via SHA-256 fingerprinting.
+
+### `mcptest`
+
+Testing infrastructure for MCP servers. `mcptest.NewServer(t, tools...)` spins
+up an in-process test server connected via stdio. Provides assertion helpers,
+session record/replay, golden file snapshots, and benchmark helpers. All
+integration tests should use this package.
+
+### `middleware` and `resilience`
+
+Cross-cutting middleware: rate limiting, circuit breakers, caching, logging,
+and observability. Middleware follows the standard signature defined in
+`registry.Middleware`. The `resilience` package provides production-grade
+circuit breakers, rate limiters, and cache generics.
+
+### `gateway`
+
+Multi-server aggregation with namespaced tool routing. Routes tool calls to
+upstream MCP servers with per-upstream resilience policies (circuit breakers,
+rate limits, timeouts). Supports dynamic upstream registration and
+session affinity.
+
+### Dependency Layers
+
+```
+Layer 1 (no internal deps):  registry, health, sanitize, secrets, client, transport
+Layer 2 (depend on L1):      handler, resilience, mcptest, auth, resources, prompts, ...
+Layer 3 (depend on L2):      security, gateway, ralph, skills, rdcycle
+Layer 4 (depend on L3):      orchestrator, handoff, workflow, bootstrap
+```
+
+Packages must only depend on their own layer or lower. Never add an upward
+dependency.
+
 ## Code Conventions
+
+### Formatting and Linting
+
+All code must pass these checks before submission:
+
+```bash
+gofmt -l .              # Must produce no output (all files formatted)
+go vet ./...            # Must produce no warnings
+golangci-lint run ./... # If installed; covers staticcheck, errcheck, etc.
+```
+
+Use `gofmt` (or `goimports`) to format code. CI runs `go vet` on every PR.
+If you have `golangci-lint` installed, run it locally to catch issues early.
 
 ### Error Handling
 

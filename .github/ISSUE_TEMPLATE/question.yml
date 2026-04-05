@@ -1,0 +1,81 @@
+name: Question / Help
+description: Ask a question or request help using mcpkit
+title: "[Question] "
+labels: ["type/question", "status/triage"]
+assignees: ["hairglasses"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have a question about mcpkit? You can also ask in [GitHub Discussions](../../discussions) for broader community help.
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: What do you need help with?
+      placeholder: "How do I configure middleware to apply only to specific tools?"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of mcpkit does this relate to?
+      options:
+        - Getting started / setup
+        - handler (TypedHandler, param extraction)
+        - registry (tool registration, middleware chain)
+        - mcptest (testing infrastructure)
+        - gateway (multi-server aggregation)
+        - middleware / resilience
+        - auth (JWT, OAuth, RBAC)
+        - transport (stdio, HTTP)
+        - orchestrator / workflow
+        - finops (cost management)
+        - other
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: What have you tried?
+      description: Share any code, docs, or approaches you have already tried.
+      placeholder: |
+        I read the handler package docs and tried:
+        ```go
+        // my code here
+        ```
+        But I'm not sure how to...
+    validations:
+      required: false
+
+  - type: input
+    id: go-version
+    attributes:
+      label: Go Version
+      description: "Output of `go version` (if relevant)"
+      placeholder: "go1.26.1 darwin/arm64"
+    validations:
+      required: false
+
+  - type: input
+    id: version
+    attributes:
+      label: mcpkit Version
+      description: "Which version are you using? (if relevant)"
+      placeholder: "v1.0.0"
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues and discussions for an answer
+          required: true
+        - label: I read the relevant package documentation (README, godoc, CLAUDE.md)
+          required: false
