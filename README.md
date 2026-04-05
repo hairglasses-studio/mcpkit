@@ -33,7 +33,8 @@ Built on [github.com/mark3labs/mcp-go](https://github.com/mark3labs/mcp-go), mcp
 - **Agent memory** — episodic/semantic/procedural memory tiers with pluggable storage backends (`memory`)
 - **Skills** — context-aware lazy tool loading with skill bundles and triggers (`skills`)
 - **Autonomous loops** — the Ralph Loop pattern for iterative, self-directing task execution (`ralph`)
-- **MCP-A2A bridge** — expose MCP tools as [A2A](https://google.github.io/A2A/) agent skills with deterministic protocol translation; the first Go MCP-to-A2A bridge (`bridge/a2a`) ([docs](bridge/a2a/README.md))
+- **MCP-A2A bridge** — bidirectional MCP/A2A protocol bridge: expose MCP tools as A2A skills and consume A2A agents as MCP tools (`bridge/a2a`) ([docs](bridge/a2a/README.md))
+- **Multi-protocol gateway** — single HTTP endpoint serving MCP, A2A, and OpenAI function calling via automatic protocol detection and canonical translation (`gateway/multi`) ([docs](gateway/multi/README.md))
 
 ## Quick Start
 
@@ -121,12 +122,13 @@ npx @modelcontextprotocol/inspector go run main.go      # interactive debugger
 | `eval` | Evaluation framework: cases, scorers, JSON suite loading, runner | `registry` |
 | `roadmap` | Machine-readable roadmap management, gap analysis, query functions | `registry`, `handler` |
 | `rdcycle` | R&D cycle orchestration tools: scan, plan, verify, commit, report | `registry`, `handler`, `research`, `roadmap`, `workflow`, `finops` |
-| `bridge/a2a` | MCP-to-A2A protocol bridge: tool-to-skill translation, agent card generation, bridge executor | `registry`, `handler` |
+| `bridge/a2a` | Bidirectional MCP/A2A bridge: tool-to-skill translation, agent card generation, bridge executor, remote agent consumer | `registry`, `handler` |
+| `gateway/multi` | Multi-protocol HTTP gateway: MCP, A2A, and OpenAI adapters with auto-detection and canonical translation | `registry` |
 
 ## Dependency Layers
 
 - **Layer 1** (no internal deps): `registry`, `health`, `sanitize`, `secrets`, `client`
-- **Layer 2** (depend on Layer 1): `resources`, `prompts`, `handler`, `resilience`, `mcptest`, `auth`, `observability`, `logging`, `sampling`, `roots`, `research`, `discovery`, `dispatcher`, `extensions`, `memory`, `finops`, `lifecycle`, `eval`, `roadmap`
+- **Layer 2** (depend on Layer 1): `resources`, `prompts`, `handler`, `resilience`, `mcptest`, `auth`, `observability`, `logging`, `sampling`, `roots`, `research`, `discovery`, `dispatcher`, `extensions`, `memory`, `finops`, `lifecycle`, `eval`, `roadmap`, `gateway/multi`
 - **Layer 3** (depend on Layer 2): `security`, `gateway`, `ralph`, `skills`, `rdcycle`
 - **Layer 4** (depend on Layer 3): `orchestrator`, `handoff`, `workflow`, `bootstrap`
 

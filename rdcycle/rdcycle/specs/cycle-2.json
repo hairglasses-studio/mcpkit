@@ -1,16 +1,16 @@
 {
   "name": "R\u0026D Cycle: cycle-2",
-  "description": "Autonomous R\u0026D cycle 'cycle-2' (strategy: full, since: 2026-04-05T15:35:18Z).",
+  "description": "Autonomous R\u0026D cycle 'cycle-2' (strategy: full, since: 2026-04-05T15:41:46Z).",
   "completion": "All planned work items are implemented, tests pass, and roadmap is updated.",
   "tasks": [
     {
       "id": "scan",
-      "description": "Run rdcycle_scan to check ecosystem activity since 2026-04-05T15:35:18Z.",
+      "description": "Run rdcycle_scan to check ecosystem activity since 2026-04-05T15:41:46Z.",
       "done": false
     },
     {
       "id": "plan",
-      "description": "Run rdcycle_plan with scan results and roadmap at /var/folders/np/fwx0ngdd4md0vvn83hn11nr80000gn/T/TestPerpetualStartAndStop2227965558/001/roadmap.json.",
+      "description": "Run rdcycle_plan with scan results and roadmap at /tmp/TestPerpetualStartAndStop1726797475/001/roadmap.json.",
       "done": false,
       "depends_on": [
         "scan"
