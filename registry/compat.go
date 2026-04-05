@@ -18,6 +18,7 @@ type (
 	ToolInputSchema  = mcp.ToolInputSchema
 	ToolOutputSchema = mcp.ToolOutputSchema
 	ToolAnnotation   = mcp.ToolAnnotation
+	ToolMeta         = mcp.Meta
 	TextContent      = mcp.TextContent
 	Content          = mcp.Content
 	TaskStatus       = mcp.TaskStatus
@@ -162,6 +163,22 @@ func MakeStructuredResult(content Content, data any) *CallToolResult {
 		Content:           []mcp.Content{content},
 		StructuredContent: data,
 	}
+}
+
+// SetToolMetaField stores an additional metadata field on a tool descriptor.
+func SetToolMetaField(tool *Tool, key string, value any) {
+	if tool.Meta == nil {
+		tool.Meta = &ToolMeta{AdditionalFields: map[string]any{}}
+	}
+	if tool.Meta.AdditionalFields == nil {
+		tool.Meta.AdditionalFields = map[string]any{}
+	}
+	tool.Meta.AdditionalFields[key] = value
+}
+
+// SetToolDeferLoading sets the SDK's defer_loading flag when supported.
+func SetToolDeferLoading(tool *Tool, deferred bool) {
+	tool.DeferLoading = deferred
 }
 
 // Task status constants re-exported for convenience.

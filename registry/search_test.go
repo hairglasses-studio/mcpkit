@@ -168,6 +168,32 @@ func TestSearchTools_TagMatch(t *testing.T) {
 	}
 }
 
+func TestSearchTools_SearchTermsMatch(t *testing.T) {
+	r := NewToolRegistry()
+	r.RegisterModule(&testModule{
+		name: "mod",
+		tools: []ToolDefinition{
+			{
+				Tool:        Tool{Name: "systemd_logs", Description: "Fetch recent service output"},
+				Handler:     func(_ context.Context, _ CallToolRequest) (*CallToolResult, error) { return MakeTextResult("ok"), nil },
+				Category:    "systemd",
+				SearchTerms: []string{"journal", "journald", "service logs"},
+			},
+		},
+	})
+
+	results := r.SearchTools("journal")
+	if len(results) == 0 {
+		t.Fatal("expected search term match for journal")
+	}
+	if results[0].Tool.Tool.Name != "systemd_logs" {
+		t.Fatalf("top result = %q, want systemd_logs", results[0].Tool.Tool.Name)
+	}
+	if results[0].MatchType != "search_term" {
+		t.Fatalf("match type = %q, want search_term", results[0].MatchType)
+	}
+}
+
 func TestSearchTools_CategoryMatch(t *testing.T) {
 	r := NewToolRegistry()
 	r.RegisterModule(&testModule{

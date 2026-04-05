@@ -36,10 +36,7 @@ func WireToolListChanged(d *DynamicRegistry, s *MCPServer) {
 		for name := range current {
 			if !prev[name] {
 				td := d.tools[name]
-				annotated := ApplyMCPAnnotations(td, d.config.ToolNamePrefix)
-				if annotated.OutputSchema != nil {
-					annotated.Tool.OutputSchema = *annotated.OutputSchema
-				}
+				annotated := ApplyToolMetadata(td, d.config.ToolNamePrefix, d.deferred[name])
 				wrapped := d.wrapHandler(td.Tool.Name, td)
 				AddToolToServer(s, annotated.Tool, wrapped)
 			}
