@@ -173,10 +173,10 @@ npx @modelcontextprotocol/inspector go run main.go
 
 Call `greet` with `{"name": "World"}` -- you get `"Hello, World!"`.
 Call with `{"name": "Mundo", "language": "es", "formal": true}` -- you get `"Buenos dias, Mundo."`.
-Call with `{}` (missing required `name`) -- the typed handler returns a `[INVALID_PARAM]` error automatically.
+Call with `{"name": 12345}` (wrong type) -- the typed handler returns a `[INVALID_PARAM]` error automatically.
 
 **What you get:**
-- `jsonschema:"required"` marks fields as required in the generated schema; missing required fields return `[INVALID_PARAM]` errors
+- `jsonschema:"required"` marks fields as required in the generated schema; clients see the constraint, and type mismatches return `[INVALID_PARAM]` errors
 - `jsonschema:"enum=en,enum=es"` constrains allowed values
 - `json:",omitempty"` makes fields optional in the JSON wire format
 - Returning a Go `error` from the handler produces an error result with `isError: true`
@@ -493,8 +493,6 @@ import (
     "github.com/hairglasses-studio/mcpkit/prompts"
     "github.com/hairglasses-studio/mcpkit/registry"
     "github.com/hairglasses-studio/mcpkit/resources"
-
-    "github.com/mark3labs/mcp-go/server"
 )
 
 // helper builds a fully wired test server matching the production setup.
@@ -528,16 +526,16 @@ func TestGreet(t *testing.T) {
     mcptest.AssertToolResultContains(t, result, "Hello, World!")
 }
 
-func TestGreet_MissingName(t *testing.T) {
+func TestGreet_InvalidType(t *testing.T) {
     client := newTestServer(t)
 
-    // CallToolE returns both result and error, so we can inspect error results
-    result, err := client.CallToolE("greet", map[string]any{})
+    // Passing the wrong type triggers a deserialization error
+    result, err := client.CallToolE("greet", map[string]any{"name": 12345})
     if err != nil {
         t.Fatalf("unexpected protocol error: %v", err)
     }
 
-    mcptest.AssertError(t, result, "")
+    mcptest.AssertError(t, result, "INVALID_PARAM")
 }
 
 func TestReadConfig(t *testing.T) {
@@ -586,8 +584,8 @@ go test -v -count=1
 ```
 === RUN   TestGreet
 --- PASS: TestGreet (0.00s)
-=== RUN   TestGreet_MissingName
---- PASS: TestGreet_MissingName (0.00s)
+=== RUN   TestGreet_InvalidType
+--- PASS: TestGreet_InvalidType (0.00s)
 === RUN   TestReadConfig
 --- PASS: TestReadConfig (0.00s)
 === RUN   TestGreetWorkflowPrompt
