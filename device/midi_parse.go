@@ -111,9 +111,35 @@ func parseMIDIBytes(deviceID DeviceID, buf []byte, n int) []Event {
 			i += 3
 
 		case 0xF0: // System messages (SysEx, etc.)
-			// Skip the status byte, then skip all data bytes until next status.
-			i++
-			for i < n && buf[i] < 0x80 {
+			if b == 0xF0 {
+				// SysEx: collect bytes from 0xF0 through 0xF7 (EOX).
+				start := i
+				i++
+				for i < n && buf[i] < 0x80 {
+					i++
+				}
+				// Check if we hit the EOX terminator (0xF7).
+				var sysexData []byte
+				if i < n && buf[i] == 0xF7 {
+					sysexData = make([]byte, i-start+1)
+					copy(sysexData, buf[start:i+1])
+					i++ // consume the 0xF7
+				} else {
+					// Unterminated or terminated by another status byte:
+					// include what we have (0xF0 through data bytes).
+					sysexData = make([]byte, i-start)
+					copy(sysexData, buf[start:i])
+				}
+				events = append(events, Event{
+					DeviceID:  deviceID,
+					Type:      EventMIDISysEx,
+					Timestamp: time.Now(),
+					Source:    "midi:sysex",
+					SysEx:     sysexData,
+					Value:     float64(len(sysexData)),
+				})
+			} else {
+				// Other system messages (0xF1-0xFF): skip.
 				i++
 			}
 
