@@ -76,6 +76,87 @@ func TestMiddleware_ReusesExistingSession(t *testing.T) {
 	}
 }
 
+func TestTokenMiddleware_QueryParam(t *testing.T) {
+	store := session.NewMemStore(session.Options{})
+	defer store.Close()
+
+	existingSess, _ := store.Create(nil)
+
+	var capturedID string
+	handler := session.TokenMiddleware(store, session.TokenMiddlewareOptions{
+		QueryParam: "session_token",
+	})(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		s, ok := session.FromContext(r.Context())
+		if ok {
+			capturedID = s.ID()
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/?session_token="+existingSess.ID(), nil)
+	handler.ServeHTTP(rr, req)
+
+	if capturedID != existingSess.ID() {
+		t.Fatalf("got %q, want %q", capturedID, existingSess.ID())
+	}
+}
+
+func TestTokenMiddleware_Precedence(t *testing.T) {
+	store := session.NewMemStore(session.Options{})
+	defer store.Close()
+
+	sessHeader, _ := store.Create(nil)
+	sessCookie, _ := store.Create(nil)
+	sessQuery, _ := store.Create(nil)
+
+	makeHandler := func() (http.Handler, *string) {
+		var capturedID string
+		h := session.TokenMiddleware(store, session.TokenMiddlewareOptions{
+			Header:     "X-Session-Token",
+			CookieName: session.DefaultCookieName,
+			QueryParam: "session_token",
+		})(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			s, ok := session.FromContext(r.Context())
+			if ok {
+				capturedID = s.ID()
+			}
+			w.WriteHeader(http.StatusOK)
+		}))
+		return h, &capturedID
+	}
+
+	// All three present: header wins.
+	h, captured := makeHandler()
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/?session_token="+sessQuery.ID(), nil)
+	req.Header.Set("X-Session-Token", sessHeader.ID())
+	req.AddCookie(&http.Cookie{Name: session.DefaultCookieName, Value: sessCookie.ID()})
+	h.ServeHTTP(rr, req)
+	if *captured != sessHeader.ID() {
+		t.Fatalf("header precedence: got %q, want %q", *captured, sessHeader.ID())
+	}
+
+	// Cookie and query present (no header): cookie wins.
+	h, captured = makeHandler()
+	rr = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodGet, "/?session_token="+sessQuery.ID(), nil)
+	req.AddCookie(&http.Cookie{Name: session.DefaultCookieName, Value: sessCookie.ID()})
+	h.ServeHTTP(rr, req)
+	if *captured != sessCookie.ID() {
+		t.Fatalf("cookie precedence: got %q, want %q", *captured, sessCookie.ID())
+	}
+
+	// Only query param: query wins.
+	h, captured = makeHandler()
+	rr = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodGet, "/?session_token="+sessQuery.ID(), nil)
+	h.ServeHTTP(rr, req)
+	if *captured != sessQuery.ID() {
+		t.Fatalf("query precedence: got %q, want %q", *captured, sessQuery.ID())
+	}
+}
+
 func TestTokenMiddleware_HeaderExtraction(t *testing.T) {
 	store := session.NewMemStore(session.Options{})
 	defer store.Close()
