@@ -43,12 +43,16 @@ type Manager struct {
 }
 
 type managedDevice struct {
-	info       Info
-	provider   DeviceProvider
-	connected  bool
-	lastSeen   time.Time
-	reconnects int
+	info         Info
+	provider     DeviceProvider
+	connected    bool
+	closedByUser bool // true when Disconnect() was called explicitly
+	lastSeen     time.Time
+	reconnects   int
 }
+
+// defaultReconnectDelay is used when ManagerConfig.ReconnectDelay is zero.
+const defaultReconnectDelay = 2 * time.Second
 
 // NewManager creates a new device manager with the given config.
 // Call Start() to begin device discovery and event processing.
@@ -170,10 +174,11 @@ func (m *Manager) Connect(ctx context.Context, id DeviceID) error {
 	m.mu.Lock()
 	m.conns[id] = conn
 	md.connected = true
+	md.closedByUser = false // reset so auto-reconnect works if connection drops
 	m.mu.Unlock()
 
 	// Forward events from this connection to the event bus.
-	go m.forwardEvents(id, conn)
+	go m.forwardEvents(ctx, id, conn)
 
 	return nil
 }
@@ -189,6 +194,7 @@ func (m *Manager) Disconnect(id DeviceID) error {
 	delete(m.conns, id)
 	if md, ok := m.devices[id]; ok {
 		md.connected = false
+		md.closedByUser = true
 	}
 	m.mu.Unlock()
 
@@ -238,7 +244,7 @@ func (m *Manager) Refresh(ctx context.Context) error {
 	return nil
 }
 
-func (m *Manager) forwardEvents(id DeviceID, conn DeviceConnection) {
+func (m *Manager) forwardEvents(ctx context.Context, id DeviceID, conn DeviceConnection) {
 	for event := range conn.Events() {
 		select {
 		case m.eventBus <- event:
@@ -269,4 +275,96 @@ func (m *Manager) forwardEvents(id DeviceID, conn DeviceConnection) {
 		default:
 		}
 	}
+
+	// Attempt auto-reconnect unless the user explicitly disconnected.
+	m.mu.RLock()
+	closedByUser := false
+	if md, ok := m.devices[id]; ok {
+		closedByUser = md.closedByUser
+	}
+	m.mu.RUnlock()
+
+	if !closedByUser {
+		go m.attemptReconnect(ctx, id)
+	}
+}
+
+// attemptReconnect tries to re-open and restart a device connection.
+// It respects MaxReconnects (0 = unlimited) and waits ReconnectDelay
+// between attempts. It stops if the context is cancelled or the device
+// was explicitly closed by the user.
+func (m *Manager) attemptReconnect(ctx context.Context, id DeviceID) {
+	delay := m.config.ReconnectDelay
+	if delay == 0 {
+		delay = defaultReconnectDelay
+	}
+	maxAttempts := m.config.MaxReconnects // 0 means unlimited
+
+	for attempt := 1; maxAttempts == 0 || attempt <= maxAttempts; attempt++ {
+		// Wait before attempting reconnect.
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(delay):
+		}
+
+		// Check if the manager is shutting down or device was explicitly closed.
+		m.mu.RLock()
+		md, ok := m.devices[id]
+		if !ok || md.closedByUser {
+			m.mu.RUnlock()
+			return
+		}
+		provider := md.provider
+		m.mu.RUnlock()
+
+		// Try to re-open the device.
+		conn, err := provider.Open(ctx, id)
+		if err != nil {
+			continue
+		}
+
+		if err := conn.Start(ctx); err != nil {
+			conn.Close()
+			continue
+		}
+
+		// Success — update state under lock.
+		m.mu.Lock()
+		md, ok = m.devices[id]
+		if !ok || md.closedByUser {
+			// Device removed or user disconnected while we were reconnecting.
+			m.mu.Unlock()
+			conn.Close()
+			return
+		}
+		m.conns[id] = conn
+		md.connected = true
+		md.reconnects = 0
+		m.mu.Unlock()
+
+		// Emit hot-plug reconnect event.
+		m.mu.RLock()
+		info := md.info
+		m.mu.RUnlock()
+		select {
+		case m.hotplug <- HotPlugEvent{
+			Type:      HotPlugConnect,
+			Info:      info,
+			Timestamp: time.Now(),
+		}:
+		default:
+		}
+
+		// Resume forwarding events from the new connection.
+		go m.forwardEvents(ctx, id, conn)
+		return
+	}
+
+	// Exhausted all reconnect attempts — update counter.
+	m.mu.Lock()
+	if md, ok := m.devices[id]; ok {
+		md.reconnects++
+	}
+	m.mu.Unlock()
 }
