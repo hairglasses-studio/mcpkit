@@ -160,5 +160,5 @@ func IsGridDevice(vid, pid uint16) bool {
 func IsGridDeviceName(name string) bool {
 	lower := bytes.ToLower([]byte(name))
 	return bytes.Contains(lower, []byte("grid")) &&
-		(bytes.Contains(lower, []byte("intech")) || bytes.Contains(lower, []byte("cdc")))
+		bytes.Contains(lower, []byte("cdc"))
 }
