@@ -103,6 +103,9 @@ func init() {
 	RegisterProvider(func() DeviceProvider { return &darwinIOKitProvider{} })
 }
 
+// Compile-time interface checks.
+var _ Grabbable = (*darwinIOKitConnection)(nil)
+
 // ---------------------------------------------------------------------------
 // IOKit HID provider — gamepads, generic HID via IOKit HID Manager
 // ---------------------------------------------------------------------------
@@ -345,6 +348,7 @@ type darwinIOKitConnection struct {
 	events     chan Event
 	cancel     context.CancelFunc
 	alive      bool
+	grabbed    bool
 	feedback   *darwinIOKitFeedback
 }
 
@@ -538,6 +542,9 @@ func (c *darwinIOKitConnection) Close() error {
 	if c.cancel != nil {
 		c.cancel()
 	}
+	if c.grabbed {
+		c.ReleaseGrab()
+	}
 	if c.deviceRef != 0 {
 		C.IOHIDDeviceClose(c.deviceRef, C.kIOHIDOptionsTypeNone)
 	}
@@ -545,6 +552,49 @@ func (c *darwinIOKitConnection) Close() error {
 		C.IOHIDManagerClose(c.manager, C.kIOHIDOptionsTypeNone)
 		C.CFRelease(C.CFTypeRef(c.manager))
 	}
+	return nil
+}
+
+// Grab claims exclusive access to this HID device via IOHIDDeviceOpen with
+// kIOHIDOptionsTypeSeizeDevice. While grabbed, the kernel stops forwarding
+// events from this device to other clients (e.g., the window server).
+func (c *darwinIOKitConnection) Grab() error {
+	if c.deviceRef == 0 {
+		return fmt.Errorf("device not open")
+	}
+	if c.grabbed {
+		return nil
+	}
+
+	// Close the device handle, then reopen with the seize flag.
+	C.IOHIDDeviceClose(c.deviceRef, C.kIOHIDOptionsTypeNone)
+
+	const kIOHIDOptionsTypeSeizeDevice = C.IOOptionBits(0x01)
+	ret := C.IOHIDDeviceOpen(c.deviceRef, kIOHIDOptionsTypeSeizeDevice)
+	if ret != C.kIOReturnSuccess {
+		// Attempt to reopen without seize so the connection remains usable.
+		C.IOHIDDeviceOpen(c.deviceRef, C.kIOHIDOptionsTypeNone)
+		return fmt.Errorf("IOHIDDeviceOpen(seize) failed: 0x%x", ret)
+	}
+	c.grabbed = true
+	return nil
+}
+
+// ReleaseGrab releases exclusive access by reopening the device with
+// kIOHIDOptionsTypeNone, allowing other clients to receive events again.
+func (c *darwinIOKitConnection) ReleaseGrab() error {
+	if c.deviceRef == 0 || !c.grabbed {
+		return nil
+	}
+
+	C.IOHIDDeviceClose(c.deviceRef, C.kIOHIDOptionsTypeNone)
+
+	ret := C.IOHIDDeviceOpen(c.deviceRef, C.kIOHIDOptionsTypeNone)
+	if ret != C.kIOReturnSuccess {
+		c.grabbed = false
+		return fmt.Errorf("IOHIDDeviceOpen(release) failed: 0x%x", ret)
+	}
+	c.grabbed = false
 	return nil
 }
 
