@@ -87,6 +87,20 @@ func TestClassifyDevice_IntechGrid_ByName(t *testing.T) {
 	}
 }
 
+func TestClassifyDevice_IntechGrid_ByVendor(t *testing.T) {
+	// Unknown PID but known Intech VID should classify via vendor brand heuristic.
+	dt := ClassifyDevice(0x303a, 0xFFFF, "Some Future Grid Module")
+	if dt != TypeMIDI {
+		t.Errorf("Intech vendor 0x303a classified as %v, want midi", dt)
+	}
+}
+
+func TestBrandLabel_Intech(t *testing.T) {
+	if got := BrandLabel(0x303a); got != "intech" {
+		t.Errorf("BrandLabel(0x303a) = %q, want intech", got)
+	}
+}
+
 func TestClassifyDevice_Unknown(t *testing.T) {
 	dt := ClassifyDevice(0x1234, 0x5678, "Mystery Device")
 	if dt != TypeUnknown {

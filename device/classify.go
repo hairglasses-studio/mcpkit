@@ -23,7 +23,7 @@ func ClassifyDevice(vendorID, productID uint16, name string) DeviceType {
 			return TypeRacingWheel
 		case "akai", "focusrite", "novation", "arturia", "korg", "roland",
 			"casio", "yamaha", "native_instruments", "behringer",
-			"m_audio", "keith_mcmillen", "roli":
+			"m_audio", "keith_mcmillen", "roli", "intech":
 			return TypeMIDI
 		}
 	}
@@ -208,6 +208,7 @@ var VendorBrands = map[uint16]string{
 	0x0763: "m_audio",     // M-Audio
 	0x2011: "keith_mcmillen", // Keith McMillen Instruments
 	0x314b: "roli",        // ROLI
+	0x303a: "intech",     // Intech Studio (ESP32-S3 based Grid modules)
 
 	// Stream Deck / macro pads
 	0x0fd9: "elgato", // Elgato
