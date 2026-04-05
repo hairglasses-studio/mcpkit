@@ -15,6 +15,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/hairglasses-studio/mcpkit/protocol"
 	"github.com/hairglasses-studio/mcpkit/transport"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
@@ -85,21 +86,7 @@ func (h *MCPConnHandler) Handle(ctx context.Context, conn net.Conn, sessionID st
 
 		var rawMessage json.RawMessage
 		if err := json.Unmarshal([]byte(line), &rawMessage); err != nil {
-			errResp := struct {
-				JSONRPC string `json:"jsonrpc"`
-				ID      any    `json:"id"`
-				Error   struct {
-					Code    int    `json:"code"`
-					Message string `json:"message"`
-				} `json:"error"`
-			}{
-				JSONRPC: "2.0",
-				ID:      nil,
-				Error: struct {
-					Code    int    `json:"code"`
-					Message string `json:"message"`
-				}{Code: -32700, Message: "Parse error"},
-			}
+			errResp := protocol.NewErrorResponse(nil, protocol.NewError(protocol.CodeParseError, "Parse error"))
 			_ = transport.WriteJSONLine(conn, &writeMu, errResp)
 			continue
 		}

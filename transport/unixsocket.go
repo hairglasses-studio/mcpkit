@@ -13,6 +13,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/hairglasses-studio/mcpkit/protocol"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
@@ -271,7 +272,7 @@ func (s *UnixSocketServer) handleConn(ctx context.Context, conn net.Conn) {
 
 		var rawMessage json.RawMessage
 		if err := json.Unmarshal([]byte(line), &rawMessage); err != nil {
-			resp := createJSONRPCError(nil, -32700, "Parse error")
+			resp := createJSONRPCError(nil, protocol.CodeParseError, "Parse error")
 			data, _ := json.Marshal(resp)
 			data = append(data, '\n')
 			writeMu.Lock()
