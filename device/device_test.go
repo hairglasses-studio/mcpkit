@@ -66,6 +66,27 @@ func TestClassifyDevice_Mouse(t *testing.T) {
 	}
 }
 
+func TestClassifyDevice_IntechGrid_Gen1(t *testing.T) {
+	dt := ClassifyDevice(0x03eb, 0xecad, "Intech Studio: Grid")
+	if dt != TypeMIDI {
+		t.Errorf("Intech Grid Gen1 classified as %v, want midi", dt)
+	}
+}
+
+func TestClassifyDevice_IntechGrid_Gen2(t *testing.T) {
+	dt := ClassifyDevice(0x303a, 0x8123, "Grid")
+	if dt != TypeMIDI {
+		t.Errorf("Intech Grid Gen2 classified as %v, want midi", dt)
+	}
+}
+
+func TestClassifyDevice_IntechGrid_ByName(t *testing.T) {
+	dt := ClassifyDevice(0x0000, 0x0000, "Intech Grid MIDI device")
+	if dt != TypeMIDI {
+		t.Errorf("Intech Grid by name classified as %v, want midi", dt)
+	}
+}
+
 func TestClassifyDevice_Unknown(t *testing.T) {
 	dt := ClassifyDevice(0x1234, 0x5678, "Mystery Device")
 	if dt != TypeUnknown {
