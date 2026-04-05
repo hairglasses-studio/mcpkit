@@ -134,6 +134,29 @@ func TestDefaultCheckpointFile(t *testing.T) {
 	}
 }
 
+func TestSaveCheckpoint_NonWritableDir(t *testing.T) {
+	if os.Getuid() == 0 {
+		t.Skip("running as root")
+	}
+	dir := t.TempDir()
+	os.Chmod(dir, 0o555)
+	t.Cleanup(func() { os.Chmod(dir, 0o755) })
+
+	path := filepath.Join(dir, "checkpoint.json")
+	err := SaveCheckpoint(path, []ConversationTurn{{UserPrompt: "p"}})
+	if err == nil {
+		t.Fatal("expected error for non-writable directory")
+	}
+}
+
+func TestSaveCheckpoint_NonExistentDir(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "nonexistent", "sub", "checkpoint.json")
+	err := SaveCheckpoint(path, []ConversationTurn{{UserPrompt: "p"}})
+	if err == nil {
+		t.Fatal("expected error for non-existent directory")
+	}
+}
+
 func TestPruneHistory(t *testing.T) {
 	t.Parallel()
 	turns := make([]ConversationTurn, 10)

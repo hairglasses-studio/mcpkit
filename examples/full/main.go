@@ -1,7 +1,7 @@
 //go:build !official_sdk
 
 // Command full demonstrates a production-grade mcpkit MCP server with the full
-// middleware stack: lifecycle, observability, finops, sanitize, security, and resilience.
+// middleware stack: lifecycle, observability, finops, truncate, sanitize, security, and resilience.
 package main
 
 import (
@@ -21,6 +21,7 @@ import (
 	"github.com/hairglasses-studio/mcpkit/health"
 	"github.com/hairglasses-studio/mcpkit/lifecycle"
 	"github.com/hairglasses-studio/mcpkit/logging"
+	"github.com/hairglasses-studio/mcpkit/middleware/truncate"
 	"github.com/hairglasses-studio/mcpkit/observability"
 	"github.com/hairglasses-studio/mcpkit/prompts"
 	"github.com/hairglasses-studio/mcpkit/registry"
@@ -247,13 +248,14 @@ func main() {
 	userFunc := func(ctx context.Context) string { return auth.Subject(ctx) }
 
 	// --- Tool registry with full middleware stack ---
-	// Order (outermost first): observability → logging → finops → sanitize → security → resilience
+	// Order (outermost first): observability → logging → finops → truncate → sanitize → security → resilience
 	reg := registry.NewToolRegistry(registry.Config{
 		DefaultTimeout: 30 * time.Second,
 		Middleware: []registry.Middleware{
 			obs.Middleware(),
 			logging.Middleware(logger),
 			finops.Middleware(tracker),
+			truncate.New(truncate.WithMaxBytes(4096)),
 			sanitize.OutputMiddleware(sanitize.OutputPolicy{RedactSecrets: true}),
 			security.AuditMiddleware(auditLog, userFunc),
 			security.RBACMiddleware(rbac, auditLog, userFunc),

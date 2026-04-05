@@ -201,6 +201,7 @@ import (
     "time"
 
     "github.com/hairglasses-studio/mcpkit/handler"
+    "github.com/hairglasses-studio/mcpkit/middleware/truncate"
     "github.com/hairglasses-studio/mcpkit/registry"
     "github.com/hairglasses-studio/mcpkit/resilience"
 )
@@ -269,6 +270,7 @@ func main() {
 
     reg := registry.NewToolRegistry(registry.Config{
         Middleware: []registry.Middleware{
+            truncate.New(truncate.WithMaxBytes(4096)),
             resilience.RateLimitMiddleware(resilience.NewRateLimitRegistry()),
             resilience.CircuitBreakerMiddleware(resilience.NewCircuitBreakerRegistry(nil)),
             loggingMiddleware(logger),
@@ -298,6 +300,7 @@ Each tool call now logs a structured JSON line to stderr:
 ```
 
 **What you get:**
+- **Response truncation** via `middleware/truncate` -- caps text content at 4KB (configurable) and appends a guidance message, preventing oversized responses from flooding the model context window
 - **Rate limiting** per `CircuitBreakerGroup` (default: 10 req/s, burst 20)
 - **Circuit breaker** that trips after repeated failures, preventing cascading errors
 - **Structured logging** to stderr (never stdout -- MCP stdio discipline)
@@ -609,6 +612,7 @@ PASS
 | Topic | Package | Link |
 |-------|---------|------|
 | Typed handlers and error codes | `handler` | [pkg.go.dev/handler](https://pkg.go.dev/github.com/hairglasses-studio/mcpkit/handler) |
+| Response truncation | `middleware/truncate` | [examples/truncate-demo/main.go](examples/truncate-demo/main.go) |
 | Resilience (circuit breakers, rate limits) | `resilience` | [pkg.go.dev/resilience](https://pkg.go.dev/github.com/hairglasses-studio/mcpkit/resilience) |
 | ToolModule interface for production servers | `registry` | [pkg.go.dev/registry](https://pkg.go.dev/github.com/hairglasses-studio/mcpkit/registry) |
 | Resources and prompts | `resources`, `prompts` | [pkg.go.dev/resources](https://pkg.go.dev/github.com/hairglasses-studio/mcpkit/resources), [pkg.go.dev/prompts](https://pkg.go.dev/github.com/hairglasses-studio/mcpkit/prompts) |

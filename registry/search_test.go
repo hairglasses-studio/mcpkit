@@ -304,6 +304,144 @@ func TestSearchTools_EmptyRegistry(t *testing.T) {
 	}
 }
 
+func TestSearchTools_SearchTermsExactMatch(t *testing.T) {
+	r := NewToolRegistry()
+	r.RegisterModule(&testModule{
+		name: "mod",
+		tools: []ToolDefinition{
+			{
+				Tool:        Tool{Name: "lookup_user", Description: "Find a user"},
+				Handler:     func(_ context.Context, _ CallToolRequest) (*CallToolResult, error) { return MakeTextResult("ok"), nil },
+				Category:    "users",
+				SearchTerms: []string{"find_user", "get_user", "user_search"},
+			},
+		},
+	})
+
+	results := r.SearchTools("find_user")
+	if len(results) == 0 {
+		t.Fatal("expected match on search_term 'find_user'")
+	}
+	if results[0].MatchType != "search_term" {
+		t.Errorf("MatchType = %q, want 'search_term'", results[0].MatchType)
+	}
+}
+
+func TestSearchTools_SearchTermsPartialMatch(t *testing.T) {
+	r := NewToolRegistry()
+	r.RegisterModule(&testModule{
+		name: "mod",
+		tools: []ToolDefinition{
+			{
+				Tool:        Tool{Name: "process_data", Description: "Process data"},
+				Handler:     func(_ context.Context, _ CallToolRequest) (*CallToolResult, error) { return MakeTextResult("ok"), nil },
+				SearchTerms: []string{"transform", "pipeline"},
+			},
+		},
+	})
+
+	results := r.SearchTools("transform")
+	if len(results) == 0 {
+		t.Fatal("expected match on search_term partial")
+	}
+}
+
+func TestSearchTools_FuzzyNameMatch(t *testing.T) {
+	r := NewToolRegistry()
+	r.RegisterModule(&testModule{
+		name: "mod",
+		tools: []ToolDefinition{
+			makeSearchTool("system_status", "Get system status", "system", nil),
+		},
+	})
+
+	// "systm" is a typo for "system" — fuzzy match should still find it.
+	results := r.SearchTools("systm")
+	if len(results) == 0 {
+		t.Fatal("expected fuzzy match for typo 'systm' -> 'system'")
+	}
+}
+
+func TestSearchTools_FuzzyTagMatch(t *testing.T) {
+	r := NewToolRegistry()
+	r.RegisterModule(&testModule{
+		name: "mod",
+		tools: []ToolDefinition{
+			{
+				Tool:    Tool{Name: "unrelated_name", Description: "Does something unrelated"},
+				Handler: func(_ context.Context, _ CallToolRequest) (*CallToolResult, error) { return MakeTextResult("ok"), nil },
+				Tags:    []string{"deployment"},
+			},
+		},
+	})
+
+	// "deploymnt" typo should fuzzy-match the "deployment" tag.
+	results := r.SearchTools("deploymnt")
+	if len(results) == 0 {
+		t.Fatal("expected fuzzy match on tag 'deployment' for typo 'deploymnt'")
+	}
+}
+
+func TestSearchTools_FuzzyCategoryMatch(t *testing.T) {
+	r := NewToolRegistry()
+	r.RegisterModule(&testModule{
+		name: "mod",
+		tools: []ToolDefinition{
+			{
+				Tool:     Tool{Name: "sometool", Description: "Does something"},
+				Handler:  func(_ context.Context, _ CallToolRequest) (*CallToolResult, error) { return MakeTextResult("ok"), nil },
+				Category: "monitoring",
+			},
+		},
+	})
+
+	// "monitring" typo should fuzzy-match "monitoring" category.
+	results := r.SearchTools("monitring")
+	if len(results) == 0 {
+		t.Fatal("expected fuzzy match on category 'monitoring' for typo 'monitring'")
+	}
+}
+
+func TestSearchTools_FuzzyRuntimeGroupMatch(t *testing.T) {
+	r := NewToolRegistry()
+	r.RegisterModule(&testModule{
+		name: "mod",
+		tools: []ToolDefinition{
+			{
+				Tool:         Tool{Name: "tool_x", Description: "A tool"},
+				Handler:      func(_ context.Context, _ CallToolRequest) (*CallToolResult, error) { return MakeTextResult("ok"), nil },
+				RuntimeGroup: "infrastructure",
+			},
+		},
+	})
+
+	// "infrastrcture" typo should fuzzy-match "infrastructure".
+	results := r.SearchTools("infrastrcture")
+	if len(results) == 0 {
+		t.Fatal("expected fuzzy match on runtime_group 'infrastructure'")
+	}
+}
+
+func TestSearchTools_FuzzySearchTermMatch(t *testing.T) {
+	r := NewToolRegistry()
+	r.RegisterModule(&testModule{
+		name: "mod",
+		tools: []ToolDefinition{
+			{
+				Tool:        Tool{Name: "data_tool", Description: "Manages data"},
+				Handler:     func(_ context.Context, _ CallToolRequest) (*CallToolResult, error) { return MakeTextResult("ok"), nil },
+				SearchTerms: []string{"aggregation"},
+			},
+		},
+	})
+
+	// "aggregaton" typo should fuzzy-match "aggregation" search term.
+	results := r.SearchTools("aggregaton")
+	if len(results) == 0 {
+		t.Fatal("expected fuzzy match on search_term 'aggregation'")
+	}
+}
+
 func TestSearchTools_RuntimeGroupMatch(t *testing.T) {
 	r := NewToolRegistry()
 	r.RegisterModule(&testModule{

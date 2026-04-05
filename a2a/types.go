@@ -33,6 +33,27 @@ type Task struct {
 	Updated  time.Time         `json:"updated"`
 }
 
+// snapshot returns a shallow copy of the task with slices and maps copied so
+// the copy can be safely serialized outside the lock that protects the original.
+func (t *Task) snapshot() Task {
+	cp := *t
+	if len(t.Messages) > 0 {
+		cp.Messages = make([]Message, len(t.Messages))
+		copy(cp.Messages, t.Messages)
+	}
+	if len(t.Artifacts) > 0 {
+		cp.Artifacts = make([]Artifact, len(t.Artifacts))
+		copy(cp.Artifacts, t.Artifacts)
+	}
+	if len(t.Metadata) > 0 {
+		cp.Metadata = make(map[string]string, len(t.Metadata))
+		for k, v := range t.Metadata {
+			cp.Metadata[k] = v
+		}
+	}
+	return cp
+}
+
 // Message represents a conversation turn in an A2A task.
 type Message struct {
 	Role  string `json:"role"` // "user" or "agent"
