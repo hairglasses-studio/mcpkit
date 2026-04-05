@@ -70,7 +70,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"time"
 )
 
 func init() {
@@ -227,108 +226,8 @@ func (c *darwinMIDIConnection) readLoop(ctx context.Context) {
 			return
 		}
 
-		// Parse MIDI bytes from the pipe.
-		for i := 0; i < n; {
-			b := buf[i]
-			if b < 0x80 {
-				i++
-				continue // skip running status data bytes
-			}
-
-			msgType := b & 0xF0
-			channel := b & 0x0F
-			remaining := n - i - 1
-
-			switch msgType {
-			case 0x90, 0x80: // Note On / Note Off
-				if remaining < 2 {
-					i = n
-					continue
-				}
-				note := buf[i+1] & 0x7F
-				velocity := buf[i+2] & 0x7F
-				isOn := msgType == 0x90 && velocity > 0
-				c.emit(ctx, Event{
-					DeviceID:  c.deviceInfo.ID,
-					Type:      EventMIDINote,
-					Timestamp: time.Now(),
-					Source:    fmt.Sprintf("midi:note:%d", note),
-					Channel:   channel,
-					MIDINote:  note,
-					Velocity:  velocity,
-					Pressed:   isOn,
-					Value:     float64(velocity) / 127.0,
-				})
-				i += 3
-
-			case 0xB0: // Control Change
-				if remaining < 2 {
-					i = n
-					continue
-				}
-				cc := buf[i+1] & 0x7F
-				val := buf[i+2] & 0x7F
-				c.emit(ctx, Event{
-					DeviceID:   c.deviceInfo.ID,
-					Type:       EventMIDICC,
-					Timestamp:  time.Now(),
-					Source:     fmt.Sprintf("midi:cc:%d", cc),
-					Channel:    channel,
-					Controller: cc,
-					MIDIValue:  val,
-					Value:      float64(val) / 127.0,
-				})
-				i += 3
-
-			case 0xC0: // Program Change (1 data byte)
-				if remaining < 1 {
-					i = n
-					continue
-				}
-				prog := buf[i+1] & 0x7F
-				c.emit(ctx, Event{
-					DeviceID:  c.deviceInfo.ID,
-					Type:      EventMIDIProgramChange,
-					Timestamp: time.Now(),
-					Source:    fmt.Sprintf("midi:pc:%d", prog),
-					Channel:   channel,
-					Program:   prog,
-					Value:     float64(prog) / 127.0,
-				})
-				i += 2
-
-			case 0xD0: // Channel Pressure (1 data byte)
-				i += 2
-
-			case 0xE0: // Pitch Bend
-				if remaining < 2 {
-					i = n
-					continue
-				}
-				lsb := int16(buf[i+1] & 0x7F)
-				msb := int16(buf[i+2] & 0x7F)
-				bend := (msb << 7) | lsb - 8192
-				c.emit(ctx, Event{
-					DeviceID:  c.deviceInfo.ID,
-					Type:      EventMIDIPitchBend,
-					Timestamp: time.Now(),
-					Source:    "midi:pitch_bend",
-					Channel:   channel,
-					PitchBend: bend,
-					Value:     float64(bend) / 8192.0,
-				})
-				i += 3
-
-			case 0xF0: // System messages
-				// Skip SysEx and other system messages.
-				i++
-				for i < n && buf[i] < 0x80 {
-					i++
-				}
-
-			default:
-				i++
-			}
+		for _, ev := range parseMIDIBytes(c.deviceInfo.ID, buf, n) {
+			c.emit(ctx, ev)
 		}
 	}
 }
