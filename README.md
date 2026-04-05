@@ -33,6 +33,7 @@ Built on [github.com/mark3labs/mcp-go](https://github.com/mark3labs/mcp-go), mcp
 - **Agent memory** — episodic/semantic/procedural memory tiers with pluggable storage backends (`memory`)
 - **Skills** — context-aware lazy tool loading with skill bundles and triggers (`skills`)
 - **Autonomous loops** — the Ralph Loop pattern for iterative, self-directing task execution (`ralph`)
+- **MCP-A2A bridge** — expose MCP tools as [A2A](https://google.github.io/A2A/) agent skills with deterministic protocol translation; the first Go MCP-to-A2A bridge (`bridge/a2a`) ([docs](bridge/a2a/README.md))
 
 ## Quick Start
 
@@ -120,6 +121,7 @@ npx @modelcontextprotocol/inspector go run main.go      # interactive debugger
 | `eval` | Evaluation framework: cases, scorers, JSON suite loading, runner | `registry` |
 | `roadmap` | Machine-readable roadmap management, gap analysis, query functions | `registry`, `handler` |
 | `rdcycle` | R&D cycle orchestration tools: scan, plan, verify, commit, report | `registry`, `handler`, `research`, `roadmap`, `workflow`, `finops` |
+| `bridge/a2a` | MCP-to-A2A protocol bridge: tool-to-skill translation, agent card generation, bridge executor | `registry`, `handler` |
 
 ## Dependency Layers
 
