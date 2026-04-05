@@ -1,7 +1,9 @@
 package session
 
 import (
+	"bytes"
 	"context"
+	"encoding/gob"
 	"encoding/json"
 	"errors"
 	"maps"
@@ -76,6 +78,35 @@ func MarshalSession(s Session) ([]byte, error) {
 func UnmarshalSession(data []byte) (Session, error) {
 	var ss SerializableSession
 	if err := json.Unmarshal(data, &ss); err != nil {
+		return nil, err
+	}
+	return Restore(&ss), nil
+}
+
+func init() {
+	// Register common types stored in session Data (map[string]any) so gob
+	// can encode/decode them through the any interface.
+	gob.Register("")
+	gob.Register(0)
+	gob.Register(0.0)
+	gob.Register(false)
+	gob.Register([]any{})
+	gob.Register(map[string]any{})
+}
+
+// MarshalSessionGob serializes a session to gob-encoded bytes.
+func MarshalSessionGob(s Session) ([]byte, error) {
+	var buf bytes.Buffer
+	if err := gob.NewEncoder(&buf).Encode(Snapshot(s)); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+// UnmarshalSessionGob deserializes a session from gob-encoded bytes.
+func UnmarshalSessionGob(data []byte) (Session, error) {
+	var ss SerializableSession
+	if err := gob.NewDecoder(bytes.NewReader(data)).Decode(&ss); err != nil {
 		return nil, err
 	}
 	return Restore(&ss), nil
