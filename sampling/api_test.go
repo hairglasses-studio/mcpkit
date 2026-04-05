@@ -13,6 +13,34 @@ import (
 	"time"
 )
 
+// redirectTransport rewrites all requests to point at the test server URL,
+// then delegates to the test server's default transport. This lets us test
+// doRequest (which hardcodes the Anthropic API URL) against a local httptest server.
+type redirectTransport struct {
+	targetURL string
+	inner     http.RoundTripper
+}
+
+func (rt *redirectTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	req = req.Clone(req.Context())
+	req.URL.Scheme = "http"
+	// Parse the test server URL to get host.
+	req.URL.Host = strings.TrimPrefix(rt.targetURL, "http://")
+	return rt.inner.RoundTrip(req)
+}
+
+// testHTTPClient returns an *http.Client that redirects all requests to the
+// given httptest.Server.
+func testHTTPClient(ts *httptest.Server) *http.Client {
+	return &http.Client{
+		Transport: &redirectTransport{
+			targetURL: ts.URL,
+			inner:     http.DefaultTransport,
+		},
+		Timeout: 10 * time.Second,
+	}
+}
+
 func TestAPISamplingClient_CreateMessage_Success(t *testing.T) {
 	t.Parallel()
 
@@ -34,7 +62,11 @@ func TestAPISamplingClient_CreateMessage_Success(t *testing.T) {
 			t.Errorf("decode request: %v", err)
 		}
 		if req.Model != "claude-sonnet-4-6" {
-			t.Errorf("expected default model, got %q", req.Model)
+			t.Errorf("expected default model claude-sonnet-4-6, got %q", req.Model)
+		}
+		// CompletionRequest sets default of 1024, so that's what arrives.
+		if req.MaxTokens != 1024 {
+			t.Errorf("expected MaxTokens 1024, got %d", req.MaxTokens)
 		}
 
 		resp := apiResponse{
@@ -49,17 +81,14 @@ func TestAPISamplingClient_CreateMessage_Success(t *testing.T) {
 	defer ts.Close()
 
 	client := &APISamplingClient{
-		APIKey:       "test-key",
-		DefaultModel: "", // should use default
-		HTTPClient:   ts.Client(),
+		APIKey:     "test-key",
+		HTTPClient: testHTTPClient(ts),
 	}
-	// Override the endpoint — we need to patch doRequest indirectly.
-	// Since the client hardcodes the Anthropic endpoint, we test via the
-	// doRequest method directly and also verify CreateMessage with a custom
-	// transport.
 
-	// Test doRequest directly with our test server.
-	result, err := testCreateMessageWithEndpoint(t, ts.URL, client)
+	msgs := []SamplingMessage{TextMessage("user", "test")}
+	req := CompletionRequest(msgs)
+
+	result, err := client.CreateMessage(context.Background(), req)
 	if err != nil {
 		t.Fatalf("CreateMessage: %v", err)
 	}
@@ -69,53 +98,195 @@ func TestAPISamplingClient_CreateMessage_Success(t *testing.T) {
 	if result.StopReason != "end_turn" {
 		t.Errorf("expected stop_reason end_turn, got %q", result.StopReason)
 	}
+	if string(result.Role) != "assistant" {
+		t.Errorf("expected role assistant, got %q", result.Role)
+	}
 }
 
-// testCreateMessageWithEndpoint tests the doRequest path by calling it directly
-// with a custom endpoint. This lets us test the full HTTP round-trip without
-// hitting the real API.
-func testCreateMessageWithEndpoint(t *testing.T, endpoint string, client *APISamplingClient) (*CreateMessageResult, error) {
-	t.Helper()
+func TestAPISamplingClient_CreateMessage_CustomModel(t *testing.T) {
+	t.Parallel()
 
-	// We test the doRequest method which is the core HTTP logic.
-	body := apiRequest{
-		Model:     "claude-sonnet-4-6",
-		MaxTokens: 1024,
-		Messages:  []apiMessage{{Role: "user", Content: "test"}},
-	}
-
-	// Build an HTTP request manually to the test endpoint.
-	payload, _ := json.Marshal(body)
-	req, _ := http.NewRequest(http.MethodPost, endpoint, strings.NewReader(string(payload)))
-	req.Header.Set("x-api-key", client.APIKey)
-	req.Header.Set("anthropic-version", "2023-06-01")
-	req.Header.Set("content-type", "application/json")
-
-	resp, err := client.httpClient().Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	var apiResp apiResponse
-	if err := json.NewDecoder(resp.Body).Decode(&apiResp); err != nil {
-		return nil, err
-	}
-
-	text := ""
-	for _, ct := range apiResp.Content {
-		if ct.Type == "text" {
-			text = ct.Text
-			break
+	var receivedModel string
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req apiRequest
+		json.NewDecoder(r.Body).Decode(&req)
+		receivedModel = req.Model
+		resp := apiResponse{
+			Content:    []apiContent{{Type: "text", Text: "ok"}},
+			Model:      req.Model,
+			StopReason: "end_turn",
 		}
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(resp)
+	}))
+	defer ts.Close()
+
+	client := &APISamplingClient{
+		APIKey:       "test-key",
+		DefaultModel: "claude-opus-4",
+		HTTPClient:   testHTTPClient(ts),
 	}
 
-	result := &CreateMessageResult{
-		Model:      apiResp.Model,
-		StopReason: apiResp.StopReason,
+	msgs := []SamplingMessage{TextMessage("user", "test")}
+	req := CompletionRequest(msgs)
+
+	_, err := client.CreateMessage(context.Background(), req)
+	if err != nil {
+		t.Fatalf("CreateMessage: %v", err)
 	}
-	_ = text
-	return result, nil
+	if receivedModel != "claude-opus-4" {
+		t.Errorf("expected model claude-opus-4, got %q", receivedModel)
+	}
+}
+
+func TestAPISamplingClient_CreateMessage_ModelFromMetadata(t *testing.T) {
+	t.Parallel()
+
+	var receivedModel string
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req apiRequest
+		json.NewDecoder(r.Body).Decode(&req)
+		receivedModel = req.Model
+		resp := apiResponse{
+			Content:    []apiContent{{Type: "text", Text: "ok"}},
+			Model:      req.Model,
+			StopReason: "end_turn",
+		}
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(resp)
+	}))
+	defer ts.Close()
+
+	client := &APISamplingClient{
+		APIKey:       "test-key",
+		DefaultModel: "should-be-overridden",
+		HTTPClient:   testHTTPClient(ts),
+	}
+
+	msgs := []SamplingMessage{TextMessage("user", "test")}
+	req := CompletionRequest(msgs, WithModel("claude-3-5-haiku"))
+
+	_, err := client.CreateMessage(context.Background(), req)
+	if err != nil {
+		t.Fatalf("CreateMessage: %v", err)
+	}
+	if receivedModel != "claude-3-5-haiku" {
+		t.Errorf("expected model claude-3-5-haiku, got %q", receivedModel)
+	}
+}
+
+func TestAPISamplingClient_CreateMessage_SystemPrompt(t *testing.T) {
+	t.Parallel()
+
+	var receivedSystem string
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req apiRequest
+		json.NewDecoder(r.Body).Decode(&req)
+		receivedSystem = req.System
+		resp := apiResponse{
+			Content:    []apiContent{{Type: "text", Text: "ok"}},
+			Model:      "claude-sonnet-4-6",
+			StopReason: "end_turn",
+		}
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(resp)
+	}))
+	defer ts.Close()
+
+	client := &APISamplingClient{
+		APIKey:     "test-key",
+		HTTPClient: testHTTPClient(ts),
+	}
+
+	msgs := []SamplingMessage{TextMessage("user", "hello")}
+	req := CompletionRequest(msgs, WithSystemPrompt("You are a test assistant."))
+
+	_, err := client.CreateMessage(context.Background(), req)
+	if err != nil {
+		t.Fatalf("CreateMessage: %v", err)
+	}
+	if receivedSystem != "You are a test assistant." {
+		t.Errorf("expected system prompt, got %q", receivedSystem)
+	}
+}
+
+func TestAPISamplingClient_CreateMessage_MaxTokensDefault(t *testing.T) {
+	t.Parallel()
+
+	var receivedMaxTokens int
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req apiRequest
+		json.NewDecoder(r.Body).Decode(&req)
+		receivedMaxTokens = req.MaxTokens
+		resp := apiResponse{
+			Content:    []apiContent{{Type: "text", Text: "ok"}},
+			Model:      "claude-sonnet-4-6",
+			StopReason: "end_turn",
+		}
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(resp)
+	}))
+	defer ts.Close()
+
+	client := &APISamplingClient{
+		APIKey:     "test-key",
+		HTTPClient: testHTTPClient(ts),
+	}
+
+	// maxTokens 0 should be clamped to 4096.
+	req := CreateMessageRequest{}
+	req.MaxTokens = 0
+	req.Messages = []SamplingMessage{TextMessage("user", "hi")}
+
+	_, err := client.CreateMessage(context.Background(), req)
+	if err != nil {
+		t.Fatalf("CreateMessage: %v", err)
+	}
+	if receivedMaxTokens != 4096 {
+		t.Errorf("expected maxTokens clamped to 4096, got %d", receivedMaxTokens)
+	}
+}
+
+func TestAPISamplingClient_CreateMessage_MultipleMessages(t *testing.T) {
+	t.Parallel()
+
+	var receivedMsgs []apiMessage
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req apiRequest
+		json.NewDecoder(r.Body).Decode(&req)
+		receivedMsgs = req.Messages
+		resp := apiResponse{
+			Content:    []apiContent{{Type: "text", Text: "ok"}},
+			Model:      "claude-sonnet-4-6",
+			StopReason: "end_turn",
+		}
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(resp)
+	}))
+	defer ts.Close()
+
+	client := &APISamplingClient{
+		APIKey:     "test-key",
+		HTTPClient: testHTTPClient(ts),
+	}
+
+	msgs := []SamplingMessage{
+		TextMessage("user", "What is Go?"),
+		TextMessage("assistant", "Go is a programming language."),
+		TextMessage("user", "Tell me more."),
+	}
+	req := CompletionRequest(msgs)
+
+	_, err := client.CreateMessage(context.Background(), req)
+	if err != nil {
+		t.Fatalf("CreateMessage: %v", err)
+	}
+	if len(receivedMsgs) != 3 {
+		t.Fatalf("expected 3 messages, got %d", len(receivedMsgs))
+	}
+	if receivedMsgs[0].Role != "user" || receivedMsgs[1].Role != "assistant" {
+		t.Errorf("unexpected roles: %v", receivedMsgs)
+	}
 }
 
 func TestAPISamplingClient_HttpClient_Default(t *testing.T) {
@@ -146,53 +317,6 @@ func TestAPISamplingClient_HttpClient_Custom(t *testing.T) {
 	}
 }
 
-func TestAPISamplingClient_ModelFromMetadata(t *testing.T) {
-	t.Parallel()
-
-	var receivedModel string
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var req apiRequest
-		json.NewDecoder(r.Body).Decode(&req)
-		receivedModel = req.Model
-		resp := apiResponse{
-			Content:    []apiContent{{Type: "text", Text: "ok"}},
-			Model:      req.Model,
-			StopReason: "end_turn",
-		}
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(resp)
-	}))
-	defer ts.Close()
-
-	// We'll test model selection via the metadata path by calling doRequest.
-	client := &APISamplingClient{
-		APIKey:       "test-key",
-		DefaultModel: "claude-sonnet-4-6",
-		HTTPClient:   ts.Client(),
-	}
-
-	body := apiRequest{
-		Model:     "claude-opus-4",
-		MaxTokens: 1024,
-		Messages:  []apiMessage{{Role: "user", Content: "test"}},
-	}
-
-	payload, _ := json.Marshal(body)
-	req, _ := http.NewRequest(http.MethodPost, ts.URL, strings.NewReader(string(payload)))
-	req.Header.Set("x-api-key", client.APIKey)
-	req.Header.Set("anthropic-version", "2023-06-01")
-	req.Header.Set("content-type", "application/json")
-	resp, err := client.httpClient().Do(req)
-	if err != nil {
-		t.Fatalf("request: %v", err)
-	}
-	resp.Body.Close()
-
-	if receivedModel != "claude-opus-4" {
-		t.Errorf("expected model claude-opus-4, got %q", receivedModel)
-	}
-}
-
 func TestAPISamplingClient_RateLimitRetry(t *testing.T) {
 	t.Parallel()
 
@@ -214,10 +338,9 @@ func TestAPISamplingClient_RateLimitRetry(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	// Test the doRequest retry path by directly testing doRequest.
 	client := &APISamplingClient{
 		APIKey:     "test-key",
-		HTTPClient: ts.Client(),
+		HTTPClient: testHTTPClient(ts),
 	}
 
 	body := apiRequest{
@@ -226,7 +349,7 @@ func TestAPISamplingClient_RateLimitRetry(t *testing.T) {
 		Messages:  []apiMessage{{Role: "user", Content: "test"}},
 	}
 
-	// First call should get rate limited.
+	// First call: rate limited.
 	resp1, err1 := client.doRequest(context.Background(), body)
 	if resp1 != nil {
 		t.Error("expected nil response on rate limit")
@@ -238,7 +361,7 @@ func TestAPISamplingClient_RateLimitRetry(t *testing.T) {
 		t.Errorf("expected rate limit error type, got %T: %v", err1, err1)
 	}
 
-	// Second call should also be rate limited.
+	// Second call: also rate limited.
 	resp2, err2 := client.doRequest(context.Background(), body)
 	if resp2 != nil {
 		t.Error("expected nil response on rate limit")
@@ -247,7 +370,7 @@ func TestAPISamplingClient_RateLimitRetry(t *testing.T) {
 		t.Error("expected rate limit error on second attempt")
 	}
 
-	// Third call should succeed.
+	// Third call: succeeds.
 	resp3, err3 := client.doRequest(context.Background(), body)
 	if err3 != nil {
 		t.Fatalf("expected success on third attempt, got: %v", err3)
@@ -273,7 +396,7 @@ func TestAPISamplingClient_NonRateLimitError(t *testing.T) {
 
 	client := &APISamplingClient{
 		APIKey:     "test-key",
-		HTTPClient: ts.Client(),
+		HTTPClient: testHTTPClient(ts),
 	}
 
 	body := apiRequest{
@@ -292,7 +415,6 @@ func TestAPISamplingClient_NonRateLimitError(t *testing.T) {
 	if !strings.Contains(err.Error(), "400") {
 		t.Errorf("expected error to mention 400, got: %v", err)
 	}
-	// Should NOT be a rate limit error.
 	if isAPIRateLimitError(err) {
 		t.Error("400 error should not be classified as rate limit")
 	}
@@ -312,7 +434,7 @@ func TestAPISamplingClient_APIResponseError(t *testing.T) {
 
 	client := &APISamplingClient{
 		APIKey:     "test-key",
-		HTTPClient: ts.Client(),
+		HTTPClient: testHTTPClient(ts),
 	}
 
 	body := apiRequest{
@@ -353,7 +475,7 @@ func TestAPISamplingClient_DoRequest_Success(t *testing.T) {
 
 	client := &APISamplingClient{
 		APIKey:     "test-key",
-		HTTPClient: ts.Client(),
+		HTTPClient: testHTTPClient(ts),
 	}
 
 	body := apiRequest{
@@ -400,7 +522,7 @@ func TestIsAPIRateLimitError(t *testing.T) {
 	}{
 		{"rate limit error", &apiRateLimitError{status: 429}, true},
 		{"generic error", context.DeadlineExceeded, false},
-		{"nil-wrapped", context.Canceled, false},
+		{"cancelled", context.Canceled, false},
 	}
 
 	for _, tt := range tests {
@@ -424,7 +546,7 @@ func TestAPISamplingClient_DoRequest_InvalidJSON(t *testing.T) {
 
 	client := &APISamplingClient{
 		APIKey:     "test-key",
-		HTTPClient: ts.Client(),
+		HTTPClient: testHTTPClient(ts),
 	}
 
 	body := apiRequest{
@@ -461,7 +583,7 @@ func TestAPISamplingClient_DoRequest_NoTextContent(t *testing.T) {
 
 	client := &APISamplingClient{
 		APIKey:     "test-key",
-		HTTPClient: ts.Client(),
+		HTTPClient: testHTTPClient(ts),
 	}
 
 	body := apiRequest{
@@ -474,7 +596,6 @@ func TestAPISamplingClient_DoRequest_NoTextContent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("doRequest: %v", err)
 	}
-	// Non-text content should still return a response.
 	if resp == nil {
 		t.Fatal("expected non-nil response")
 	}
@@ -496,7 +617,7 @@ func TestAPISamplingClient_DoRequest_EmptyContent(t *testing.T) {
 
 	client := &APISamplingClient{
 		APIKey:     "test-key",
-		HTTPClient: ts.Client(),
+		HTTPClient: testHTTPClient(ts),
 	}
 
 	body := apiRequest{
@@ -514,5 +635,47 @@ func TestAPISamplingClient_DoRequest_EmptyContent(t *testing.T) {
 	}
 	if len(resp.Content) != 0 {
 		t.Errorf("expected empty content, got %v", resp.Content)
+	}
+}
+
+func TestAPISamplingClient_CreateMessage_StringContent(t *testing.T) {
+	t.Parallel()
+
+	var receivedMsgs []apiMessage
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req apiRequest
+		json.NewDecoder(r.Body).Decode(&req)
+		receivedMsgs = req.Messages
+		resp := apiResponse{
+			Content:    []apiContent{{Type: "text", Text: "ok"}},
+			Model:      "claude-sonnet-4-6",
+			StopReason: "end_turn",
+		}
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(resp)
+	}))
+	defer ts.Close()
+
+	client := &APISamplingClient{
+		APIKey:     "test-key",
+		HTTPClient: testHTTPClient(ts),
+	}
+
+	// Create a request with raw string content (exercises the string fallback path).
+	req := CreateMessageRequest{}
+	req.Messages = []SamplingMessage{
+		{Role: "user", Content: "raw string content"},
+	}
+	req.MaxTokens = 256
+
+	_, err := client.CreateMessage(context.Background(), req)
+	if err != nil {
+		t.Fatalf("CreateMessage: %v", err)
+	}
+	if len(receivedMsgs) != 1 {
+		t.Fatalf("expected 1 message, got %d", len(receivedMsgs))
+	}
+	if receivedMsgs[0].Content != "raw string content" {
+		t.Errorf("expected raw string content, got %q", receivedMsgs[0].Content)
 	}
 }
