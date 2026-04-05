@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -298,9 +299,16 @@ func (c *linuxEvdevConnection) convertEvent(ev inputEvent) *Event {
 		if pressed {
 			val = 1.0
 		}
+		// Evdev key codes 1-255 are keyboard keys (KEY_ESC through
+		// extended media/function keys). Codes 256+ (0x100+) are
+		// buttons (BTN_MISC, BTN_MOUSE, BTN_JOYSTICK, BTN_GAMEPAD, etc.).
+		evType := EventButton
+		if ev.Code > 0 && ev.Code < 0x100 {
+			evType = EventKey
+		}
 		return &Event{
 			DeviceID:  c.deviceInfo.ID,
-			Type:      EventButton,
+			Type:      evType,
 			Timestamp: time.Unix(ev.Sec, ev.Usec*1000),
 			Source:    name,
 			Code:      ev.Code,
@@ -348,9 +356,15 @@ func (c *linuxEvdevConnection) convertEvent(ev inputEvent) *Event {
 		if name == "" {
 			return nil
 		}
+		// REL_DIAL (0x07) and REL_WHEEL (0x08) are rotary encoder axes.
+		// Emit EventEncoder instead of EventAxis for these.
+		evType := EventAxis
+		if ev.Code == 0x07 || ev.Code == 0x08 {
+			evType = EventEncoder
+		}
 		return &Event{
 			DeviceID:  c.deviceInfo.ID,
-			Type:      EventAxis,
+			Type:      evType,
 			Timestamp: time.Unix(ev.Sec, ev.Usec*1000),
 			Source:    name,
 			Value:     float64(ev.Val),
@@ -847,7 +861,35 @@ func (c *linuxMIDIConnection) readLoop(ctx context.Context) {
 			}
 
 		default:
-			continue // System messages, etc.
+			if status == 0xF0 {
+				// SysEx: read data bytes until 0xF7 (EOX) or another status byte.
+				sysexBuf := []byte{0xF0}
+				oneByte := make([]byte, 1)
+				for {
+					n, err := c.fd.Read(oneByte)
+					if err != nil || n < 1 {
+						return
+					}
+					sysexBuf = append(sysexBuf, oneByte[0])
+					if oneByte[0] == 0xF7 {
+						break
+					}
+					if oneByte[0] >= 0x80 {
+						// Unexpected status byte — unterminated SysEx.
+						break
+					}
+				}
+				ev = &Event{
+					DeviceID:  c.deviceInfo.ID,
+					Type:      EventMIDISysEx,
+					Timestamp: time.Now(),
+					Source:    "midi:sysex",
+					SysEx:     sysexBuf,
+					Value:     float64(len(sysexBuf)),
+				}
+			} else {
+				continue // Other system messages, etc.
+			}
 		}
 
 		if ev != nil {
@@ -873,82 +915,249 @@ func (c *linuxMIDIConnection) Close() error {
 func (p *linuxMIDIProvider) Close() error { return nil }
 
 // ---------------------------------------------------------------------------
-// Linux hot-plug watcher stub
+// Linux hot-plug watcher — netlink KOBJECT_UEVENT with polling fallback
 // ---------------------------------------------------------------------------
 
-// LinuxHotPlugWatcher monitors device changes via polling /proc/bus/input/devices.
-// A future version would use netlink KOBJECT_UEVENT for instant notification.
+// netlinkKobjectUevent is the netlink protocol for kernel uevents (linux/netlink.h).
+const netlinkKobjectUevent = 15 // NETLINK_KOBJECT_UEVENT
+
+// hotplugDebounce is the debounce window for coalescing add/remove flurries
+// when a single device connects (the kernel may emit several uevents).
+const hotplugDebounce = 200 * time.Millisecond
+
+// LinuxHotPlugWatcher monitors device changes using a netlink KOBJECT_UEVENT
+// socket for near-instant notification. If the netlink socket cannot be created
+// (e.g., insufficient permissions in a container), it falls back to polling
+// providers every 2 seconds.
 type LinuxHotPlugWatcher struct {
-	events   chan HotPlugEvent
-	cancel   context.CancelFunc
-	known    map[DeviceID]bool
-	provider *linuxInputProvider
+	events    chan HotPlugEvent
+	cancel    context.CancelFunc
+	known     map[DeviceID]Info
+	providers []DeviceProvider
+	netlinkFD int // -1 when using polling fallback
 }
 
 // NewLinuxHotPlugWatcher creates a hot-plug watcher for Linux.
 func NewLinuxHotPlugWatcher() *LinuxHotPlugWatcher {
 	return &LinuxHotPlugWatcher{
-		events:   make(chan HotPlugEvent, 16),
-		known:    make(map[DeviceID]bool),
-		provider: &linuxInputProvider{},
+		events: make(chan HotPlugEvent, 16),
+		known:  make(map[DeviceID]Info),
+		providers: []DeviceProvider{
+			&linuxInputProvider{},
+			&linuxMIDIProvider{},
+		},
+		netlinkFD: -1,
 	}
 }
 
 func (w *LinuxHotPlugWatcher) Start(ctx context.Context) error {
 	ctx, w.cancel = context.WithCancel(ctx)
 
-	// Initial snapshot.
-	devices, _ := w.provider.Enumerate(ctx)
-	for _, d := range devices {
-		w.known[d.ID] = true
+	// Initial snapshot from all providers.
+	for _, p := range w.providers {
+		devices, _ := p.Enumerate(ctx)
+		for _, d := range devices {
+			w.known[d.ID] = d
+		}
 	}
 
-	go func() {
-		ticker := time.NewTicker(2 * time.Second)
-		defer ticker.Stop()
-		defer close(w.events)
-
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				current, _ := w.provider.Enumerate(ctx)
-				currentIDs := make(map[DeviceID]bool)
-
-				for _, d := range current {
-					currentIDs[d.ID] = true
-					if !w.known[d.ID] {
-						w.known[d.ID] = true
-						select {
-						case w.events <- HotPlugEvent{
-							Type:      HotPlugConnect,
-							Info:      d,
-							Timestamp: time.Now(),
-						}:
-						default:
-						}
-					}
-				}
-
-				for id := range w.known {
-					if !currentIDs[id] {
-						delete(w.known, id)
-						select {
-						case w.events <- HotPlugEvent{
-							Type:      HotPlugDisconnect,
-							Info:      Info{ID: id},
-							Timestamp: time.Now(),
-						}:
-						default:
-						}
-					}
-				}
-			}
+	// Try to create a netlink socket for instant uevent notification.
+	fd, err := syscall.Socket(syscall.AF_NETLINK, syscall.SOCK_DGRAM, netlinkKobjectUevent)
+	if err == nil {
+		sa := &syscall.SockaddrNetlink{
+			Family: syscall.AF_NETLINK,
+			Groups: 1, // Multicast group 1 = kernel uevents
 		}
-	}()
+		if bindErr := syscall.Bind(fd, sa); bindErr != nil {
+			syscall.Close(fd)
+			fd = -1
+			slog.Warn("hotplug: netlink bind failed, falling back to polling", "error", bindErr)
+		}
+	} else {
+		slog.Warn("hotplug: netlink socket creation failed, falling back to polling", "error", err)
+		fd = -1
+	}
+
+	w.netlinkFD = fd
+
+	if fd >= 0 {
+		go w.netlinkLoop(ctx)
+	} else {
+		go w.pollingLoop(ctx)
+	}
 
 	return nil
+}
+
+// netlinkLoop reads KOBJECT_UEVENT messages and triggers re-enumeration on
+// relevant subsystem events (input for evdev, sound for MIDI).
+func (w *LinuxHotPlugWatcher) netlinkLoop(ctx context.Context) {
+	defer close(w.events)
+
+	buf := make([]byte, 4096)
+	var debounceTimer *time.Timer
+	debounceCh := make(chan struct{}, 1) // buffered so sends never block
+
+	for {
+		select {
+		case <-ctx.Done():
+			if debounceTimer != nil {
+				debounceTimer.Stop()
+			}
+			return
+		default:
+		}
+
+		// Set a read deadline so we can check context cancellation periodically.
+		tv := syscall.Timeval{Sec: 1}
+		syscall.SetsockoptTimeval(w.netlinkFD, syscall.SOL_SOCKET, syscall.SO_RCVTIMEO, &tv)
+
+		n, _, err := syscall.Recvfrom(w.netlinkFD, buf, 0)
+		if err != nil {
+			// EAGAIN/EWOULDBLOCK means the timeout fired — just loop.
+			if err == syscall.EAGAIN || err == syscall.EWOULDBLOCK {
+				// Process any pending debounce.
+				select {
+				case <-debounceCh:
+					w.rescan(ctx)
+				default:
+				}
+				continue
+			}
+			// Real error — give up on netlink, switch to polling.
+			slog.Warn("hotplug: netlink read error, switching to polling", "error", err)
+			go w.pollingLoopNoClose(ctx)
+			return
+		}
+
+		if n <= 0 {
+			continue
+		}
+
+		// Parse the uevent message. Format: null-terminated key=value pairs.
+		if !isRelevantUevent(buf[:n]) {
+			continue
+		}
+
+		// Debounce: coalesce rapid uevent flurries into a single rescan.
+		if debounceTimer != nil {
+			debounceTimer.Stop()
+		}
+		debounceTimer = time.AfterFunc(hotplugDebounce, func() {
+			select {
+			case debounceCh <- struct{}{}:
+			default:
+			}
+		})
+	}
+}
+
+// isRelevantUevent checks if a raw netlink uevent message contains an
+// add or remove action for a subsystem we care about (input or sound).
+func isRelevantUevent(data []byte) bool {
+	var action, subsystem string
+
+	// Uevent messages are sequences of null-terminated KEY=VALUE strings.
+	// The first segment is the kobject path (e.g., "add@/devices/...") —
+	// subsequent segments are KEY=VALUE pairs.
+	for _, part := range splitNullTerminated(data) {
+		if k, v, ok := strings.Cut(part, "="); ok {
+			switch k {
+			case "ACTION":
+				action = v
+			case "SUBSYSTEM":
+				subsystem = v
+			}
+		}
+	}
+
+	if action != "add" && action != "remove" {
+		return false
+	}
+	return subsystem == "input" || subsystem == "sound"
+}
+
+// splitNullTerminated splits a byte buffer into strings separated by null bytes.
+func splitNullTerminated(data []byte) []string {
+	var parts []string
+	start := 0
+	for i, b := range data {
+		if b == 0 {
+			if i > start {
+				parts = append(parts, string(data[start:i]))
+			}
+			start = i + 1
+		}
+	}
+	// Handle trailing data without null terminator.
+	if start < len(data) {
+		parts = append(parts, string(data[start:]))
+	}
+	return parts
+}
+
+// rescan re-enumerates all providers and emits connect/disconnect events.
+func (w *LinuxHotPlugWatcher) rescan(ctx context.Context) {
+	currentIDs := make(map[DeviceID]Info)
+
+	for _, p := range w.providers {
+		devices, _ := p.Enumerate(ctx)
+		for _, d := range devices {
+			currentIDs[d.ID] = d
+		}
+	}
+
+	// Detect new devices.
+	for id, info := range currentIDs {
+		if _, existed := w.known[id]; !existed {
+			w.known[id] = info
+			select {
+			case w.events <- HotPlugEvent{
+				Type:      HotPlugConnect,
+				Info:      info,
+				Timestamp: time.Now(),
+			}:
+			default:
+			}
+		}
+	}
+
+	// Detect removed devices.
+	for id, info := range w.known {
+		if _, exists := currentIDs[id]; !exists {
+			delete(w.known, id)
+			select {
+			case w.events <- HotPlugEvent{
+				Type:      HotPlugDisconnect,
+				Info:      info,
+				Timestamp: time.Now(),
+			}:
+			default:
+			}
+		}
+	}
+}
+
+// pollingLoop is the fallback that polls providers every 2 seconds.
+func (w *LinuxHotPlugWatcher) pollingLoop(ctx context.Context) {
+	defer close(w.events)
+	w.pollingLoopNoClose(ctx)
+}
+
+// pollingLoopNoClose runs the polling loop without closing the events channel.
+// Used when switching from netlink to polling mid-stream.
+func (w *LinuxHotPlugWatcher) pollingLoopNoClose(ctx context.Context) {
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			w.rescan(ctx)
+		}
+	}
 }
 
 func (w *LinuxHotPlugWatcher) Events() <-chan HotPlugEvent { return w.events }
@@ -956,6 +1165,10 @@ func (w *LinuxHotPlugWatcher) Events() <-chan HotPlugEvent { return w.events }
 func (w *LinuxHotPlugWatcher) Close() error {
 	if w.cancel != nil {
 		w.cancel()
+	}
+	if w.netlinkFD >= 0 {
+		syscall.Close(w.netlinkFD)
+		w.netlinkFD = -1
 	}
 	return nil
 }
