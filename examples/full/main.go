@@ -92,6 +92,7 @@ func (m *NotesModule) Tools() []registry.ToolDefinition {
 	)
 	searchTool.Category = "notes"
 	searchTool.Tags = []string{"search", "read-only"}
+	searchTool.SearchTerms = []string{"find notes", "lookup notes", "query notes"}
 	searchTool.Complexity = registry.ComplexitySimple
 
 	createTool := handler.TypedHandler[NoteCreateInput, NoteCreateOutput](
@@ -109,6 +110,7 @@ func (m *NotesModule) Tools() []registry.ToolDefinition {
 	)
 	createTool.Category = "notes"
 	createTool.Tags = []string{"create", "write"}
+	createTool.DeferLoading = true
 
 	return []registry.ToolDefinition{searchTool, createTool}
 }

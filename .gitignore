@@ -18,6 +18,7 @@ logs/
 # Compiled binaries
 /minimal
 /full
+/http
 /examples/http/http
 /examples/gateway/gateway
 /examples/elicitation/elicitation
@@ -35,3 +36,11 @@ cov.out
 .idea/
 *.swp
 *.swo
+
+# Local env files
+.env
+.env.local
+.envrc
+.env.*
+!.env.example
+!.env.*.example

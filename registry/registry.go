@@ -34,6 +34,7 @@ type ToolDefinition struct {
 	Category            string
 	Subcategory         string
 	Tags                []string
+	SearchTerms         []string
 	UseCases            []string
 	Complexity          ToolComplexity
 	IsWrite             bool
@@ -44,6 +45,8 @@ type ToolDefinition struct {
 	CircuitBreakerGroup string
 	RuntimeGroup        string
 	OutputSchema        *ToolOutputSchema
+	MaxResultChars      int
+	DeferLoading        bool
 }
 
 // ToolModule is the interface that tool modules implement.
@@ -312,10 +315,7 @@ func (r *ToolRegistry) RegisterWithServer(s *MCPServer) {
 	defer r.mu.RUnlock()
 
 	for _, tool := range r.tools {
-		annotated := ApplyMCPAnnotations(tool, r.config.ToolNamePrefix)
-		if annotated.OutputSchema != nil {
-			annotated.Tool.OutputSchema = *annotated.OutputSchema
-		}
+		annotated := ApplyToolMetadata(tool, r.config.ToolNamePrefix, r.deferred[tool.Tool.Name])
 		wrapped := r.wrapHandler(tool.Tool.Name, tool)
 		AddToolToServer(s, annotated.Tool, wrapped)
 	}
@@ -335,7 +335,7 @@ func (r *ToolRegistry) wrapHandler(toolName string, td ToolDefinition) ToolHandl
 	if timeout == 0 {
 		timeout = r.config.DefaultTimeout
 	}
-	maxSize := r.config.MaxResponseSize
+	maxSize := effectiveMaxResponseSize(td, r.config.MaxResponseSize)
 
 	return func(ctx context.Context, request CallToolRequest) (result *CallToolResult, err error) {
 		// Enforce timeout

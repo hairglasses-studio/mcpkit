@@ -9,7 +9,7 @@ import (
 type ToolSearchResult struct {
 	Tool      ToolDefinition
 	Score     int
-	MatchType string // "name", "tag", "category", "runtime_group", "description"
+	MatchType string // "name", "tag", "search_term", "category", "runtime_group", "description"
 }
 
 // SearchTools searches for tools matching a query string.
@@ -37,6 +37,10 @@ func (r *ToolRegistry) SearchTools(query string) []ToolSearchResult {
 		tagsLower := make([]string, len(tool.Tags))
 		for i, t := range tool.Tags {
 			tagsLower[i] = strings.ToLower(t)
+		}
+		searchTermsLower := make([]string, len(tool.SearchTerms))
+		for i, term := range tool.SearchTerms {
+			searchTermsLower[i] = strings.ToLower(term)
 		}
 
 		allWordsMatched := true
@@ -90,6 +94,29 @@ func (r *ToolRegistry) SearchTools(query string) []ToolSearchResult {
 					wordMatched = true
 					if bestMatchType == "" || bestMatchType == "description" {
 						bestMatchType = "tag"
+					}
+				}
+			}
+
+			// Explicit search terms / synonyms
+			for _, termLower := range searchTermsLower {
+				if termLower == word {
+					wordScore += 30 * weight
+					wordMatched = true
+					if bestMatchType == "" || bestMatchType == "description" || bestMatchType == "category" {
+						bestMatchType = "search_term"
+					}
+				} else if strings.Contains(termLower, word) {
+					wordScore += 16 * weight
+					wordMatched = true
+					if bestMatchType == "" || bestMatchType == "description" || bestMatchType == "category" {
+						bestMatchType = "search_term"
+					}
+				} else if fuzzy := fuzzyMatchSegments(word, termLower); fuzzy > 0 {
+					wordScore += float64(7*fuzzy) * weight
+					wordMatched = true
+					if bestMatchType == "" || bestMatchType == "description" || bestMatchType == "category" {
+						bestMatchType = "search_term"
 					}
 				}
 			}

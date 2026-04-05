@@ -218,6 +218,30 @@ func TestApplyMCPAnnotations_TitleGenerationNoPrefix(t *testing.T) {
 	}
 }
 
+func TestApplyToolMetadata_MaxResultCharsAndDeferred(t *testing.T) {
+	td := ToolDefinition{
+		Tool:           Tool{Name: "myapp_logs_fetch"},
+		MaxResultChars: 4096,
+		DeferLoading:   true,
+	}
+
+	annotated := ApplyToolMetadata(td, "myapp_", false)
+
+	if !annotated.Tool.DeferLoading {
+		t.Fatal("expected defer_loading to be set on tool descriptor")
+	}
+	if annotated.Tool.Meta == nil {
+		t.Fatal("expected tool meta to be initialized")
+	}
+	got, ok := annotated.Tool.Meta.AdditionalFields[anthropicMaxResultSizeMetaKey]
+	if !ok {
+		t.Fatalf("expected %q metadata field to be set", anthropicMaxResultSizeMetaKey)
+	}
+	if got != 4096 {
+		t.Fatalf("max result metadata = %v, want 4096", got)
+	}
+}
+
 // TestApplyMCPAnnotations_TitleGenerationWithPrefix verifies prefix stripping in title.
 func TestApplyMCPAnnotations_TitleGenerationWithPrefix(t *testing.T) {
 	cases := []struct {

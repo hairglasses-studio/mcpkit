@@ -19,6 +19,7 @@ type (
 	CallToolRequest = mcp.CallToolRequest
 	CallToolResult  = mcp.CallToolResult
 	ToolAnnotation  = mcp.ToolAnnotations // plural in official SDK
+	ToolMeta        = mcp.Meta
 	TextContent     = mcp.TextContent
 	Content         = mcp.Content
 
@@ -45,9 +46,9 @@ type (
 	ModelPreferences     = mcp.ModelPreferences
 
 	// Root types
-	Root             = mcp.Root
-	ListRootsParams  = mcp.ListRootsParams
-	ListRootsResult  = mcp.ListRootsResult
+	Root            = mcp.Root
+	ListRootsParams = mcp.ListRootsParams
+	ListRootsResult = mcp.ListRootsResult
 )
 
 // Note: The official SDK does not have separate ToolInputSchema/ToolOutputSchema
@@ -167,6 +168,21 @@ func MakeStructuredResult(content Content, data any) *CallToolResult {
 		Content:           []mcp.Content{content},
 		StructuredContent: data,
 	}
+}
+
+// SetToolMetaField stores an additional metadata field on a tool descriptor.
+func SetToolMetaField(tool *Tool, key string, value any) {
+	if tool.Meta == nil {
+		tool.Meta = ToolMeta{}
+	}
+	tool.Meta[key] = value
+}
+
+// SetToolDeferLoading is a no-op for the official SDK until it exposes an
+// equivalent field on tool descriptors.
+func SetToolDeferLoading(tool *Tool, deferred bool) {
+	_ = tool
+	_ = deferred
 }
 
 // ExtractTextContent extracts the text from a Content value if it is a TextContent.
