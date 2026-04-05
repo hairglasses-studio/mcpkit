@@ -1,0 +1,124 @@
+name: Server Card Submission
+description: Submit or update a Server Card for an MCP server
+title: "[Server Card] "
+labels: ["type/server-card", "status/triage"]
+assignees: ["hairglasses"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Submit a Server Card describing an MCP server's capabilities. Server Cards follow the MCP Server Card specification for standardized server discovery.
+
+  - type: input
+    id: server-name
+    attributes:
+      label: Server Name
+      description: Name of the MCP server
+      placeholder: "dotfiles-mcp"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: One-paragraph description of what this server does
+      placeholder: "dotfiles-mcp provides 90 MCP tools for Linux desktop automation, covering Hyprland/Sway window management, GLSL shader pipeline, Bluetooth, MIDI, and open-source scoring."
+    validations:
+      required: true
+
+  - type: input
+    id: tool-count
+    attributes:
+      label: Tool Count
+      description: How many tools does this server expose?
+      placeholder: "90"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: transport
+    attributes:
+      label: Transport Type
+      description: How does this server communicate?
+      options:
+        - stdio
+        - Streamable HTTP (SSE)
+        - HTTP + SSE (legacy)
+        - Both (stdio + HTTP)
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: homepage
+    attributes:
+      label: Homepage URL
+      description: Repository or documentation URL
+      placeholder: "https://github.com/hairglasses-studio/dotfiles-mcp"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: capabilities
+    attributes:
+      label: Capabilities
+      description: Which MCP capabilities does this server support?
+      options:
+        - label: Tools
+          required: false
+        - label: Resources
+          required: false
+        - label: Prompts
+          required: false
+        - label: Sampling
+          required: false
+        - label: Logging
+          required: false
+        - label: Elicitation
+          required: false
+        - label: Structured Output
+          required: false
+        - label: Async Tasks
+          required: false
+
+  - type: textarea
+    id: tool-categories
+    attributes:
+      label: Tool Categories
+      description: Group tools by domain/module
+      placeholder: |
+        | Category | Tools | Example |
+        |----------|-------|---------|
+        | Window Management | 15 | hypr_move_window, hypr_resize |
+        | Shaders | 12 | shader_apply, shader_list |
+        | Input Devices | 8 | input_list, input_configure |
+
+  - type: input
+    id: wellknown
+    attributes:
+      label: Well-Known URL
+      description: "If the server exposes a `.well-known/mcp-server-card.json`, provide the URL"
+      placeholder: "https://example.com/.well-known/mcp-server-card.json"
+
+  - type: textarea
+    id: requirements
+    attributes:
+      label: System Requirements
+      description: What does this server need to run?
+      placeholder: |
+        - Linux with systemd
+        - Hyprland or Sway (for window management tools)
+        - Go 1.26.1+ (to build from source)
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: The server is publicly available (open source or hosted)
+          required: true
+        - label: The server has a README with installation and usage instructions
+          required: true
+        - label: The server follows MCP protocol specification
+          required: true
