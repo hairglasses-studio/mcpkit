@@ -1,6 +1,12 @@
 {
   "name": "R\u0026D Cycle: cycle-1",
+<<<<<<< HEAD
   "description": "Autonomous R\u0026D cycle 'cycle-1' (strategy: meta_improve, since: 2026-04-05T14:45:14Z).",
+||||||| 4307688
+  "description": "Autonomous R\u0026D cycle 'cycle-1' (strategy: meta_improve, since: 2026-04-05T14:17:42Z).",
+=======
+  "description": "Autonomous R\u0026D cycle 'cycle-1' (strategy: meta_improve, since: 2026-04-05T14:30:24Z).",
+>>>>>>> 9e0ed2c349893f9c4887a9cd60ff027443d86dd2
   "completion": "All planned work items are implemented, tests pass, and roadmap is updated.",
   "tasks": [
     {
