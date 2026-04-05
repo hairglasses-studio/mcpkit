@@ -81,24 +81,28 @@ func (s *Server) handleTaskSend(w http.ResponseWriter, req JSONRPCRequest) {
 		params.ID = uuid.New().String()
 	}
 
+	now := time.Now()
+
 	// Create task
 	task := &Task{
 		ID:       params.ID,
 		State:    TaskSubmitted,
 		Messages: params.Messages,
 		Metadata: params.Metadata,
-		Created:  time.Now(),
-		Updated:  time.Now(),
+		Created:  now,
+		Updated:  now,
 	}
 
 	s.mu.Lock()
 	s.tasks[task.ID] = task
+	snapshot := task.snapshot()
 	s.mu.Unlock()
 
-	// Dispatch to MCP tool (synchronous for now)
+	// Dispatch to MCP tool asynchronously.
 	go s.dispatchTask(task)
 
-	writeRPCResult(w, req.ID, task)
+	// Serialize the snapshot taken under lock to avoid racing with dispatchTask.
+	writeRPCResult(w, req.ID, &snapshot)
 }
 
 func (s *Server) handleTaskGet(w http.ResponseWriter, req JSONRPCRequest) {
@@ -110,6 +114,10 @@ func (s *Server) handleTaskGet(w http.ResponseWriter, req JSONRPCRequest) {
 
 	s.mu.RLock()
 	task, ok := s.tasks[params.ID]
+	var snapshot Task
+	if ok {
+		snapshot = task.snapshot()
+	}
 	s.mu.RUnlock()
 
 	if !ok {
@@ -117,7 +125,7 @@ func (s *Server) handleTaskGet(w http.ResponseWriter, req JSONRPCRequest) {
 		return
 	}
 
-	writeRPCResult(w, req.ID, task)
+	writeRPCResult(w, req.ID, &snapshot)
 }
 
 func (s *Server) handleTaskCancel(w http.ResponseWriter, req JSONRPCRequest) {
@@ -129,9 +137,13 @@ func (s *Server) handleTaskCancel(w http.ResponseWriter, req JSONRPCRequest) {
 
 	s.mu.Lock()
 	task, ok := s.tasks[params.ID]
-	if ok && !task.State.IsTerminal() {
-		task.State = TaskCanceled
-		task.Updated = time.Now()
+	var snapshot Task
+	if ok {
+		if !task.State.IsTerminal() {
+			task.State = TaskCanceled
+			task.Updated = time.Now()
+		}
+		snapshot = task.snapshot()
 	}
 	s.mu.Unlock()
 
@@ -140,7 +152,7 @@ func (s *Server) handleTaskCancel(w http.ResponseWriter, req JSONRPCRequest) {
 		return
 	}
 
-	writeRPCResult(w, req.ID, task)
+	writeRPCResult(w, req.ID, &snapshot)
 }
 
 // dispatchTask finds the best MCP tool for the task and executes it.
