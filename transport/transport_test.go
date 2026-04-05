@@ -92,7 +92,7 @@ func TestStdioTransport_FromRW(t *testing.T) {
 // WebSocketTransport stub
 // --------------------------------------------------------------------------
 
-func TestWebSocketTransport_Stub(t *testing.T) {
+func TestWebSocketTransport_NoConn(t *testing.T) {
 	ws := transport.NewWebSocketTransport("ws://localhost:8080")
 	if ws.URL() != "ws://localhost:8080" {
 		t.Fatalf("unexpected URL: %s", ws.URL())
@@ -100,9 +100,9 @@ func TestWebSocketTransport_Stub(t *testing.T) {
 
 	err := ws.Start(context.Background())
 	if err == nil {
-		t.Fatal("expected error from stub Start")
+		t.Fatal("expected error when starting without conn")
 	}
-	if !strings.Contains(err.Error(), "not yet implemented") {
+	if !strings.Contains(err.Error(), "not set") {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
