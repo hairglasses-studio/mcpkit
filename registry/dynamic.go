@@ -115,10 +115,7 @@ func (r *ToolRegistry) RegisterFilteredWithServer(s *MCPServer, filter ToolFilte
 		if !filter(tool) {
 			continue
 		}
-		annotated := ApplyMCPAnnotations(tool, r.config.ToolNamePrefix)
-		if annotated.OutputSchema != nil {
-			annotated.Tool.OutputSchema = *annotated.OutputSchema
-		}
+		annotated := ApplyToolMetadata(tool, r.config.ToolNamePrefix, r.deferred[tool.Tool.Name])
 		wrapped := r.wrapHandler(tool.Tool.Name, tool)
 		AddToolToServer(s, annotated.Tool, wrapped)
 	}
@@ -181,4 +178,3 @@ func NotDeferred(deferred map[string]bool) ToolFilter {
 		return !deferred[td.Tool.Name]
 	}
 }
-

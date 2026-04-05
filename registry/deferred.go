@@ -37,6 +37,9 @@ func (r *ToolRegistry) RegisterDeferredModule(module ToolModule, deferredTools m
 		if !tool.IsWrite {
 			tool.IsWrite = InferIsWrite(tool.Tool.Name)
 		}
+		if deferredTools[tool.Tool.Name] {
+			tool.DeferLoading = true
+		}
 
 		r.tools[tool.Tool.Name] = tool
 
@@ -53,8 +56,8 @@ func (r *ToolRegistry) ListEagerTools() []string {
 	defer r.mu.RUnlock()
 
 	var names []string
-	for name := range r.tools {
-		if !r.deferred[name] {
+	for name, tool := range r.tools {
+		if !r.deferred[name] && !tool.DeferLoading {
 			names = append(names, name)
 		}
 	}
@@ -67,8 +70,10 @@ func (r *ToolRegistry) ListDeferredTools() []string {
 	defer r.mu.RUnlock()
 
 	var names []string
-	for name := range r.deferred {
-		names = append(names, name)
+	for name, tool := range r.tools {
+		if r.deferred[name] || tool.DeferLoading {
+			names = append(names, name)
+		}
 	}
 	return names
 }
@@ -78,19 +83,27 @@ func (r *ToolRegistry) SetDeferred(toolName string, deferred bool) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if _, exists := r.tools[toolName]; !exists {
+	tool, exists := r.tools[toolName]
+	if !exists {
 		return
 	}
 	if deferred {
 		r.deferred[toolName] = true
+		tool.DeferLoading = true
 	} else {
 		delete(r.deferred, toolName)
+		tool.DeferLoading = false
 	}
+	r.tools[toolName] = tool
 }
 
 // IsDeferred returns whether a tool is marked for deferred loading.
 func (r *ToolRegistry) IsDeferred(toolName string) bool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	return r.deferred[toolName]
+	if r.deferred[toolName] {
+		return true
+	}
+	tool, ok := r.tools[toolName]
+	return ok && tool.DeferLoading
 }

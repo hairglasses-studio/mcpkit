@@ -22,6 +22,10 @@ type UpstreamConfig struct {
 	// URL is the streamable HTTP endpoint of the upstream server.
 	URL string
 
+	// AllowedTools limits the upstream surface to an explicit subset of tool
+	// names. Empty means expose every discovered tool.
+	AllowedTools []string
+
 	// HealthInterval is how often to ping the upstream. Default: 30s.
 	HealthInterval time.Duration
 
@@ -40,6 +44,18 @@ func (c *UpstreamConfig) applyDefaults() {
 	if c.UnhealthyThreshold == 0 {
 		c.UnhealthyThreshold = 3
 	}
+}
+
+func (c UpstreamConfig) allowsTool(name string) bool {
+	if len(c.AllowedTools) == 0 {
+		return true
+	}
+	for _, allowed := range c.AllowedTools {
+		if allowed == name {
+			return true
+		}
+	}
+	return false
 }
 
 // UpstreamInfo provides status information about an upstream.
@@ -101,9 +117,15 @@ func (u *upstream) syncTools(ctx context.Context) ([]mcp.Tool, error) {
 		return nil, err
 	}
 	u.mu.Lock()
-	u.tools = result.Tools
+	filtered := make([]mcp.Tool, 0, len(result.Tools))
+	for _, tool := range result.Tools {
+		if u.config.allowsTool(tool.Name) {
+			filtered = append(filtered, tool)
+		}
+	}
+	u.tools = filtered
 	u.mu.Unlock()
-	return result.Tools, nil
+	return filtered, nil
 }
 
 // startHealthLoop begins periodic health checking.

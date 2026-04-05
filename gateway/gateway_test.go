@@ -86,6 +86,27 @@ func TestAddUpstream(t *testing.T) {
 	}
 }
 
+func TestAddUpstream_AllowedToolsFilter(t *testing.T) {
+	_, cfg := newTestUpstream(t, "svc1", echoTool("greet"), echoTool("farewell"))
+	cfg.AllowedTools = []string{"farewell"}
+
+	gw, reg := NewGateway()
+	defer gw.Close()
+
+	count, err := gw.AddUpstream(context.Background(), cfg)
+	if err != nil {
+		t.Fatalf("AddUpstream: %v", err)
+	}
+	if count != 1 {
+		t.Fatalf("expected 1 allowed tool, got %d", count)
+	}
+
+	tools := reg.ListTools()
+	if len(tools) != 1 || tools[0] != "svc1.farewell" {
+		t.Fatalf("expected only svc1.farewell, got %v", tools)
+	}
+}
+
 func TestProxyToolCall(t *testing.T) {
 	_, cfg := newTestUpstream(t, "echo", echoTool("say"))
 	gw, reg := NewGateway()
