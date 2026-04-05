@@ -1,16 +1,34 @@
 {
   "name": "R\u0026D Cycle: cycle-2",
+<<<<<<< HEAD
   "description": "Autonomous R\u0026D cycle 'cycle-2' (strategy: full, since: 2026-04-05T14:45:14Z).",
+||||||| 4307688
+  "description": "Autonomous R\u0026D cycle 'cycle-2' (strategy: full, since: 2026-04-05T14:17:43Z).",
+=======
+  "description": "Autonomous R\u0026D cycle 'cycle-2' (strategy: full, since: 2026-04-05T14:30:24Z).",
+>>>>>>> 9e0ed2c349893f9c4887a9cd60ff027443d86dd2
   "completion": "All planned work items are implemented, tests pass, and roadmap is updated.",
   "tasks": [
     {
       "id": "scan",
+<<<<<<< HEAD
       "description": "Run rdcycle_scan to check ecosystem activity since 2026-04-05T14:45:14Z.",
+||||||| 4307688
+      "description": "Run rdcycle_scan to check ecosystem activity since 2026-04-05T14:17:43Z.",
+=======
+      "description": "Run rdcycle_scan to check ecosystem activity since 2026-04-05T14:30:24Z.",
+>>>>>>> 9e0ed2c349893f9c4887a9cd60ff027443d86dd2
       "done": false
     },
     {
       "id": "plan",
+<<<<<<< HEAD
       "description": "Run rdcycle_plan with scan results and roadmap at /tmp/TestPerpetualStartAndStop4275102279/001/roadmap.json.",
+||||||| 4307688
+      "description": "Run rdcycle_plan with scan results and roadmap at /tmp/TestPerpetualStartAndStop2315344620/001/roadmap.json.",
+=======
+      "description": "Run rdcycle_plan with scan results and roadmap at /var/folders/np/fwx0ngdd4md0vvn83hn11nr80000gn/T/TestPerpetualStartAndStop2868502322/001/roadmap.json.",
+>>>>>>> 9e0ed2c349893f9c4887a9cd60ff027443d86dd2
       "done": false,
       "depends_on": [
         "scan"
