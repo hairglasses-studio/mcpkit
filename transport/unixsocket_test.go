@@ -1,14 +1,22 @@
 package transport
 
 import (
+	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
+	"fmt"
+	"log/slog"
+	"net"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/mark3labs/mcp-go/server"
 )
 
 // --------------------------------------------------------------------------
@@ -252,5 +260,419 @@ func TestDefaultSocketPath_EmptyName(t *testing.T) {
 	expected := "/run/user/1000/mcpkit/.sock"
 	if path != expected {
 		t.Errorf("expected %q, got %q", expected, path)
+	}
+}
+
+// --------------------------------------------------------------------------
+// NewUnixSocketServer + WithLogger
+// --------------------------------------------------------------------------
+
+func TestNewUnixSocketServer(t *testing.T) {
+	t.Parallel()
+	s := server.NewMCPServer("test", "1.0.0")
+	us := NewUnixSocketServer(s, "/tmp/test-mcpkit.sock")
+	if us == nil {
+		t.Fatal("expected non-nil UnixSocketServer")
+	}
+	if us.socketPath != "/tmp/test-mcpkit.sock" {
+		t.Errorf("unexpected socket path: %s", us.socketPath)
+	}
+}
+
+func TestNewUnixSocketServer_WithLogger(t *testing.T) {
+	t.Parallel()
+	s := server.NewMCPServer("test", "1.0.0")
+	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
+	us := NewUnixSocketServer(s, "/tmp/test-logger.sock", WithLogger(logger))
+	if us.logger != logger {
+		t.Error("expected custom logger to be set")
+	}
+}
+
+// --------------------------------------------------------------------------
+// Unix socket server integration tests (Serve + handleConn + Shutdown)
+// --------------------------------------------------------------------------
+
+// testSocketPath returns a unique socket path inside t.TempDir().
+func testSocketPath(t *testing.T) string {
+	t.Helper()
+	return filepath.Join(t.TempDir(), "test.sock")
+}
+
+// waitForSocket polls until the socket file exists or the deadline is reached.
+func waitForSocket(t *testing.T, sockPath string) {
+	t.Helper()
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		if _, err := os.Stat(sockPath); err == nil {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatalf("socket %s did not appear in time", sockPath)
+}
+
+func TestUnixSocketServer_ServeAndShutdown(t *testing.T) {
+	t.Parallel()
+
+	sockPath := testSocketPath(t)
+	mcpSrv := server.NewMCPServer("test-srv", "1.0.0")
+	us := NewUnixSocketServer(mcpSrv, sockPath, WithLogger(slog.Default()))
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	serveErr := make(chan error, 1)
+	go func() {
+		serveErr <- us.Serve(ctx)
+	}()
+
+	waitForSocket(t, sockPath)
+
+	// Connect and send a valid JSON-RPC initialize request.
+	conn, err := net.Dial("unix", sockPath)
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	defer conn.Close()
+
+	initReq := `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}` + "\n"
+	if _, err := conn.Write([]byte(initReq)); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+
+	// Read the response.
+	conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+	reader := bufio.NewReader(conn)
+	line, err := reader.ReadString('\n')
+	if err != nil {
+		t.Fatalf("read response: %v", err)
+	}
+
+	// Should be valid JSON-RPC response.
+	var resp map[string]any
+	if err := json.Unmarshal([]byte(line), &resp); err != nil {
+		t.Fatalf("unmarshal response: %v (raw: %s)", err, line)
+	}
+	if resp["jsonrpc"] != "2.0" {
+		t.Errorf("expected jsonrpc 2.0, got %v", resp["jsonrpc"])
+	}
+
+	// Shutdown the server.
+	if err := us.Shutdown(); err != nil {
+		t.Fatalf("Shutdown: %v", err)
+	}
+
+	// Cancel context so Serve returns.
+	cancel()
+
+	select {
+	case err := <-serveErr:
+		// Serve should return with context.Canceled or a listener close error.
+		if err != nil && !strings.Contains(err.Error(), "context canceled") && !strings.Contains(err.Error(), "use of closed") {
+			t.Logf("Serve returned: %v (acceptable)", err)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("Serve did not return after shutdown")
+	}
+
+	// Socket file should be removed.
+	if _, err := os.Stat(sockPath); err == nil {
+		t.Error("expected socket file to be removed after Shutdown")
+	}
+}
+
+func TestUnixSocketServer_HandleConn_ParseError(t *testing.T) {
+	t.Parallel()
+
+	sockPath := testSocketPath(t)
+	mcpSrv := server.NewMCPServer("test-parse", "1.0.0")
+	us := NewUnixSocketServer(mcpSrv, sockPath)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go us.Serve(ctx)
+	waitForSocket(t, sockPath)
+
+	conn, err := net.Dial("unix", sockPath)
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	defer conn.Close()
+
+	// Send invalid JSON to trigger parse error path.
+	if _, err := conn.Write([]byte("not valid json\n")); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+
+	conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+	reader := bufio.NewReader(conn)
+	line, err := reader.ReadString('\n')
+	if err != nil {
+		t.Fatalf("read: %v", err)
+	}
+
+	// Should receive a JSON-RPC error response.
+	var errResp jsonRPCError
+	if err := json.Unmarshal([]byte(line), &errResp); err != nil {
+		t.Fatalf("unmarshal error response: %v", err)
+	}
+	if errResp.Error.Message != "Parse error" {
+		t.Errorf("expected 'Parse error', got %q", errResp.Error.Message)
+	}
+
+	us.Shutdown()
+	cancel()
+}
+
+func TestUnixSocketServer_HandleConn_MultipleClients(t *testing.T) {
+	t.Parallel()
+
+	sockPath := testSocketPath(t)
+	mcpSrv := server.NewMCPServer("test-multi", "1.0.0")
+	us := NewUnixSocketServer(mcpSrv, sockPath)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go us.Serve(ctx)
+	waitForSocket(t, sockPath)
+
+	// Connect two clients concurrently.
+	var wg sync.WaitGroup
+	for i := 0; i < 2; i++ {
+		wg.Add(1)
+		go func(clientID int) {
+			defer wg.Done()
+			conn, err := net.Dial("unix", sockPath)
+			if err != nil {
+				t.Errorf("client %d dial: %v", clientID, err)
+				return
+			}
+			defer conn.Close()
+
+			initReq := fmt.Sprintf(`{"jsonrpc":"2.0","id":%d,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"client-%d","version":"1.0"}}}`+"\n", clientID, clientID)
+			if _, err := conn.Write([]byte(initReq)); err != nil {
+				t.Errorf("client %d write: %v", clientID, err)
+				return
+			}
+
+			conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+			reader := bufio.NewReader(conn)
+			line, err := reader.ReadString('\n')
+			if err != nil {
+				t.Errorf("client %d read: %v", clientID, err)
+				return
+			}
+
+			var resp map[string]any
+			if err := json.Unmarshal([]byte(line), &resp); err != nil {
+				t.Errorf("client %d unmarshal: %v", clientID, err)
+				return
+			}
+			if resp["jsonrpc"] != "2.0" {
+				t.Errorf("client %d: expected jsonrpc 2.0, got %v", clientID, resp["jsonrpc"])
+			}
+		}(i + 1)
+	}
+	wg.Wait()
+
+	us.Shutdown()
+	cancel()
+}
+
+func TestUnixSocketServer_Shutdown_Idempotent(t *testing.T) {
+	t.Parallel()
+
+	sockPath := testSocketPath(t)
+	mcpSrv := server.NewMCPServer("test-idempotent", "1.0.0")
+	us := NewUnixSocketServer(mcpSrv, sockPath)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	go us.Serve(ctx)
+	waitForSocket(t, sockPath)
+
+	// Double shutdown should not panic.
+	if err := us.Shutdown(); err != nil {
+		t.Fatalf("first Shutdown: %v", err)
+	}
+	if err := us.Shutdown(); err != nil {
+		t.Fatalf("second Shutdown: %v", err)
+	}
+
+	cancel()
+}
+
+func TestUnixSocketServer_Serve_InvalidPath(t *testing.T) {
+	t.Parallel()
+
+	// Use a path that cannot be created.
+	mcpSrv := server.NewMCPServer("test-bad", "1.0.0")
+	us := NewUnixSocketServer(mcpSrv, "/dev/null/impossible/test.sock")
+
+	ctx := context.Background()
+	err := us.Serve(ctx)
+	if err == nil {
+		t.Fatal("expected error for invalid socket path")
+	}
+}
+
+// --------------------------------------------------------------------------
+// UnixSocketClient integration tests (DialUnixSocket, Call, Close)
+// --------------------------------------------------------------------------
+
+func TestUnixSocketClient_DialCallClose(t *testing.T) {
+	t.Parallel()
+
+	sockPath := testSocketPath(t)
+	mcpSrv := server.NewMCPServer("test-client", "1.0.0")
+	us := NewUnixSocketServer(mcpSrv, sockPath)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go us.Serve(ctx)
+	waitForSocket(t, sockPath)
+
+	// Dial the socket using the client.
+	client, err := DialUnixSocket(sockPath)
+	if err != nil {
+		t.Fatalf("DialUnixSocket: %v", err)
+	}
+
+	// Call initialize.
+	resp, err := client.Call("initialize", map[string]any{
+		"protocolVersion": "2024-11-05",
+		"capabilities":    map[string]any{},
+		"clientInfo":      map[string]any{"name": "go-test", "version": "1.0"},
+	})
+	if err != nil {
+		t.Fatalf("Call: %v", err)
+	}
+
+	// Response should be valid JSON-RPC.
+	var parsed map[string]any
+	if err := json.Unmarshal(resp, &parsed); err != nil {
+		t.Fatalf("unmarshal response: %v", err)
+	}
+	if parsed["jsonrpc"] != "2.0" {
+		t.Errorf("expected jsonrpc 2.0, got %v", parsed["jsonrpc"])
+	}
+
+	// Close the client.
+	if err := client.Close(); err != nil {
+		t.Fatalf("Close: %v", err)
+	}
+
+	us.Shutdown()
+	cancel()
+}
+
+func TestUnixSocketClient_DialFailure(t *testing.T) {
+	t.Parallel()
+
+	_, err := DialUnixSocket("/tmp/nonexistent-mcpkit-test.sock")
+	if err == nil {
+		t.Fatal("expected error dialing nonexistent socket")
+	}
+	if !strings.Contains(err.Error(), "dial") {
+		t.Errorf("expected dial error, got: %v", err)
+	}
+}
+
+func TestUnixSocketClient_ConnectionClosedDuringCall(t *testing.T) {
+	t.Parallel()
+
+	sockPath := testSocketPath(t)
+	mcpSrv := server.NewMCPServer("test-close-during", "1.0.0")
+	us := NewUnixSocketServer(mcpSrv, sockPath)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go us.Serve(ctx)
+	waitForSocket(t, sockPath)
+
+	client, err := DialUnixSocket(sockPath)
+	if err != nil {
+		t.Fatalf("DialUnixSocket: %v", err)
+	}
+
+	// Shutdown the server, then try to call -- should get connection closed error.
+	us.Shutdown()
+	cancel()
+
+	// Give the server a moment to close connections.
+	time.Sleep(50 * time.Millisecond)
+
+	_, err = client.Call("initialize", nil)
+	if err == nil {
+		t.Fatal("expected error after server shutdown")
+	}
+
+	// Client close should still work.
+	_ = client.Close()
+}
+
+func TestUnixSocketClient_ReadLoopNotificationSkip(t *testing.T) {
+	t.Parallel()
+
+	// Create a raw unix socket pair to test the client readLoop's
+	// handling of notification messages (no numeric ID).
+	sockPath := testSocketPath(t)
+
+	ln, err := net.Listen("unix", sockPath)
+	if err != nil {
+		t.Fatalf("listen: %v", err)
+	}
+	defer ln.Close()
+
+	accepted := make(chan net.Conn, 1)
+	go func() {
+		conn, err := ln.Accept()
+		if err != nil {
+			return
+		}
+		accepted <- conn
+	}()
+
+	client, err := DialUnixSocket(sockPath)
+	if err != nil {
+		t.Fatalf("DialUnixSocket: %v", err)
+	}
+	defer client.Close()
+
+	serverConn := <-accepted
+	defer serverConn.Close()
+
+	// Send a notification (no numeric id) -- client readLoop should skip it.
+	notif := `{"jsonrpc":"2.0","method":"notifications/message","params":{}}` + "\n"
+	if _, err := serverConn.Write([]byte(notif)); err != nil {
+		t.Fatalf("write notification: %v", err)
+	}
+
+	// Now send a proper response to a Call.
+	go func() {
+		reader := bufio.NewReader(serverConn)
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			return
+		}
+		var req struct {
+			ID int64 `json:"id"`
+		}
+		json.Unmarshal([]byte(line), &req)
+		resp := fmt.Sprintf(`{"jsonrpc":"2.0","id":%d,"result":{"ok":true}}`, req.ID) + "\n"
+		serverConn.Write([]byte(resp))
+	}()
+
+	resp, err := client.Call("ping", nil)
+	if err != nil {
+		t.Fatalf("Call: %v", err)
+	}
+
+	if !strings.Contains(string(resp), `"ok":true`) {
+		t.Errorf("unexpected response: %s", resp)
 	}
 }

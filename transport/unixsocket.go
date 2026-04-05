@@ -82,7 +82,9 @@ func (s *UnixSocketServer) Serve(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("unixsocket: listen: %w", err)
 	}
+	s.mu.Lock()
 	s.listener = ln
+	s.mu.Unlock()
 
 	s.logger.Info("unix socket server listening", "path", s.socketPath)
 
@@ -129,8 +131,11 @@ func (s *UnixSocketServer) Serve(ctx context.Context) error {
 func (s *UnixSocketServer) Shutdown() error {
 	var firstErr error
 	s.shutdownOnce.Do(func() {
-		if s.listener != nil {
-			if err := s.listener.Close(); err != nil {
+		s.mu.Lock()
+		ln := s.listener
+		s.mu.Unlock()
+		if ln != nil {
+			if err := ln.Close(); err != nil {
 				firstErr = err
 			}
 		}

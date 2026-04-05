@@ -50,10 +50,10 @@ func Chain(base Transport, middleware ...Middleware) Transport {
 // ReadWriteTransport is a Transport backed by an io.ReadWriter.
 // It is the common base for stdio and in-process transports.
 type ReadWriteTransport struct {
-	rw      io.ReadWriter
-	recv    chan Message
-	close   chan struct{}
-	closed  bool
+	rw     io.ReadWriter
+	recv   chan Message
+	close  chan struct{}
+	closed bool
 }
 
 // NewReadWriteTransport creates a Transport that reads/writes from rw.
