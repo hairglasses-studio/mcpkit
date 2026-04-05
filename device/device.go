@@ -169,6 +169,13 @@ type DeviceFeedback interface {
 	SendRaw(data []byte) error
 }
 
+// Grabbable is an optional interface for connections that support exclusive access.
+// When grabbed, the kernel stops forwarding events to other consumers.
+type Grabbable interface {
+	Grab() error
+	ReleaseGrab() error
+}
+
 // HotPlugWatcher monitors for device connect/disconnect events.
 type HotPlugWatcher interface {
 	// Start begins monitoring. Events are delivered via the channel.
