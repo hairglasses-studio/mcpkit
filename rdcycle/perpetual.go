@@ -3,7 +3,7 @@ package rdcycle
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -138,7 +138,7 @@ func (m *Module) handlePerpetualStart(_ context.Context, input perpetualStartInp
 
 	go func() {
 		if err := orch.Run(ctx); err != nil {
-			log.Printf("[perpetual] orchestrator stopped: %v", err)
+			slog.Error("perpetual orchestrator stopped", "error", err)
 			state.lastErrMu.Lock()
 			state.lastErr = err
 			state.lastErrMu.Unlock()

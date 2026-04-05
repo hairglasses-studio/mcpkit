@@ -3,7 +3,7 @@ package observability
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -86,7 +86,7 @@ func Init(ctx context.Context, cfg Config) (*Provider, func(context.Context) err
 			otlptracegrpc.WithInsecure(),
 		)
 		if err != nil {
-			log.Printf("Warning: failed to create trace exporter: %v", err)
+			slog.Warn("failed to create trace exporter", "error", err)
 		} else {
 			tp := sdktrace.NewTracerProvider(
 				sdktrace.WithBatcher(traceExporter),
@@ -112,7 +112,7 @@ func Init(ctx context.Context, cfg Config) (*Provider, func(context.Context) err
 				otlpmetricgrpc.WithInsecure(),
 			)
 			if err != nil {
-				log.Printf("Warning: failed to create OTLP metric exporter: %v", err)
+				slog.Warn("failed to create OTLP metric exporter", "error", err)
 				meterProvider = sdkmetric.NewMeterProvider(
 					sdkmetric.WithResource(res),
 					sdkmetric.WithReader(promExporter),
@@ -210,9 +210,9 @@ func startPrometheusServer(port string) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("ok"))
 	})
-	log.Printf("Prometheus metrics server starting on :%s/metrics", port)
+	slog.Info("prometheus metrics server starting", "port", port, "path", "/metrics")
 	if err := http.ListenAndServe(":"+port, mux); err != nil {
-		log.Printf("Prometheus server error: %v", err)
+		slog.Error("prometheus server error", "error", err, "port", port)
 	}
 }
 
