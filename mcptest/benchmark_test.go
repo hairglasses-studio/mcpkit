@@ -93,3 +93,80 @@ func TestBenchmarkSuite_ListsAllTools(t *testing.T) {
 		t.Errorf("expected 2 tools, got %d: %v", len(names), names)
 	}
 }
+
+// noopMiddleware is a pass-through middleware for overhead measurement.
+func noopMiddleware(name string, td registry.ToolDefinition, next registry.ToolHandlerFunc) registry.ToolHandlerFunc {
+	return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		return next(ctx, req)
+	}
+}
+
+// contextMiddleware adds a value to context (simulates auth/tracing middleware).
+func contextMiddleware(name string, td registry.ToolDefinition, next registry.ToolHandlerFunc) registry.ToolHandlerFunc {
+	type ctxKey struct{}
+	return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		ctx = context.WithValue(ctx, ctxKey{}, name)
+		return next(ctx, req)
+	}
+}
+
+func newEchoRegistryWithMiddleware(mw []registry.Middleware) *registry.ToolRegistry {
+	reg := registry.NewToolRegistry()
+	if len(mw) > 0 {
+		reg.SetMiddleware(mw)
+	}
+	reg.RegisterModule(&echoModule{})
+	return reg
+}
+
+// BenchmarkMiddleware_None measures raw handler call without middleware.
+func BenchmarkMiddleware_None(b *testing.B) {
+	reg := newEchoRegistryWithMiddleware(nil)
+	BenchmarkTool(b, reg, "echo", map[string]any{"message": "bench"})
+}
+
+// BenchmarkMiddleware_1_Noop measures overhead of 1 pass-through middleware.
+func BenchmarkMiddleware_1_Noop(b *testing.B) {
+	reg := newEchoRegistryWithMiddleware([]registry.Middleware{noopMiddleware})
+	BenchmarkTool(b, reg, "echo", map[string]any{"message": "bench"})
+}
+
+// BenchmarkMiddleware_5_Noop measures overhead of 5 stacked noop middleware.
+func BenchmarkMiddleware_5_Noop(b *testing.B) {
+	mw := make([]registry.Middleware, 5)
+	for i := range mw {
+		mw[i] = noopMiddleware
+	}
+	reg := newEchoRegistryWithMiddleware(mw)
+	BenchmarkTool(b, reg, "echo", map[string]any{"message": "bench"})
+}
+
+// BenchmarkMiddleware_10_Noop measures overhead of 10 stacked noop middleware.
+func BenchmarkMiddleware_10_Noop(b *testing.B) {
+	mw := make([]registry.Middleware, 10)
+	for i := range mw {
+		mw[i] = noopMiddleware
+	}
+	reg := newEchoRegistryWithMiddleware(mw)
+	BenchmarkTool(b, reg, "echo", map[string]any{"message": "bench"})
+}
+
+// BenchmarkMiddleware_5_Context measures 5 middleware that add context values.
+func BenchmarkMiddleware_5_Context(b *testing.B) {
+	mw := make([]registry.Middleware, 5)
+	for i := range mw {
+		mw[i] = contextMiddleware
+	}
+	reg := newEchoRegistryWithMiddleware(mw)
+	BenchmarkTool(b, reg, "echo", map[string]any{"message": "bench"})
+}
+
+// BenchmarkMiddleware_Parallel_5_Noop measures parallel throughput with 5 middleware.
+func BenchmarkMiddleware_Parallel_5_Noop(b *testing.B) {
+	mw := make([]registry.Middleware, 5)
+	for i := range mw {
+		mw[i] = noopMiddleware
+	}
+	reg := newEchoRegistryWithMiddleware(mw)
+	BenchmarkToolParallel(b, reg, "echo", map[string]any{"message": "bench"})
+}

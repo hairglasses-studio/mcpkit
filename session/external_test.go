@@ -241,6 +241,94 @@ func TestRestore(t *testing.T) {
 	}
 }
 
+func TestMarshalUnmarshalSessionGob(t *testing.T) {
+	s := newSession("gob-test-id", time.Minute)
+	s.Set("key1", "value1")
+	s.Set("count", 42) // gob preserves int type (unlike JSON float64)
+
+	data, err := MarshalSessionGob(s)
+	if err != nil {
+		t.Fatalf("MarshalSessionGob: %v", err)
+	}
+	if len(data) == 0 {
+		t.Fatal("expected non-empty gob data")
+	}
+
+	restored, err := UnmarshalSessionGob(data)
+	if err != nil {
+		t.Fatalf("UnmarshalSessionGob: %v", err)
+	}
+
+	if restored.ID() != s.ID() {
+		t.Errorf("ID mismatch: got %q want %q", restored.ID(), s.ID())
+	}
+
+	v, ok := restored.Get("key1")
+	if !ok || v != "value1" {
+		t.Errorf("key1: got %v, ok=%v", v, ok)
+	}
+	v, ok = restored.Get("count")
+	if !ok || v != 42 {
+		t.Errorf("count: got %v (type %T), ok=%v", v, v, ok)
+	}
+}
+
+func TestGobSessionPreservesData(t *testing.T) {
+	now := time.Now().Truncate(time.Second)
+	s := newSession("preserve-id", 2*time.Hour)
+
+	// Override internal timestamps for deterministic comparison.
+	s.createdAt = now
+	s.expiresAt = now.Add(2 * time.Hour)
+	s.state = StateActive
+
+	s.Set("str", "hello")
+	s.Set("num", 3.14)
+	s.Set("flag", true)
+
+	data, err := MarshalSessionGob(s)
+	if err != nil {
+		t.Fatalf("MarshalSessionGob: %v", err)
+	}
+
+	restored, err := UnmarshalSessionGob(data)
+	if err != nil {
+		t.Fatalf("UnmarshalSessionGob: %v", err)
+	}
+
+	// Verify all fields survive the round-trip.
+	if restored.ID() != "preserve-id" {
+		t.Errorf("ID: got %q", restored.ID())
+	}
+	if restored.State() != StateActive {
+		t.Errorf("State: got %v, want %v", restored.State(), StateActive)
+	}
+	if !restored.CreatedAt().Equal(now) {
+		t.Errorf("CreatedAt: got %v, want %v", restored.CreatedAt(), now)
+	}
+	if !restored.ExpiresAt().Equal(now.Add(2 * time.Hour)) {
+		t.Errorf("ExpiresAt: got %v, want %v", restored.ExpiresAt(), now.Add(2*time.Hour))
+	}
+
+	for _, tc := range []struct {
+		key  string
+		want any
+	}{
+		{"str", "hello"},
+		{"num", 3.14},
+		{"flag", true},
+	} {
+		v, ok := restored.Get(tc.key)
+		if !ok {
+			t.Errorf("%s: not found", tc.key)
+			continue
+		}
+		if v != tc.want {
+			t.Errorf("%s: got %v (%T), want %v (%T)", tc.key, v, v, tc.want, tc.want)
+		}
+	}
+}
+
 func keysOf(m map[string][]byte) []string {
 	keys := make([]string, 0, len(m))
 	for k := range m {

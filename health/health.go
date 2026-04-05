@@ -1,29 +1,38 @@
 package health
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"sync"
 	"time"
 )
 
+// Pinger is satisfied by any external store that can check connectivity.
+// session.ExternalStore implements this via its Ping method.
+type Pinger interface {
+	Ping(ctx context.Context) error
+}
+
 // Status represents the health status.
 type Status struct {
-	Status    string            `json:"status"`
-	Uptime    string            `json:"uptime"`
-	ToolCount int               `json:"tool_count"`
-	Tasks     int               `json:"active_tasks,omitempty"`
-	Circuits  map[string]string `json:"circuit_breakers,omitempty"`
+	Status       string            `json:"status"`
+	Uptime       string            `json:"uptime"`
+	ToolCount    int               `json:"tool_count"`
+	Tasks        int               `json:"active_tasks,omitempty"`
+	Circuits     map[string]string `json:"circuit_breakers,omitempty"`
+	SessionStore string            `json:"session_store,omitempty"`
 }
 
 // Checker provides health check data.
 type Checker struct {
-	mu        sync.RWMutex
-	startedAt time.Time
-	status    string
-	toolCount func() int
-	taskCount func() int
-	circuits  func() map[string]string
+	mu           sync.RWMutex
+	startedAt    time.Time
+	status       string
+	toolCount    func() int
+	taskCount    func() int
+	circuits     func() map[string]string
+	sessionStore Pinger
 }
 
 // SetStatus sets the overall lifecycle status (e.g., "healthy", "draining", "stopped").
@@ -68,6 +77,12 @@ func WithCircuits(fn func() map[string]string) Option {
 	return func(c *Checker) { c.circuits = fn }
 }
 
+// WithSessionStore registers an external session store for health checks.
+// The Pinger interface is satisfied by session.ExternalStore.
+func WithSessionStore(p Pinger) Option {
+	return func(c *Checker) { c.sessionStore = p }
+}
+
 // NewChecker creates a new health checker.
 func NewChecker(opts ...Option) *Checker {
 	c := &Checker{
@@ -93,6 +108,15 @@ func (c *Checker) Check() Status {
 	}
 	if c.circuits != nil {
 		s.Circuits = c.circuits()
+	}
+	if c.sessionStore != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		if err := c.sessionStore.Ping(ctx); err != nil {
+			s.SessionStore = "unhealthy: " + err.Error()
+		} else {
+			s.SessionStore = "healthy"
+		}
 	}
 	return s
 }

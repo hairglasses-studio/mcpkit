@@ -66,6 +66,9 @@ type TokenMiddlewareOptions struct {
 	// CookieName overrides the default cookie name for token extraction.
 	// If empty, DefaultCookieName is used.
 	CookieName string
+	// QueryParam is the URL query parameter name to read the session token from.
+	// Checked after Header and Cookie. Example: "session_token".
+	QueryParam string
 }
 
 // TokenMiddleware returns an HTTP middleware that extracts a session token
@@ -89,6 +92,9 @@ func TokenMiddleware(store SessionStore, opts TokenMiddlewareOptions) func(http.
 				if c, err := r.Cookie(cookieName); err == nil {
 					token = c.Value
 				}
+			}
+			if token == "" && opts.QueryParam != "" {
+				token = r.URL.Query().Get(opts.QueryParam)
 			}
 
 			if token != "" {

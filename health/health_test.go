@@ -1,7 +1,9 @@
 package health
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -93,5 +95,54 @@ func TestHandler_Live(t *testing.T) {
 
 	if rec.Code != http.StatusOK {
 		t.Errorf("status = %d, want 200", rec.Code)
+	}
+}
+
+type healthyPinger struct{}
+
+func (healthyPinger) Ping(context.Context) error { return nil }
+
+type unhealthyPinger struct{}
+
+func (unhealthyPinger) Ping(context.Context) error { return errors.New("connection refused") }
+
+func TestChecker_WithSessionStoreHealthy(t *testing.T) {
+	c := NewChecker(WithSessionStore(healthyPinger{}))
+	s := c.Check()
+	if s.SessionStore != "healthy" {
+		t.Errorf("session_store = %q, want healthy", s.SessionStore)
+	}
+}
+
+func TestChecker_WithSessionStoreUnhealthy(t *testing.T) {
+	c := NewChecker(WithSessionStore(unhealthyPinger{}))
+	s := c.Check()
+	if s.SessionStore != "unhealthy: connection refused" {
+		t.Errorf("session_store = %q, want unhealthy message", s.SessionStore)
+	}
+}
+
+func TestChecker_NoSessionStore(t *testing.T) {
+	c := NewChecker()
+	s := c.Check()
+	if s.SessionStore != "" {
+		t.Errorf("session_store = %q, want empty", s.SessionStore)
+	}
+}
+
+func TestHandler_HealthWithSessionStore(t *testing.T) {
+	c := NewChecker(WithSessionStore(healthyPinger{}))
+	h := Handler(c)
+
+	req := httptest.NewRequest("GET", "/health", nil)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	var s Status
+	if err := json.NewDecoder(rec.Body).Decode(&s); err != nil {
+		t.Fatalf("decode error: %v", err)
+	}
+	if s.SessionStore != "healthy" {
+		t.Errorf("session_store = %q, want healthy", s.SessionStore)
 	}
 }
