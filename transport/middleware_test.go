@@ -151,4 +151,4 @@ func TestChain_MultipleMiddleware(t *testing.T) {
 type errWriter struct{}
 
 func (e *errWriter) Write(p []byte) (int, error) { return 0, errors.New("write error") }
-func (e *errWriter) Read(p []byte) (int, error)   { return 0, errors.New("read error") }
+func (e *errWriter) Read(p []byte) (int, error)  { return 0, errors.New("read error") }
