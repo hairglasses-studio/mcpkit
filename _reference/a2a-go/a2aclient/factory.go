@@ -1,0 +1,316 @@
+// Copyright 2025 The A2A Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package a2aclient
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"slices"
+	"strings"
+
+	"github.com/a2aproject/a2a-go/v2/a2a"
+	"github.com/a2aproject/a2a-go/v2/log"
+
+	"golang.org/x/mod/semver"
+)
+
+// Factory provides an API for creating a [Client] compatible with requested transports.
+// Factory is immutable, but the configuration can be extended using [WithAdditionalOptions] call.
+type Factory struct {
+	config       Config
+	interceptors []CallInterceptor
+	transports   map[transportKey]TransportFactory
+}
+
+type transportKey struct {
+	protocol       a2a.TransportProtocol
+	protocolSemver a2a.ProtocolVersion // must start with v
+}
+
+func makeTransportKey(version a2a.ProtocolVersion, protocol a2a.TransportProtocol) transportKey {
+	if !strings.HasPrefix(string(version), "v") {
+		version = a2a.ProtocolVersion("v" + string(version))
+	}
+	return transportKey{protocol, version}
+}
+
+// transportCandidate represents an Agent endpoint with the protocol supported by the Client
+// and is used during the best compatible transport selection.
+type transportCandidate struct {
+	factory  TransportFactory
+	endpoint *a2a.AgentInterface
+	// priority if determined by the index of endpoint.Transport in Config.PreferredTransports
+	// or is set to len(Config.PreferredTransports) if Transport is not present in the config
+	priority int
+	// semver is the version of the protocol with a 'v' prefix.
+	semver string
+}
+
+// defaultOptions is a set of default configurations applied to every Factory unless WithDefaultsDisabled was used.
+// Transport ordering matches other A2A SDKs (Python, Java, JavaScript): JSON-RPC first (primary/fallback), then REST.
+var defaultOptions = []FactoryOption{WithJSONRPCTransport(nil), WithRESTTransport(nil)}
+
+// NewFromCard is a client [Client] constructor method which takes an [a2a.AgentCard] as input.
+// It is equivalent to [Factory].CreateFromCard method.
+func NewFromCard(ctx context.Context, card *a2a.AgentCard, opts ...FactoryOption) (*Client, error) {
+	return NewFactory(opts...).CreateFromCard(ctx, card)
+}
+
+// NewFromEndpoints is a [Client] constructor method which takes known [a2a.AgentInterface] descriptions as input.
+// It is equivalent to [Factory].CreateFromEndpoints method.
+func NewFromEndpoints(ctx context.Context, endpoints []*a2a.AgentInterface, opts ...FactoryOption) (*Client, error) {
+	return NewFactory(opts...).CreateFromEndpoints(ctx, endpoints)
+}
+
+// CreateFromCard returns a [Client] configured to communicate with the agent described by
+// the provided [a2a.AgentCard] or fails if we couldn't establish a compatible transport.
+// [Config].PreferredTransports field is used to determine the order of connection attempts.
+//
+// If PreferredTransports were not provided, we start from the PreferredTransport specified in the AgentCard
+// and proceed in the order specified by the AdditionalInterfaces.
+//
+// The method fails if we couldn't establish a compatible transport.
+func (f *Factory) CreateFromCard(ctx context.Context, card *a2a.AgentCard) (*Client, error) {
+	if len(card.SupportedInterfaces) == 0 {
+		return nil, fmt.Errorf("agent card has no supported interfaces")
+	}
+
+	serverPrefs := make([]*a2a.AgentInterface, len(card.SupportedInterfaces))
+	copy(serverPrefs, card.SupportedInterfaces)
+
+	candidates, err := f.selectTransport(serverPrefs)
+	if err != nil {
+		return nil, err
+	}
+
+	conn, selected, err := createTransport(ctx, candidates, card)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open a connection: %w", err)
+	}
+
+	client := &Client{
+		config:          f.config,
+		transport:       conn,
+		interceptors:    f.interceptors,
+		endpoint:        *selected.endpoint,
+		protocolVersion: a2a.ProtocolVersion(selected.semver[1:]),
+	}
+	client.card.Store(card)
+	return client, nil
+}
+
+// CreateFromEndpoints returns a [Client] configured to communicate with one of the provided endpoints.
+// [Config].PreferredTransports field is used to determine the order of connection attempts.
+//
+// If PreferredTransports were not provided, we attempt to establish a connection using the provided endpoint order.
+//
+// The method fails if we couldn't establish a compatible transport.
+func (f *Factory) CreateFromEndpoints(ctx context.Context, endpoints []*a2a.AgentInterface) (*Client, error) {
+	candidates, err := f.selectTransport(endpoints)
+	if err != nil {
+		return nil, err
+	}
+
+	conn, selected, err := createTransport(ctx, candidates, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open a connection: %w", err)
+	}
+
+	return &Client{
+		config:          f.config,
+		transport:       conn,
+		interceptors:    f.interceptors,
+		protocolVersion: a2a.ProtocolVersion(selected.semver[1:]),
+		endpoint:        *selected.endpoint,
+	}, nil
+}
+
+// createTransport attempts to connect using the provided transports, returning the first
+// one that succeeds. If all transports fail, it returns an error.
+func createTransport(ctx context.Context, candidates []transportCandidate, card *a2a.AgentCard) (Transport, *transportCandidate, error) {
+	if len(candidates) == 0 {
+		return nil, nil, fmt.Errorf("empty list of transport candidates was provided")
+	}
+	var transport Transport
+	var selected *transportCandidate
+	var failures []error
+	for _, tc := range candidates {
+		conn, err := tc.factory.Create(ctx, card, tc.endpoint)
+		if err == nil {
+			transport = conn
+			selected = &tc
+			break
+		}
+		err = fmt.Errorf("failed to connect to %s: %w", tc.endpoint.URL, err)
+		failures = append(failures, err)
+	}
+	if transport == nil {
+		return nil, nil, errors.Join(failures...)
+	}
+	if len(failures) > 0 {
+		log.Info(ctx, "some transports failed to connect", "failures", failures)
+	}
+
+	if selected.endpoint.Tenant != "" {
+		transport = &tenantTransportDecorator{base: transport, tenant: selected.endpoint.Tenant}
+	}
+
+	return transport, selected, nil
+}
+
+// selectTransport filters the list of available endpoints leaving only those with
+// compatible transport protocols. If config.PreferredTransports is set the result is ordered
+// based on the provided client preferences.
+func (f *Factory) selectTransport(available []*a2a.AgentInterface) ([]transportCandidate, error) {
+	candidates := make([]transportCandidate, 0, len(available))
+
+	for _, opt := range available {
+		key := makeTransportKey(opt.ProtocolVersion, opt.ProtocolBinding)
+
+		candidate, ok := f.transports[key]
+		candidateVersion := key.protocolSemver
+		if !ok { // if no exact version match fallback to compatibility by major version
+			for otherKey, tr := range f.transports {
+				if otherKey.protocol != key.protocol {
+					continue
+				}
+				if semver.Major(string(key.protocolSemver)) == semver.Major(string(otherKey.protocolSemver)) {
+					candidate = tr
+					candidateVersion = otherKey.protocolSemver
+					break
+				}
+			}
+		}
+
+		if candidate != nil {
+			priority := len(f.config.PreferredTransports)
+			for j, clientPref := range f.config.PreferredTransports {
+				if clientPref == a2a.TransportProtocol(opt.ProtocolBinding) {
+					priority = j
+					break
+				}
+			}
+			candidates = append(candidates, transportCandidate{candidate, opt, priority, string(candidateVersion)})
+		}
+	}
+
+	if len(candidates) == 0 {
+		protocols := make([]string, len(available))
+		for i, a := range available {
+			protocols[i] = string(a.ProtocolBinding) + "_" + string(a.ProtocolVersion)
+		}
+		return nil, fmt.Errorf("no compatible transports found: available transports - [%s]", strings.Join(protocols, ","))
+	}
+
+	slices.SortStableFunc(candidates, func(c1, c2 transportCandidate) int {
+		// Newest protocol version first.
+		if cmp := semver.Compare(c2.semver, c1.semver); cmp != 0 {
+			return cmp
+		}
+		// Client preference first.
+		return c1.priority - c2.priority
+	})
+
+	return candidates, nil
+}
+
+// FactoryOption represents a configuration for creating a [Client].
+type FactoryOption interface {
+	apply(f *Factory)
+}
+
+type factoryOptionFn func(f *Factory)
+
+func (f factoryOptionFn) apply(factory *Factory) {
+	f(factory)
+}
+
+// WithConfig configures [Client] with the provided [Config].
+func WithConfig(c Config) FactoryOption {
+	return factoryOptionFn(func(f *Factory) {
+		f.config = c
+	})
+}
+
+// WithTransport uses the provided factory during connection establishment for the specified transport binding.
+func WithTransport(protocol a2a.TransportProtocol, factory TransportFactory) FactoryOption {
+	return WithCompatTransport(a2a.Version, protocol, factory)
+}
+
+// WithCompatTransport uses the provided factory during connection establishment for the specified transport binding and protocol version.
+func WithCompatTransport(version a2a.ProtocolVersion, protocol a2a.TransportProtocol, factory TransportFactory) FactoryOption {
+	return factoryOptionFn(func(f *Factory) {
+		f.transports[makeTransportKey(version, protocol)] = factory
+	})
+}
+
+// WithCallInterceptors attaches call interceptors to created [Client]s.
+func WithCallInterceptors(interceptors ...CallInterceptor) FactoryOption {
+	return factoryOptionFn(func(f *Factory) {
+		f.interceptors = append(f.interceptors, interceptors...)
+	})
+}
+
+// defaultsDisabledOpt is a marker for creating a Factory without any defaults set.
+type defaultsDisabledOpt struct{}
+
+func (defaultsDisabledOpt) apply(f *Factory) {}
+
+// WithDefaultsDisabled attaches call interceptors to clients created by the factory.
+func WithDefaultsDisabled() FactoryOption {
+	return defaultsDisabledOpt{}
+}
+
+// NewFactory creates a new Factory applying the provided configurations.
+func NewFactory(options ...FactoryOption) *Factory {
+	f := &Factory{
+		transports:   make(map[transportKey]TransportFactory),
+		interceptors: make([]CallInterceptor, 0),
+	}
+
+	applyDefaults := true
+	for _, o := range options {
+		if _, ok := o.(defaultsDisabledOpt); ok {
+			applyDefaults = false
+			break
+		}
+	}
+
+	if applyDefaults {
+		for _, o := range defaultOptions {
+			o.apply(f)
+		}
+	}
+
+	for _, o := range options {
+		o.apply(f)
+	}
+
+	return f
+}
+
+// WithAdditionalOptions creates a new Factory with the additionally provided options.
+func WithAdditionalOptions(f *Factory, opts ...FactoryOption) *Factory {
+	options := []FactoryOption{
+		WithDefaultsDisabled(),
+		WithConfig(f.config),
+		WithCallInterceptors(f.interceptors...),
+	}
+	for k, v := range f.transports {
+		options = append(options, WithCompatTransport(k.protocolSemver, k.protocol, v))
+	}
+	return NewFactory(append(options, opts...)...)
+}
