@@ -9,6 +9,12 @@ const (
 	evRel = 0x02 // relative axis
 	evAbs = 0x03 // absolute axis
 	evMsc = 0x04 // misc
+	evFF  = 0x15 // force feedback
+)
+
+// Force feedback effect type constants from linux/input.h.
+const (
+	ffRumble = 0x50 // FF_RUMBLE
 )
 
 // evKeyName maps EV_KEY codes to canonical KEY_*/BTN_* names.

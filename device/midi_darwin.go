@@ -63,6 +63,37 @@ static int getMIDIEndpointName(MIDIEndpointRef endpoint, char *buf, int bufLen) 
     CFRelease(name);
     return ok;
 }
+
+// ---------------------------------------------------------------------------
+// MIDI output helpers
+// ---------------------------------------------------------------------------
+
+static int createOutputPort(MIDIClientRef client, MIDIPortRef *outPort) {
+    CFStringRef name = CFStringCreateWithCString(NULL, "mapitall-out", kCFStringEncodingUTF8);
+    OSStatus err = MIDIOutputPortCreate(client, name, outPort);
+    CFRelease(name);
+    return (int)err;
+}
+
+static int getMIDIDestinationCount(void) {
+    return (int)MIDIGetNumberOfDestinations();
+}
+
+static MIDIEndpointRef getMIDIDestination(int index) {
+    return MIDIGetDestination(index);
+}
+
+static int sendMIDIBytes(MIDIPortRef port, MIDIEndpointRef dest, const uint8_t *data, int len) {
+    if (len <= 0 || len > 256) return -1;
+    // MIDIPacketList with a single packet.
+    // Buffer sized for header + one packet with up to 256 bytes of data.
+    Byte buf[512];
+    MIDIPacketList *pktList = (MIDIPacketList *)buf;
+    MIDIPacket *pkt = MIDIPacketListInit(pktList);
+    pkt = MIDIPacketListAdd(pktList, sizeof(buf), pkt, 0, (ByteCount)len, data);
+    if (!pkt) return -2;
+    return (int)MIDISend(port, dest, pktList);
+}
 */
 import "C"
 
@@ -70,6 +101,9 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sync"
+	"time"
+	"unsafe"
 )
 
 func init() {
@@ -156,17 +190,28 @@ type darwinMIDIConnection struct {
 	sourceIndex int
 	port        C.MIDIPortRef
 	endpoint    C.MIDIEndpointRef
+	outPort     C.MIDIPortRef
+	dest        C.MIDIEndpointRef
 	pipeR       *os.File
 	pipeW       *os.File
 	events      chan Event
 	cancel      context.CancelFunc
 	alive       bool
+	feedback    *darwinMIDIFeedback
 }
 
-func (c *darwinMIDIConnection) Info() Info               { return c.deviceInfo }
-func (c *darwinMIDIConnection) Events() <-chan Event     { return c.events }
-func (c *darwinMIDIConnection) Feedback() DeviceFeedback { return nil }
-func (c *darwinMIDIConnection) Alive() bool              { return c.alive }
+func (c *darwinMIDIConnection) Info() Info           { return c.deviceInfo }
+func (c *darwinMIDIConnection) Events() <-chan Event { return c.events }
+func (c *darwinMIDIConnection) Alive() bool          { return c.alive }
+
+// Feedback returns a DeviceFeedback for MIDI output, or nil if no
+// matching destination endpoint was found during Start().
+func (c *darwinMIDIConnection) Feedback() DeviceFeedback {
+	if c.feedback == nil {
+		return nil
+	}
+	return c.feedback
+}
 
 func (c *darwinMIDIConnection) Start(ctx context.Context) error {
 	client := C.getSharedClient()
@@ -201,10 +246,57 @@ func (c *darwinMIDIConnection) Start(ctx context.Context) error {
 		return fmt.Errorf("MIDIPortConnectSource failed: OSStatus %d", ret)
 	}
 
+	// Create output port and find a matching destination for MIDI output.
+	// We match the source name against destination names to find the
+	// corresponding output endpoint (most hardware exposes both a source
+	// and a destination with the same name).
+	var outPort C.MIDIPortRef
+	ret = C.createOutputPort(client, &outPort)
+	if ret == 0 {
+		c.outPort = outPort
+		dest := c.findMatchingDestination()
+		if dest != 0 {
+			c.dest = dest
+			c.feedback = &darwinMIDIFeedback{port: outPort, dest: dest}
+		}
+	}
+
 	ctx, c.cancel = context.WithCancel(ctx)
 	c.alive = true
 	go c.readLoop(ctx)
 	return nil
+}
+
+// findMatchingDestination searches CoreMIDI destinations for one whose
+// name matches the connected source. Returns 0 if no match is found.
+func (c *darwinMIDIConnection) findMatchingDestination() C.MIDIEndpointRef {
+	var srcBuf [256]C.char
+	if C.getMIDIEndpointName(c.endpoint, &srcBuf[0], 256) == 0 {
+		// Cannot determine source name — try index-based fallback.
+		destCount := int(C.getMIDIDestinationCount())
+		if c.sourceIndex < destCount {
+			return C.getMIDIDestination(C.int(c.sourceIndex))
+		}
+		return 0
+	}
+	srcName := C.GoString(&srcBuf[0])
+
+	destCount := int(C.getMIDIDestinationCount())
+	var dstBuf [256]C.char
+	for i := 0; i < destCount; i++ {
+		dest := C.getMIDIDestination(C.int(i))
+		if C.getMIDIEndpointName(dest, &dstBuf[0], 256) != 0 {
+			if C.GoString(&dstBuf[0]) == srcName {
+				return dest
+			}
+		}
+	}
+
+	// Fallback: if the source index is in range, use the same index.
+	if c.sourceIndex < destCount {
+		return C.getMIDIDestination(C.int(c.sourceIndex))
+	}
+	return 0
 }
 
 func (c *darwinMIDIConnection) readLoop(ctx context.Context) {
@@ -253,4 +345,46 @@ func (c *darwinMIDIConnection) Close() error {
 		c.pipeR.Close()
 	}
 	return nil
+}
+
+// ---------------------------------------------------------------------------
+// CoreMIDI feedback — sends MIDI bytes via a CoreMIDI output port
+// ---------------------------------------------------------------------------
+
+// darwinMIDIFeedback implements DeviceFeedback for macOS CoreMIDI output.
+// A mutex serialises calls to MIDISend so concurrent callers do not
+// interleave partial MIDI messages.
+type darwinMIDIFeedback struct {
+	port C.MIDIPortRef
+	dest C.MIDIEndpointRef
+	mu   sync.Mutex
+}
+
+// SendMIDI sends raw MIDI bytes to the CoreMIDI destination.
+func (f *darwinMIDIFeedback) SendMIDI(data []byte) error {
+	if len(data) == 0 {
+		return nil
+	}
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	ret := C.sendMIDIBytes(f.port, f.dest, (*C.uint8_t)(unsafe.Pointer(&data[0])), C.int(len(data)))
+	if ret != 0 {
+		return fmt.Errorf("MIDISend failed: OSStatus %d", ret)
+	}
+	return nil
+}
+
+// SetLED is not supported on MIDI devices.
+func (f *darwinMIDIFeedback) SetLED(int, uint8, uint8, uint8, uint8) error {
+	return ErrNotSupported
+}
+
+// SetRumble is not supported on MIDI devices.
+func (f *darwinMIDIFeedback) SetRumble(int, float64, time.Duration) error {
+	return ErrNotSupported
+}
+
+// SendRaw is not supported on MIDI devices.
+func (f *darwinMIDIFeedback) SendRaw([]byte) error {
+	return ErrNotSupported
 }
