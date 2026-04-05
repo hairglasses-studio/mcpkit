@@ -91,7 +91,7 @@ func TestScopedMiddleware_RecordsToGlobalAndScoped(t *testing.T) {
 	}
 	wrapped := mw("my-tool", registry.ToolDefinition{Category: "test"}, handler)
 
-	_, err := wrapped(context.Background(), makeTestRequest("my-tool", map[string]interface{}{"q": "hi"}))
+	_, err := wrapped(context.Background(), makeTestRequest("my-tool", map[string]any{"q": "hi"}))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -128,11 +128,11 @@ func TestScopedMiddleware_TokenBudgetEnforcement(t *testing.T) {
 	wrapped := mw("tool", registry.ToolDefinition{Category: "cat"}, handler)
 
 	ctx := context.Background()
-	req := makeTestRequest("tool", map[string]interface{}{"x": "y"})
+	req := makeTestRequest("tool", map[string]any{"x": "y"})
 
 	// Call repeatedly until budget is enforced.
 	var errResult *registry.CallToolResult
-	for i := 0; i < 20; i++ {
+	for i := range 20 {
 		r, e := wrapped(ctx, req)
 		if e != nil {
 			t.Fatalf("call %d: unexpected Go error: %v", i+1, e)
@@ -225,10 +225,10 @@ func TestScopedMiddleware_SeparateTenantBudgets(t *testing.T) {
 	mwA := ScopedMiddleware(st, resolveTo("tenant-a", "", ""))
 	wrappedA := mwA("tool", registry.ToolDefinition{Category: "c"}, handler)
 	ctx := context.Background()
-	req := makeTestRequest("tool", map[string]interface{}{"k": "v"})
+	req := makeTestRequest("tool", map[string]any{"k": "v"})
 
 	var aBlocked bool
-	for i := 0; i < 20; i++ {
+	for range 20 {
 		r, _ := wrappedA(ctx, req)
 		if registry.IsResultError(r) {
 			aBlocked = true

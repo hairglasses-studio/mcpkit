@@ -173,8 +173,8 @@ func TestIsInteger_AllTypes(t *testing.T) {
 		{int(42), true},
 		{int32(10), true},
 		{int64(100), true},
-		{float64(42.0), true},   // exact integer value as float64
-		{float64(42.5), false},  // fractional float64
+		{float64(42.0), true},  // exact integer value as float64
+		{float64(42.5), false}, // fractional float64
 		{json.Number("42"), true},
 		{json.Number("42.5"), false},
 		{"hello", false},
@@ -343,7 +343,7 @@ func TestCheckType_NullValue(t *testing.T) {
 // ==================== GetFloatParam: wrong type branch ====================
 
 func TestGetFloatParam_WrongType(t *testing.T) {
-	req := makeReq(map[string]interface{}{"price": "not-a-float"})
+	req := makeReq(map[string]any{"price": "not-a-float"})
 	if got := GetFloatParam(req, "price", 1.23); got != 1.23 {
 		t.Errorf("GetFloatParam wrong type = %f, want 1.23", got)
 	}

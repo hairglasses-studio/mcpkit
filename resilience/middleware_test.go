@@ -183,7 +183,7 @@ func TestCircuitBreakerMiddleware_OpensCircuitOnRepeatedGoErrors(t *testing.T) {
 	wrapped := mw("tool", td, inner)
 
 	// Drive 3 failures to open the circuit.
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		result, err := wrapped(context.Background(), registry.CallToolRequest{})
 		// The middleware returns the Go error from the handler as-is when not ErrCircuitOpen.
 		if err == nil && result != nil && !result.IsError {
@@ -222,7 +222,7 @@ func TestCircuitBreakerMiddleware_OpensCircuitOnRepeatedErrorResults(t *testing.
 	wrapped := mw("tool", td, inner)
 
 	// Drive 2 error-result failures to open the circuit.
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		wrapped(context.Background(), registry.CallToolRequest{}) //nolint:errcheck
 	}
 

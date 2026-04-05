@@ -298,7 +298,7 @@ func TestConcurrentRegisterAndNegotiate(t *testing.T) {
 	r := NewExtensionRegistry()
 
 	// Pre-register a set of extensions so Negotiate has something to work with.
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		name := fmt.Sprintf("mcpkit:ext%d", i)
 		_ = r.Register(Extension{Name: name, Version: "1.0.0"})
 	}
@@ -316,7 +316,7 @@ func TestConcurrentRegisterAndNegotiate(t *testing.T) {
 	}
 
 	// Concurrent Negotiate calls.
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
@@ -328,16 +328,14 @@ func TestConcurrentRegisterAndNegotiate(t *testing.T) {
 	}
 
 	// Concurrent Available calls.
-	for i := 0; i < 5; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 5 {
+		wg.Go(func() {
 			_ = r.Available()
-		}()
+		})
 	}
 
 	// Concurrent IsActive calls.
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
@@ -346,12 +344,10 @@ func TestConcurrentRegisterAndNegotiate(t *testing.T) {
 	}
 
 	// Concurrent Active calls.
-	for i := 0; i < 5; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 5 {
+		wg.Go(func() {
 			_ = r.Active()
-		}()
+		})
 	}
 
 	wg.Wait()

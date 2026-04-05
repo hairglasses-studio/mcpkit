@@ -66,10 +66,10 @@ func TestInMemoryArtifactStore_ListAll(t *testing.T) {
 	t.Parallel()
 	store := NewInMemoryArtifactStore()
 
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		_ = store.Save(Artifact{ID: fmt.Sprintf("a%d", i), Type: "scan"})
 	}
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		_ = store.Save(Artifact{ID: fmt.Sprintf("b%d", i), Type: "plan"})
 	}
 
@@ -83,7 +83,7 @@ func TestInMemoryArtifactStore_ListByType(t *testing.T) {
 	t.Parallel()
 	store := NewInMemoryArtifactStore()
 
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		_ = store.Save(Artifact{ID: fmt.Sprintf("scan-%d", i), Type: "scan"})
 	}
 	_ = store.Save(Artifact{ID: "plan-0", Type: "plan"})
@@ -118,24 +118,20 @@ func TestInMemoryArtifactStore_ConcurrentAccess(t *testing.T) {
 	store := NewInMemoryArtifactStore()
 
 	var wg sync.WaitGroup
-	for i := 0; i < 20; i++ {
+	for i := range 20 {
 		i := i
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			_ = store.Save(Artifact{
 				ID:      fmt.Sprintf("concurrent-%d", i),
 				Type:    "scan",
 				Content: map[string]any{"i": i},
 			})
-		}()
+		})
 	}
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 10 {
+		wg.Go(func() {
 			_ = store.List("scan")
-		}()
+		})
 	}
 	wg.Wait()
 

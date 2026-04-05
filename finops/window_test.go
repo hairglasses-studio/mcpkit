@@ -103,7 +103,7 @@ func TestWindowedTracker_HistoryAccumulation(t *testing.T) {
 	wt := NewWindowedTracker(Config{}, ResetHourly, WithNowFunc(clock.Now))
 
 	// Run 3 complete windows.
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		wt.Tracker().Record(UsageEntry{InputTokens: i + 1, OutputTokens: (i + 1) * 2})
 		clock.Advance(61 * time.Minute)
 	}
@@ -129,7 +129,7 @@ func TestWindowedTracker_MaxHistory(t *testing.T) {
 	)
 
 	// Create 4 completed windows — only 2 should be kept.
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		wt.Tracker().Record(UsageEntry{InputTokens: i + 1})
 		clock.Advance(61 * time.Minute)
 	}

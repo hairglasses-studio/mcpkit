@@ -195,10 +195,10 @@ func TestHTTPServer_ToolCall(t *testing.T) {
 	ct := resp.Header.Get("Content-Type")
 	if strings.Contains(ct, "text/event-stream") {
 		// Parse SSE: find the last "data: " line
-		lines := strings.Split(string(body), "\n")
-		for _, line := range lines {
-			if strings.HasPrefix(line, "data: ") {
-				resultJSON = []byte(strings.TrimPrefix(line, "data: "))
+		lines := strings.SplitSeq(string(body), "\n")
+		for line := range lines {
+			if after, ok := strings.CutPrefix(line, "data: "); ok {
+				resultJSON = []byte(after)
 			}
 		}
 		if resultJSON == nil {
@@ -252,9 +252,9 @@ func TestHTTPServer_ToolList(t *testing.T) {
 	// Parse (handle SSE or JSON)
 	var resultJSON []byte
 	if strings.Contains(resp.Header.Get("Content-Type"), "text/event-stream") {
-		for _, line := range strings.Split(string(body), "\n") {
-			if strings.HasPrefix(line, "data: ") {
-				resultJSON = []byte(strings.TrimPrefix(line, "data: "))
+		for line := range strings.SplitSeq(string(body), "\n") {
+			if after, ok := strings.CutPrefix(line, "data: "); ok {
+				resultJSON = []byte(after)
 			}
 		}
 	} else {
@@ -305,9 +305,9 @@ func TestHTTPServer_ErrorTool(t *testing.T) {
 
 	var resultJSON []byte
 	if strings.Contains(resp.Header.Get("Content-Type"), "text/event-stream") {
-		for _, line := range strings.Split(string(body), "\n") {
-			if strings.HasPrefix(line, "data: ") {
-				resultJSON = []byte(strings.TrimPrefix(line, "data: "))
+		for line := range strings.SplitSeq(string(body), "\n") {
+			if after, ok := strings.CutPrefix(line, "data: "); ok {
+				resultJSON = []byte(after)
 			}
 		}
 	} else {

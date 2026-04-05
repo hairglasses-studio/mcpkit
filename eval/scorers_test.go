@@ -117,7 +117,7 @@ func TestJSONPath_Missing(t *testing.T) {
 
 func TestCustomScorer(t *testing.T) {
 	t.Parallel()
-	scorer := Custom("length_check", func(output string, isError bool, expected interface{}) Score {
+	scorer := Custom("length_check", func(output string, isError bool, expected any) Score {
 		maxLen, _ := expected.(float64)
 		if float64(len(output)) <= maxLen {
 			return Score{Value: 1.0}

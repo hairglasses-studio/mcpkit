@@ -2,6 +2,7 @@ package secrets
 
 import (
 	"regexp"
+	"slices"
 	"strings"
 )
 
@@ -109,13 +110,7 @@ func SanitizeHeaders(headers map[string]string) map[string]string {
 	result := make(map[string]string, len(headers))
 	for key, value := range headers {
 		keyLower := strings.ToLower(key)
-		isSensitive := false
-		for _, sh := range sensitiveHeaders {
-			if keyLower == sh {
-				isSensitive = true
-				break
-			}
-		}
+		isSensitive := slices.Contains(sensitiveHeaders, keyLower)
 		if isSensitive {
 			result[key] = MaskValue(value)
 		} else {

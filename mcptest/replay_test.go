@@ -20,8 +20,8 @@ func TestRecorder_Session(t *testing.T) {
 	s := NewServer(t, reg)
 	c := NewClient(t, s)
 
-	c.CallTool("test_echo", map[string]interface{}{"message": "hello"})
-	c.CallTool("test_echo", map[string]interface{}{"message": "world"})
+	c.CallTool("test_echo", map[string]any{"message": "hello"})
+	c.CallTool("test_echo", map[string]any{"message": "world"})
 
 	session := rec.Session("my-session")
 	if session.Name != "my-session" {
@@ -45,7 +45,7 @@ func TestRecorder_SaveLoadSession_RoundTrip(t *testing.T) {
 	s := NewServer(t, reg)
 	c := NewClient(t, s)
 
-	c.CallTool("test_echo", map[string]interface{}{"message": "round-trip"})
+	c.CallTool("test_echo", map[string]any{"message": "round-trip"})
 
 	dir := t.TempDir()
 	path := filepath.Join(dir, "session.json")
@@ -90,7 +90,7 @@ func TestReplay_Match(t *testing.T) {
 	c := NewClient(t, s)
 
 	// Record a session
-	c.CallTool("test_echo", map[string]interface{}{"message": "replay-me"})
+	c.CallTool("test_echo", map[string]any{"message": "replay-me"})
 	session := rec.Session("replay-test")
 
 	// Replay against the same client — result should match
@@ -113,7 +113,7 @@ func TestReplay_MismatchDetected(t *testing.T) {
 	c2 := NewClient(t, s2)
 
 	// Build the session using c1
-	c1.CallTool("test_echo", map[string]interface{}{"message": "original"})
+	c1.CallTool("test_echo", map[string]any{"message": "original"})
 
 	// Manually construct a session with a different expected result
 	session := &Session{
@@ -121,7 +121,7 @@ func TestReplay_MismatchDetected(t *testing.T) {
 		Entries: []SessionEntry{
 			{
 				ToolName: "test_echo",
-				Args:     map[string]interface{}{"message": "original"},
+				Args:     map[string]any{"message": "original"},
 				Result:   registry.MakeTextResult("DIFFERENT OUTPUT"),
 				IsError:  false,
 			},
@@ -147,8 +147,8 @@ func TestReplay_WithStrictOrder(t *testing.T) {
 	s := NewServer(t, reg)
 	c := NewClient(t, s)
 
-	c.CallTool("test_echo", map[string]interface{}{"message": "first"})
-	c.CallTool("test_echo", map[string]interface{}{"message": "second"})
+	c.CallTool("test_echo", map[string]any{"message": "first"})
+	c.CallTool("test_echo", map[string]any{"message": "second"})
 	session := rec.Session("strict-test")
 
 	// Should pass with strict order since we replay in same order
@@ -165,7 +165,7 @@ func TestReplay_WithIgnoreFields(t *testing.T) {
 	s := NewServer(t, reg)
 	c := NewClient(t, s)
 
-	c.CallTool("test_echo", map[string]interface{}{"message": "ignore-test"})
+	c.CallTool("test_echo", map[string]any{"message": "ignore-test"})
 	session := rec.Session("ignore-test")
 
 	// Should still pass ignoring a non-existent field
@@ -178,19 +178,19 @@ type mockTB struct {
 	onError func()
 }
 
-func (m *mockTB) Helper()                              {}
-func (m *mockTB) Log(args ...interface{})               {}
-func (m *mockTB) Logf(format string, args ...interface{}) {}
-func (m *mockTB) Error(args ...interface{}) {
+func (m *mockTB) Helper()                         {}
+func (m *mockTB) Log(args ...any)                 {}
+func (m *mockTB) Logf(format string, args ...any) {}
+func (m *mockTB) Error(args ...any) {
 	m.onError()
 }
-func (m *mockTB) Errorf(format string, args ...interface{}) {
+func (m *mockTB) Errorf(format string, args ...any) {
 	m.onError()
 }
-func (m *mockTB) Fatal(args ...interface{}) {
+func (m *mockTB) Fatal(args ...any) {
 	m.onError()
 }
-func (m *mockTB) Fatalf(format string, args ...interface{}) {
+func (m *mockTB) Fatalf(format string, args ...any) {
 	m.onError()
 }
 
@@ -214,7 +214,7 @@ func TestSaveSession_WriteError(t *testing.T) {
 	reg.RegisterModule(&testModule{})
 	s := NewServer(t, reg)
 	c := NewClient(t, s)
-	c.CallTool("test_echo", map[string]interface{}{"message": "save-error-test"})
+	c.CallTool("test_echo", map[string]any{"message": "save-error-test"})
 
 	// Write to an unwritable path (directory as target file)
 	dir := t.TempDir()
@@ -247,7 +247,7 @@ func TestReplay_NilGotNonNilWant(t *testing.T) {
 		Entries: []SessionEntry{
 			{
 				ToolName: "test_echo",
-				Args:     map[string]interface{}{"message": "hi"},
+				Args:     map[string]any{"message": "hi"},
 				Result:   nil, // entry says nil
 				IsError:  false,
 			},

@@ -11,7 +11,7 @@ import (
 // Call records a single tool invocation.
 type Call struct {
 	Name   string
-	Args   map[string]interface{}
+	Args   map[string]any
 	Result *registry.CallToolResult
 	Err    error
 }

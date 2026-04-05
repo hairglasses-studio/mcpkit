@@ -45,12 +45,12 @@ func generateRSATestKey(t *testing.T) *rsa.PrivateKey {
 //
 // Actually, to keep it simple: overrides with key starting with "typ", "alg", "jwk" patch the
 // header. Anything else patches the payload. Passing a nil value removes the key.
-func signDPoPProof(t *testing.T, key crypto.Signer, method, uri, accessToken string, overrides map[string]interface{}) string {
+func signDPoPProof(t *testing.T, key crypto.Signer, method, uri, accessToken string, overrides map[string]any) string {
 	t.Helper()
 
 	// Determine algorithm and build JWK from the public key
 	var alg string
-	var jwk map[string]interface{}
+	var jwk map[string]any
 
 	switch pub := key.Public().(type) {
 	case *rsa.PublicKey:
@@ -62,7 +62,7 @@ func signDPoPProof(t *testing.T, key crypto.Signer, method, uri, accessToken str
 		for len(eBytes) > 1 && eBytes[0] == 0 {
 			eBytes = eBytes[1:]
 		}
-		jwk = map[string]interface{}{
+		jwk = map[string]any{
 			"kty": "RSA",
 			"n":   base64.RawURLEncoding.EncodeToString(nBytes),
 			"e":   base64.RawURLEncoding.EncodeToString(eBytes),
@@ -78,7 +78,7 @@ func signDPoPProof(t *testing.T, key crypto.Signer, method, uri, accessToken str
 		for len(yBytes) < 32 {
 			yBytes = append([]byte{0}, yBytes...)
 		}
-		jwk = map[string]interface{}{
+		jwk = map[string]any{
 			"kty": "EC",
 			"crv": "P-256",
 			"x":   base64.RawURLEncoding.EncodeToString(xBytes),
@@ -89,7 +89,7 @@ func signDPoPProof(t *testing.T, key crypto.Signer, method, uri, accessToken str
 	}
 
 	// Build header
-	header := map[string]interface{}{
+	header := map[string]any{
 		"typ": "dpop+jwt",
 		"alg": alg,
 		"jwk": jwk,
@@ -107,7 +107,7 @@ func signDPoPProof(t *testing.T, key crypto.Signer, method, uri, accessToken str
 	ath := base64.RawURLEncoding.EncodeToString(athHash[:])
 
 	// Build payload
-	payload := map[string]interface{}{
+	payload := map[string]any{
 		"jti": jti,
 		"htm": method,
 		"htu": uri,
@@ -266,7 +266,7 @@ func TestDPoPValidator_Expired(t *testing.T) {
 
 	// Set iat to 1 hour ago — well outside max proof age
 	past := float64(time.Now().Add(-1 * time.Hour).Unix())
-	proof := signDPoPProof(t, key, "GET", "https://example.com/api", "tok", map[string]interface{}{
+	proof := signDPoPProof(t, key, "GET", "https://example.com/api", "tok", map[string]any{
 		"iat": past,
 	})
 	err := v.ValidateProof(proof, "tok", "GET", "https://example.com/api")
@@ -280,7 +280,7 @@ func TestDPoPValidator_InvalidTyp(t *testing.T) {
 	v := newTestDPoPValidator()
 
 	// Override typ to plain "jwt"
-	proof := signDPoPProof(t, key, "GET", "https://example.com/api", "tok", map[string]interface{}{
+	proof := signDPoPProof(t, key, "GET", "https://example.com/api", "tok", map[string]any{
 		"typ": "jwt",
 	})
 	err := v.ValidateProof(proof, "tok", "GET", "https://example.com/api")
@@ -294,7 +294,7 @@ func TestDPoPValidator_MissingJWK(t *testing.T) {
 	v := newTestDPoPValidator()
 
 	// Remove jwk from header by passing nil
-	proof := signDPoPProof(t, key, "GET", "https://example.com/api", "tok", map[string]interface{}{
+	proof := signDPoPProof(t, key, "GET", "https://example.com/api", "tok", map[string]any{
 		"jwk": nil,
 	})
 	err := v.ValidateProof(proof, "tok", "GET", "https://example.com/api")
@@ -474,7 +474,7 @@ func TestJTICache_Eviction(t *testing.T) {
 	time.Sleep(ttl + 20*time.Millisecond)
 
 	// Force cleanup by calling Check 100 times to trigger the cleanup counter
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		cache.Check(fmt.Sprintf("filler-%d", i))
 	}
 
@@ -492,7 +492,7 @@ func TestJTICache_CapacityEviction(t *testing.T) {
 	cache := newJTICache(maxSize, time.Minute)
 
 	// Fill cache to capacity
-	for i := 0; i < maxSize; i++ {
+	for i := range maxSize {
 		jti := fmt.Sprintf("jti-%d", i)
 		if !cache.Check(jti) {
 			t.Fatalf("jti-%d should be accepted", i)
@@ -577,7 +577,7 @@ func TestDPoPValidator_FutureIat(t *testing.T) {
 	v := newTestDPoPValidator()
 
 	future := float64(time.Now().Add(10 * time.Minute).Unix())
-	proof := signDPoPProof(t, key, "GET", "https://example.com/api", "tok", map[string]interface{}{
+	proof := signDPoPProof(t, key, "GET", "https://example.com/api", "tok", map[string]any{
 		"iat": future,
 	})
 	err := v.ValidateProof(proof, "tok", "GET", "https://example.com/api")
@@ -591,7 +591,7 @@ func TestDPoPValidator_MissingIat(t *testing.T) {
 	key := generateECTestKey(t)
 	v := newTestDPoPValidator()
 
-	proof := signDPoPProof(t, key, "GET", "https://example.com/api", "tok", map[string]interface{}{
+	proof := signDPoPProof(t, key, "GET", "https://example.com/api", "tok", map[string]any{
 		"iat": nil,
 	})
 	err := v.ValidateProof(proof, "tok", "GET", "https://example.com/api")
@@ -605,7 +605,7 @@ func TestDPoPValidator_MissingJTI(t *testing.T) {
 	key := generateECTestKey(t)
 	v := newTestDPoPValidator()
 
-	proof := signDPoPProof(t, key, "GET", "https://example.com/api", "tok", map[string]interface{}{
+	proof := signDPoPProof(t, key, "GET", "https://example.com/api", "tok", map[string]any{
 		"jti": nil,
 	})
 	err := v.ValidateProof(proof, "tok", "GET", "https://example.com/api")

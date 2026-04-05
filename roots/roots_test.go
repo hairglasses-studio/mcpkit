@@ -236,21 +236,17 @@ func TestCachedClient_ConcurrentSafe(t *testing.T) {
 	cached := NewCachedClient(inner)
 
 	var wg sync.WaitGroup
-	for i := 0; i < 100; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for i := range 100 {
+		wg.Go(func() {
 			_, err := cached.ListRoots(context.Background())
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
 			}
-		}()
+		})
 		if i%10 == 0 {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				cached.Invalidate()
-			}()
+			})
 		}
 	}
 	wg.Wait()

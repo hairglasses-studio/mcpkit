@@ -113,15 +113,13 @@ func (s *UnixSocketServer) Serve(ctx context.Context) error {
 		s.clients[conn] = cancel
 		s.mu.Unlock()
 
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			defer cancel()
 			s.handleConn(connCtx, conn)
 			s.mu.Lock()
 			delete(s.clients, conn)
 			s.mu.Unlock()
-		}()
+		})
 	}
 }
 
@@ -168,12 +166,12 @@ func newSocketSession(id string) *socketSession {
 	return ss
 }
 
-func (s *socketSession) SessionID() string                         { return s.id }
+func (s *socketSession) SessionID() string                                   { return s.id }
 func (s *socketSession) NotificationChannel() chan<- mcp.JSONRPCNotification { return s.notifications }
-func (s *socketSession) Initialize()                               { s.initialized.Store(true) }
-func (s *socketSession) Initialized() bool                         { return s.initialized.Load() }
+func (s *socketSession) Initialize()                                         { s.initialized.Store(true) }
+func (s *socketSession) Initialized() bool                                   { return s.initialized.Load() }
 
-func (s *socketSession) SetLogLevel(level mcp.LoggingLevel)   { s.loggingLevel.Store(level) }
+func (s *socketSession) SetLogLevel(level mcp.LoggingLevel) { s.loggingLevel.Store(level) }
 func (s *socketSession) GetLogLevel() mcp.LoggingLevel {
 	if v := s.loggingLevel.Load(); v != nil {
 		if l, ok := v.(mcp.LoggingLevel); ok {
@@ -191,7 +189,7 @@ func (s *socketSession) GetClientInfo() mcp.Implementation {
 	}
 	return mcp.Implementation{}
 }
-func (s *socketSession) SetClientInfo(ci mcp.Implementation)           { s.clientInfo.Store(ci) }
+func (s *socketSession) SetClientInfo(ci mcp.Implementation) { s.clientInfo.Store(ci) }
 func (s *socketSession) GetClientCapabilities() mcp.ClientCapabilities {
 	if v := s.clientCaps.Load(); v != nil {
 		if cc, ok := v.(mcp.ClientCapabilities); ok {
@@ -303,15 +301,15 @@ func (s *UnixSocketServer) handleConn(ctx context.Context, conn net.Conn) {
 
 // jsonRPCError is a minimal JSON-RPC error response for parse errors.
 type jsonRPCError struct {
-	JSONRPC string      `json:"jsonrpc"`
-	ID      interface{} `json:"id"`
+	JSONRPC string `json:"jsonrpc"`
+	ID      any    `json:"id"`
 	Error   struct {
 		Code    int    `json:"code"`
 		Message string `json:"message"`
 	} `json:"error"`
 }
 
-func createJSONRPCError(id interface{}, code int, message string) jsonRPCError {
+func createJSONRPCError(id any, code int, message string) jsonRPCError {
 	return jsonRPCError{
 		JSONRPC: "2.0",
 		ID:      id,

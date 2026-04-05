@@ -34,7 +34,7 @@ func ExampleDefaultProgressFile() {
 func ExampleDecision_ResolvedToolCalls() {
 	d := ralph.Decision{
 		ToolName:  "search",
-		Arguments: map[string]interface{}{"query": "MCP"},
+		Arguments: map[string]any{"query": "MCP"},
 	}
 
 	calls := d.ResolvedToolCalls()

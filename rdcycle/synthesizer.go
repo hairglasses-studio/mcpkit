@@ -215,19 +215,20 @@ func applyMutations(candidates []CandidateTask, mutations []TaskMutation) []Cand
 // buildSynthesizedSpec constructs a ralph.Spec from candidates with scaffolding tasks.
 func buildSynthesizedSpec(cfg SynthesisConfig, candidates []CandidateTask, learning *LearningEngine) ralph.Spec {
 	sinceDate := time.Now().UTC().Format(time.RFC3339)
-	description := fmt.Sprintf("Autonomous R&D cycle '%s' (strategy: %s, since: %s).",
-		cfg.CycleName, cfg.Strategy, sinceDate)
+	var description strings.Builder
+	description.WriteString(fmt.Sprintf("Autonomous R&D cycle '%s' (strategy: %s, since: %s).",
+		cfg.CycleName, cfg.Strategy, sinceDate))
 
 	// Inject lessons summary.
 	costTrend := learning.CostTrend()
 	avoidPatterns := learning.AvoidPatterns(10)
 	if costTrend != "stable" || len(avoidPatterns) > 0 {
-		description += "\n\nLearning signals:"
+		description.WriteString("\n\nLearning signals:")
 		if costTrend != "stable" {
-			description += fmt.Sprintf("\n- Cost trend: %s", costTrend)
+			description.WriteString(fmt.Sprintf("\n- Cost trend: %s", costTrend))
 		}
 		for _, p := range avoidPatterns {
-			description += fmt.Sprintf("\n- Avoid: %s", p)
+			description.WriteString(fmt.Sprintf("\n- Avoid: %s", p))
 		}
 	}
 
@@ -291,7 +292,7 @@ func buildSynthesizedSpec(cfg SynthesisConfig, candidates []CandidateTask, learn
 
 	return ralph.Spec{
 		Name:        fmt.Sprintf("R&D Cycle: %s", cfg.CycleName),
-		Description: description,
+		Description: description.String(),
 		Completion:  "All planned work items are implemented, tests pass, and roadmap is updated.",
 		Tasks:       tasks,
 	}

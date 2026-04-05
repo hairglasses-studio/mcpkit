@@ -81,7 +81,7 @@ func TestRun_Signal(t *testing.T) {
 	}()
 
 	// Wait for healthy status
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		if m.Status() == "healthy" {
 			break
 		}
@@ -151,7 +151,7 @@ func TestRun_ContextCancel(t *testing.T) {
 	}()
 
 	// Wait for healthy
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		if m.Status() == "healthy" {
 			break
 		}

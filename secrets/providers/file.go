@@ -99,13 +99,13 @@ func (p *FileProvider) loadFile(path string) error {
 			continue
 		}
 
-		idx := strings.Index(line, "=")
-		if idx == -1 {
+		before, after, ok := strings.Cut(line, "=")
+		if !ok {
 			continue
 		}
 
-		key := strings.TrimSpace(line[:idx])
-		value := strings.TrimSpace(line[idx+1:])
+		key := strings.TrimSpace(before)
+		value := strings.TrimSpace(after)
 
 		if len(value) >= 2 {
 			if (value[0] == '"' && value[len(value)-1] == '"') ||

@@ -21,7 +21,7 @@ func TestCircuitBreaker_OpensOnNoProgressThreshold(t *testing.T) {
 		SameErrorThreshold:  10,
 		CooldownDuration:    time.Hour,
 	})
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		cb.RecordResult(false, "")
 		if cb.State() != CircuitClosed {
 			t.Errorf("iteration %d: expected still closed", i+1)
@@ -42,7 +42,7 @@ func TestCircuitBreaker_OpensOnSameErrorThreshold(t *testing.T) {
 		SameErrorThreshold:  3,
 		CooldownDuration:    time.Hour,
 	})
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		cb.RecordResult(false, "tool not found")
 	}
 	if cb.State() != CircuitClosed {
@@ -212,7 +212,7 @@ func TestCircuitBreaker_ZeroConfigUsesDefaults(t *testing.T) {
 	// NewCircuitBreaker with zero config should apply defaults.
 	cb := NewCircuitBreaker(CircuitBreakerConfig{})
 	// Trip using the default no-progress threshold (3).
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		cb.RecordResult(false, "")
 	}
 	if cb.State() != CircuitOpen {

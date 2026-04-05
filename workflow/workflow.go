@@ -3,6 +3,7 @@ package workflow
 import (
 	"context"
 	"fmt"
+	"maps"
 	"time"
 )
 
@@ -31,12 +32,8 @@ func (s State) Clone() State {
 		NodeName:  s.NodeName,
 		UpdatedAt: s.UpdatedAt,
 	}
-	for k, v := range s.Data {
-		c.Data[k] = v
-	}
-	for k, v := range s.Metadata {
-		c.Metadata[k] = v
-	}
+	maps.Copy(c.Data, s.Data)
+	maps.Copy(c.Metadata, s.Metadata)
 	return c
 }
 

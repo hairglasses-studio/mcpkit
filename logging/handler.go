@@ -3,6 +3,7 @@ package logging
 import (
 	"context"
 	"log/slog"
+	"maps"
 	"sync"
 	"time"
 )
@@ -167,9 +168,7 @@ func addAttr(m map[string]any, attr slog.Attr) {
 				m[attr.Key] = sub
 			} else {
 				// Inline group (empty key): merge into parent.
-				for k, v := range sub {
-					m[k] = v
-				}
+				maps.Copy(m, sub)
 			}
 		}
 		return

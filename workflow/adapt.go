@@ -4,6 +4,7 @@ package workflow
 
 import (
 	"context"
+	"maps"
 
 	"github.com/hairglasses-studio/mcpkit/orchestrator"
 	"github.com/hairglasses-studio/mcpkit/registry"
@@ -23,13 +24,9 @@ func FromStageFunc(stage orchestrator.StageFunc) NodeFunc {
 			return state, err
 		}
 		result := state.Clone()
-		for k, v := range output.Data {
-			result.Data[k] = v
-		}
+		maps.Copy(result.Data, output.Data)
 		if output.Metadata != nil {
-			for k, v := range output.Metadata {
-				result.Metadata[k] = v
-			}
+			maps.Copy(result.Metadata, output.Metadata)
 		}
 		return result, nil
 	}
@@ -41,9 +38,7 @@ func FromStageFunc(stage orchestrator.StageFunc) NodeFunc {
 func FromToolHandler(name string, handler registry.ToolHandlerFunc) NodeFunc {
 	return func(ctx context.Context, state State) (State, error) {
 		args := make(map[string]any, len(state.Data))
-		for k, v := range state.Data {
-			args[k] = v
-		}
+		maps.Copy(args, state.Data)
 		req := registry.CallToolRequest{}
 		req.Params.Arguments = args
 		req.Params.Name = name

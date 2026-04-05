@@ -35,10 +35,7 @@ func (le *LearningEngine) AvoidPatterns(windowSize int) []string {
 	if windowSize <= 0 {
 		windowSize = 10
 	}
-	start := len(notes) - windowSize
-	if start < 0 {
-		start = 0
-	}
+	start := max(len(notes)-windowSize, 0)
 	window := notes[start:]
 
 	failCounts := make(map[string]int)

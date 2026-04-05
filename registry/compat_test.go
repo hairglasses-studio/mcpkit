@@ -60,7 +60,7 @@ func TestExtractArguments_Nil(t *testing.T) {
 
 func TestExtractArguments_Map(t *testing.T) {
 	req := CallToolRequest{}
-	req.Params.Arguments = map[string]interface{}{
+	req.Params.Arguments = map[string]any{
 		"query": "test",
 		"limit": 10,
 	}

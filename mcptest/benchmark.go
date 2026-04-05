@@ -13,7 +13,7 @@ import (
 
 // BenchmarkTool runs b.N sequential calls to toolName with the provided args,
 // using the tool handler directly from reg (bypassing HTTP transport overhead).
-func BenchmarkTool(b *testing.B, reg *registry.ToolRegistry, toolName string, args map[string]interface{}) {
+func BenchmarkTool(b *testing.B, reg *registry.ToolRegistry, toolName string, args map[string]any) {
 	b.Helper()
 
 	td, ok := reg.GetTool(toolName)
@@ -33,7 +33,7 @@ func BenchmarkTool(b *testing.B, reg *registry.ToolRegistry, toolName string, ar
 }
 
 // BenchmarkToolParallel runs the tool handler in parallel across b.N calls.
-func BenchmarkToolParallel(b *testing.B, reg *registry.ToolRegistry, toolName string, args map[string]interface{}) {
+func BenchmarkToolParallel(b *testing.B, reg *registry.ToolRegistry, toolName string, args map[string]any) {
 	b.Helper()
 
 	td, ok := reg.GetTool(toolName)
@@ -58,11 +58,10 @@ func BenchmarkToolParallel(b *testing.B, reg *registry.ToolRegistry, toolName st
 // BenchmarkSuite iterates over all tools registered in reg and runs a sub-benchmark
 // for each tool. argsFunc is called with the tool name to obtain the args map;
 // it may return nil if no arguments are needed.
-func BenchmarkSuite(b *testing.B, reg *registry.ToolRegistry, argsFunc func(string) map[string]interface{}) {
+func BenchmarkSuite(b *testing.B, reg *registry.ToolRegistry, argsFunc func(string) map[string]any) {
 	b.Helper()
 
 	for _, name := range reg.ListTools() {
-		name := name // capture loop variable
 		td, ok := reg.GetTool(name)
 		if !ok {
 			continue
@@ -84,7 +83,7 @@ func BenchmarkSuite(b *testing.B, reg *registry.ToolRegistry, argsFunc func(stri
 }
 
 // buildCallToolRequest constructs a mcp.CallToolRequest for the given tool and args.
-func buildCallToolRequest(name string, args map[string]interface{}) registry.CallToolRequest {
+func buildCallToolRequest(name string, args map[string]any) registry.CallToolRequest {
 	req := mcp.CallToolRequest{}
 	req.Params.Name = name
 	if args != nil {

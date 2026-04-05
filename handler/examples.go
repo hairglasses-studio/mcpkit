@@ -1,5 +1,7 @@
 package handler
 
+import "strings"
+
 // ToolExample represents a concrete usage example for a tool definition.
 // Including 1-5 realistic examples in tool definitions improves LLM accuracy
 // from 72% to 90% on complex parameter handling (Anthropic research).
@@ -23,31 +25,31 @@ func FormatExamples(examples []ToolExample) string {
 		return ""
 	}
 
-	var s string
-	s += "\n\nExamples:"
+	var s strings.Builder
+	s.WriteString("\n\nExamples:")
 	for i, ex := range examples {
-		s += "\n"
+		s.WriteString("\n")
 		if ex.Description != "" {
-			s += "\n  " + ex.Description + ":"
+			s.WriteString("\n  " + ex.Description + ":")
 		}
-		s += "\n  Input: {"
+		s.WriteString("\n  Input: {")
 		first := true
 		for k, v := range ex.Input {
 			if !first {
-				s += ", "
+				s.WriteString(", ")
 			}
-			s += formatKV(k, v)
+			s.WriteString(formatKV(k, v))
 			first = false
 		}
-		s += "}"
+		s.WriteString("}")
 		if ex.Output != "" {
-			s += "\n  Output: " + ex.Output
+			s.WriteString("\n  Output: " + ex.Output)
 		}
 		if i < len(examples)-1 {
-			s += ""
+			s.WriteString("")
 		}
 	}
-	return s
+	return s.String()
 }
 
 func formatKV(key string, value any) string {

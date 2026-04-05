@@ -2,6 +2,7 @@ package providers
 
 import (
 	"context"
+	"slices"
 	"testing"
 
 	"github.com/hairglasses-studio/mcpkit/secrets"
@@ -150,13 +151,7 @@ func TestEnvProvider_List_NoPrefix(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	found := false
-	for _, k := range keys {
-		if k == "MCPKIT_NOPREFIX_LIST_TEST" {
-			found = true
-			break
-		}
-	}
+	found := slices.Contains(keys, "MCPKIT_NOPREFIX_LIST_TEST")
 	if !found {
 		t.Error("expected MCPKIT_NOPREFIX_LIST_TEST in List result")
 	}

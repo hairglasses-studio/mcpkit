@@ -1,4 +1,3 @@
-
 package research
 
 import (
@@ -13,7 +12,7 @@ import (
 // AssessInput is the input for the research_assess tool.
 type AssessInput struct {
 	Findings       []Finding      `json:"findings" jsonschema:"required,description=Findings to assess (from spec/sdk/ecosystem tools)"`
-	ScoringWeights ScoringWeights `json:"scoring_weights,omitempty" jsonschema:"description=Custom weights for effort/impact/urgency scoring"`
+	ScoringWeights ScoringWeights `json:"scoring_weights" jsonschema:"description=Custom weights for effort/impact/urgency scoring"`
 }
 
 // Finding is a single item to assess, typically produced by other research tools.
@@ -40,12 +39,12 @@ type AssessOutput struct {
 
 // Assessment is a scored evaluation of a single finding.
 type Assessment struct {
-	Name        string  `json:"name"`
-	Effort      int     `json:"effort"`
-	Impact      int     `json:"impact"`
-	Urgency     int     `json:"urgency"`
-	Priority    float64 `json:"priority"`
-	Rationale   string  `json:"rationale"`
+	Name      string  `json:"name"`
+	Effort    int     `json:"effort"`
+	Impact    int     `json:"impact"`
+	Urgency   int     `json:"urgency"`
+	Priority  float64 `json:"priority"`
+	Rationale string  `json:"rationale"`
 }
 
 func (m *Module) assessTool() registry.ToolDefinition {

@@ -96,7 +96,7 @@ func TestMetadataDiscovery_Cache(t *testing.T) {
 
 	d := NewMetadataDiscovery(DiscoveryConfig{})
 
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		_, err := d.Discover(context.Background(), srv.URL)
 		if err != nil {
 			t.Fatalf("Discover %d: %v", i, err)

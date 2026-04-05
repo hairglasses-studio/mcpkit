@@ -1,4 +1,3 @@
-
 package research
 
 import (
@@ -351,21 +350,21 @@ func TestGitHubActivityTool_EmptyRepos(t *testing.T) {
 // extractSinceFromSummary attempts to extract the ISO 8601 date from a summary string.
 func extractSinceFromSummary(summary string) string {
 	// summary format: "Checked N repo(s) since 2025-03-08T00:00:00Z: ..."
-	idx := strings.Index(summary, "since ")
-	if idx < 0 {
+	_, after, ok := strings.Cut(summary, "since ")
+	if !ok {
 		return ""
 	}
-	rest := summary[idx+len("since "):]
+	rest := after
 	// Find end of the date (next colon after the time zone)
-	colonIdx := strings.Index(rest, ":")
-	if colonIdx < 0 {
+	found := strings.Contains(rest, ":")
+	if !found {
 		return ""
 	}
 	// Date format is RFC3339: "2006-01-02T15:04:05Z"
 	// Find the space or end
-	end := strings.Index(rest, " ")
-	if end < 0 {
+	before, _, ok := strings.Cut(rest, " ")
+	if !ok {
 		return strings.TrimRight(rest, " ")
 	}
-	return rest[:end]
+	return before
 }

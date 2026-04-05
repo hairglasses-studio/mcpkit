@@ -83,7 +83,7 @@ func TestTypedHandler_Execution(t *testing.T) {
 	)
 
 	req := mcp.CallToolRequest{}
-	req.Params.Arguments = map[string]interface{}{
+	req.Params.Arguments = map[string]any{
 		"query": "hello",
 		"limit": float64(10),
 	}
@@ -132,7 +132,7 @@ func TestTypedHandler_Error(t *testing.T) {
 	)
 
 	req := mcp.CallToolRequest{}
-	req.Params.Arguments = map[string]interface{}{"query": "test"}
+	req.Params.Arguments = map[string]any{"query": "test"}
 
 	result, err := td.Handler(context.Background(), req)
 	if err != nil {

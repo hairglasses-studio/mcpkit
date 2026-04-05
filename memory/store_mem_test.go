@@ -242,8 +242,8 @@ func TestList_Limit(t *testing.T) {
 	ctx := context.Background()
 	s := NewInMemoryStore()
 
-	for i := 0; i < 5; i++ {
-		_ = s.Set(ctx, MemoryEntry{Key: string(rune('a'+i)), Value: "v", Tier: TierEpisodic})
+	for i := range 5 {
+		_ = s.Set(ctx, MemoryEntry{Key: string(rune('a' + i)), Value: "v", Tier: TierEpisodic})
 	}
 
 	results, err := s.List(ctx, ListOptions{Limit: 2})
@@ -380,10 +380,10 @@ func TestConcurrentAccess(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(goroutines)
 
-	for i := 0; i < goroutines; i++ {
+	for i := range goroutines {
 		go func(id int) {
 			defer wg.Done()
-			for j := 0; j < ops; j++ {
+			for j := range ops {
 				key := string(rune('a' + (id % 5)))
 				switch j % 3 {
 				case 0:

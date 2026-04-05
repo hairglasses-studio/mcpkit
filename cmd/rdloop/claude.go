@@ -123,13 +123,11 @@ func (c *ClaudeClient) CreateMessage(ctx context.Context, req sampling.CreateMes
 	// 8 attempts with 120s cap provides ~7min total retry window for 24hr resilience.
 	var resp *claudeResponse
 	var lastErr error
-	for attempt := 0; attempt < 8; attempt++ {
+	for attempt := range 8 {
 		if attempt > 0 {
-			backoff := time.Duration(math.Pow(2, float64(attempt))) * time.Second
-			// Cap backoff at 120s for longer recovery during 24hr runs.
-			if backoff > 120*time.Second {
-				backoff = 120 * time.Second
-			}
+			backoff := min(
+				// Cap backoff at 120s for longer recovery during 24hr runs.
+				time.Duration(math.Pow(2, float64(attempt)))*time.Second, 120*time.Second)
 			// Use Retry-After header if available.
 			if rle, ok := lastErr.(*transientError); ok && rle.retryAfter > 0 {
 				backoff = rle.retryAfter
@@ -264,10 +262,8 @@ func parseRetryAfter(val string) time.Duration {
 	if err != nil {
 		return 0
 	}
-	d := time.Duration(secs) * time.Second
-	// Cap at 2 minutes to avoid extreme waits.
-	if d > 2*time.Minute {
-		d = 2 * time.Minute
-	}
+	d := min(
+		// Cap at 2 minutes to avoid extreme waits.
+		time.Duration(secs)*time.Second, 2*time.Minute)
 	return d
 }

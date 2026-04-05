@@ -167,11 +167,11 @@ func TestFileArtifactStoreConcurrentAccess(t *testing.T) {
 	}
 
 	var wg sync.WaitGroup
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		wg.Add(1)
 		go func(n int) {
 			defer wg.Done()
-			for j := 0; j < 20; j++ {
+			for j := range 20 {
 				id := fmt.Sprintf("concurrent-%d-%d", n, j)
 				store.Save(Artifact{ID: id, Type: "test"})
 				store.Get(id)

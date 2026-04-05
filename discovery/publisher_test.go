@@ -79,7 +79,7 @@ func TestRegister_PostBodyAndAuthHeader(t *testing.T) {
 		capturedPath = r.URL.Path
 		capturedAuth = r.Header.Get("Authorization")
 		capturedBody, _ = io.ReadAll(r.Body)
-		writeJSON(w,want)
+		writeJSON(w, want)
 	}))
 	defer srv.Close()
 
@@ -128,7 +128,7 @@ func TestUpdate_PutRequest(t *testing.T) {
 		capturedMethod = r.Method
 		capturedPath = r.URL.Path
 		capturedAuth = r.Header.Get("Authorization")
-		writeJSON(w,response)
+		writeJSON(w, response)
 	}))
 	defer srv.Close()
 
@@ -157,7 +157,7 @@ func TestUpdate_IDURLEncoded(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// r.RequestURI preserves the raw (percent-encoded) form sent by the client.
 		capturedRequestURI = r.RequestURI
-		writeJSON(w,ServerMetadata{ID: "has space"})
+		writeJSON(w, ServerMetadata{ID: "has space"})
 	}))
 	defer srv.Close()
 
@@ -225,7 +225,7 @@ func TestPublish_ConvenienceWrapper(t *testing.T) {
 		if r.Method != http.MethodPost {
 			t.Errorf("Publish: expected POST, got %q", r.Method)
 		}
-		writeJSON(w,want)
+		writeJSON(w, want)
 	}))
 	defer srv.Close()
 
@@ -287,7 +287,6 @@ func TestRegister_Non2xx_MapsToSentinel(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
 		t.Run(http.StatusText(tc.status), func(t *testing.T) {
 			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(tc.status)

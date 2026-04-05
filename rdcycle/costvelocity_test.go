@@ -130,10 +130,10 @@ func TestCostVelocityGovernorConcurrent(t *testing.T) {
 	g := NewCostVelocityGovernor(5, 100.0, 10)
 	done := make(chan struct{})
 
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		go func(n int) {
 			defer func() { done <- struct{}{} }()
-			for j := 0; j < 20; j++ {
+			for j := range 20 {
 				g.Record(CycleRecord{CycleNum: n*20 + j, Cost: 1.0, Productive: true})
 				g.Check()
 				g.ShouldHalt()
@@ -142,7 +142,7 @@ func TestCostVelocityGovernorConcurrent(t *testing.T) {
 			}
 		}(i)
 	}
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		<-done
 	}
 }

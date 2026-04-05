@@ -90,7 +90,7 @@ func GetStringArrayParam(req registry.CallToolRequest, name string) []string {
 	if !ok {
 		return nil
 	}
-	arr, ok := val.([]interface{})
+	arr, ok := val.([]any)
 	if !ok {
 		return nil
 	}

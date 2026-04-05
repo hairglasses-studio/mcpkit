@@ -45,7 +45,7 @@ func TestStructuredResult_HasStructuredContent(t *testing.T) {
 }
 
 func TestStructuredResult_NotError(t *testing.T) {
-	r := StructuredResult(map[string]interface{}{"ok": true})
+	r := StructuredResult(map[string]any{"ok": true})
 	if r.IsError {
 		t.Error("StructuredResult with valid data should not be an error")
 	}
@@ -100,12 +100,12 @@ func TestStructuredResult_Slice(t *testing.T) {
 // ==================== GetResponseFormat ====================
 
 func makeReqWithFormat(format string) mcp.CallToolRequest {
-	return makeReq(map[string]interface{}{"response_format": format})
+	return makeReq(map[string]any{"response_format": format})
 }
 
 func TestGetResponseFormat_Default(t *testing.T) {
 	// No response_format argument — should default to FormatDetailed
-	req := makeReq(map[string]interface{}{})
+	req := makeReq(map[string]any{})
 	got := GetResponseFormat(req)
 	if got != FormatDetailed {
 		t.Errorf("GetResponseFormat default = %q, want %q", got, FormatDetailed)

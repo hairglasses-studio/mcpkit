@@ -35,7 +35,7 @@ func TestTracingMiddleware_SpanAttributes(t *testing.T) {
 		t.Fatal("expected at least one span")
 	}
 
-	attrMap := make(map[string]interface{})
+	attrMap := make(map[string]any)
 	for _, a := range spans[0].Attributes {
 		attrMap[string(a.Key)] = a.Value.AsInterface()
 	}
