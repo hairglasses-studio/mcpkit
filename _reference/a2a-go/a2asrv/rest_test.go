@@ -1,0 +1,561 @@
+// Copyright 2025 The A2A Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package a2asrv
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"errors"
+	"io"
+	"iter"
+	"net/http"
+	"net/http/httptest"
+	"slices"
+	"testing"
+	"time"
+
+	"github.com/a2aproject/a2a-go/v2/a2a"
+	"github.com/a2aproject/a2a-go/v2/a2aclient"
+	"github.com/a2aproject/a2a-go/v2/a2asrv/taskstore"
+	"github.com/a2aproject/a2a-go/v2/internal/rest"
+	"github.com/a2aproject/a2a-go/v2/internal/testutil"
+	"github.com/a2aproject/a2a-go/v2/log"
+)
+
+func TestREST_RequestRouting(t *testing.T) {
+	testCases := []struct {
+		method string
+		call   func(ctx context.Context, client *a2aclient.Client) (any, error)
+	}{
+		{
+			method: "SendMessage",
+			call: func(ctx context.Context, client *a2aclient.Client) (any, error) {
+				return client.SendMessage(ctx, &a2a.SendMessageRequest{})
+			},
+		},
+		{
+			method: "SendStreamingMessage",
+			call: func(ctx context.Context, client *a2aclient.Client) (any, error) {
+				return handleSingleItemSeq(client.SendStreamingMessage(ctx, &a2a.SendMessageRequest{}))
+			},
+		},
+		{
+			method: "GetTask",
+			call: func(ctx context.Context, client *a2aclient.Client) (any, error) {
+				return client.GetTask(ctx, &a2a.GetTaskRequest{ID: "test-id"})
+			},
+		},
+		{
+			method: "ListTasks",
+			call: func(ctx context.Context, client *a2aclient.Client) (any, error) {
+				return client.ListTasks(ctx, &a2a.ListTasksRequest{})
+			},
+		},
+		{
+			method: "CancelTask",
+			call: func(ctx context.Context, client *a2aclient.Client) (any, error) {
+				return client.CancelTask(ctx, &a2a.CancelTaskRequest{ID: "test-id"})
+			},
+		},
+		{
+			method: "SubscribeToTask",
+			call: func(ctx context.Context, client *a2aclient.Client) (any, error) {
+				return handleSingleItemSeq(client.SubscribeToTask(ctx, &a2a.SubscribeToTaskRequest{ID: "test-id"}))
+			},
+		},
+		{
+			method: "CreateTaskPushConfig",
+			call: func(ctx context.Context, client *a2aclient.Client) (any, error) {
+				return client.CreateTaskPushConfig(ctx, &a2a.CreateTaskPushConfigRequest{TaskID: a2a.TaskID("test-id")})
+			},
+		},
+		{
+			method: "GetTaskPushConfig",
+			call: func(ctx context.Context, client *a2aclient.Client) (any, error) {
+				return client.GetTaskPushConfig(ctx, &a2a.GetTaskPushConfigRequest{TaskID: a2a.TaskID("test-id"), ID: "test-config-id"})
+			},
+		},
+		{
+			method: "ListTaskPushConfigs",
+			call: func(ctx context.Context, client *a2aclient.Client) (any, error) {
+				return client.ListTaskPushConfigs(ctx, &a2a.ListTaskPushConfigRequest{TaskID: a2a.TaskID("test-id")})
+			},
+		},
+		{
+			method: "DeleteTaskPushConfig",
+			call: func(ctx context.Context, client *a2aclient.Client) (any, error) {
+				return nil, client.DeleteTaskPushConfig(ctx, &a2a.DeleteTaskPushConfigRequest{TaskID: a2a.TaskID("test-id"), ID: "test-config-id"})
+			},
+		},
+		{
+			method: "GetExtendedAgentCard",
+			call: func(ctx context.Context, client *a2aclient.Client) (any, error) {
+				return client.GetExtendedAgentCard(ctx, &a2a.GetExtendedAgentCardRequest{})
+			},
+		},
+	}
+
+	ctx := t.Context()
+	lastCallCtx := make(chan *CallContext, 1)
+	interceptor := &mockInterceptor{
+		beforeFn: func(ctx context.Context, callCtx *CallContext, req *Request) (context.Context, any, error) {
+			lastCallCtx <- callCtx
+			return ctx, nil, nil
+		},
+	}
+
+	reqHandler := NewHandler(
+		&mockAgentExecutor{},
+		WithCallInterceptors(interceptor),
+		WithExtendedAgentCard(&a2a.AgentCard{}),
+	)
+
+	for _, tenant := range []string{"", "my-tenant"} {
+		var transport http.Handler
+		if tenant == "" {
+			transport = NewRESTHandler(reqHandler)
+		} else {
+			transport = NewTenantRESTHandler("/{*}", reqHandler)
+		}
+		server := httptest.NewServer(transport)
+		t.Cleanup(server.Close)
+
+		for _, tc := range testCases {
+			name := tc.method
+			if tenant != "" {
+				name += " (with tenant)"
+			}
+			t.Run(name, func(t *testing.T) {
+				iface := a2a.NewAgentInterface(server.URL, a2a.TransportProtocolHTTPJSON)
+				if tenant != "" {
+					iface.Tenant = tenant
+				}
+				client, err := a2aclient.NewFromEndpoints(ctx, []*a2a.AgentInterface{iface})
+				if err != nil {
+					t.Fatalf("a2aclient.NewFromEndpoints() error = %v", err)
+				}
+				_, _ = tc.call(ctx, client)
+				select {
+				case callCtx := <-lastCallCtx:
+					if callCtx.Tenant() != tenant {
+						t.Fatalf("callCtx.Tenant() = %q, want %q", callCtx.Tenant(), tenant)
+					}
+					if callCtx.Method() != tc.method {
+						t.Fatalf("callCtx.Method() = %q, want %q", callCtx.Method(), tc.method)
+					}
+				case <-time.After(1 * time.Second):
+					t.Fatalf("Routing failed")
+				}
+			})
+		}
+	}
+}
+
+func TestREST_Validations(t *testing.T) {
+	taskID := a2a.NewTaskID()
+	config := a2a.PushConfig{
+		ID:  string(taskID),
+		URL: "https://example.com/push",
+	}
+	task := &a2a.Task{ID: taskID}
+
+	authenticator := func(ctx context.Context) (string, error) {
+		return "TestUser", nil
+	}
+
+	methods := []string{"POST", "GET", "PUT", "DELETE", "PATCH"}
+
+	testCases := []struct {
+		name    string
+		methods []string
+		path    string
+		body    any
+	}{
+		{
+			name:    "SendMessage",
+			methods: []string{http.MethodPost},
+			path:    "/message:send",
+			body:    a2a.SendMessageRequest{Message: a2a.NewMessage(a2a.MessageRoleUser, a2a.NewTextPart("test"))},
+		},
+		{
+			name:    "SendMessageStream",
+			methods: []string{http.MethodPost},
+			path:    "/message:stream",
+		},
+		{
+			name:    "GetTask",
+			methods: []string{http.MethodGet},
+			path:    "/tasks/" + string(taskID),
+		},
+		{
+			name:    "ListTasks",
+			methods: []string{http.MethodGet},
+			path:    "/tasks",
+		},
+		{
+			name:    "CancelTask",
+			methods: []string{http.MethodPost},
+			path:    "/tasks/" + string(taskID) + ":cancel",
+		},
+		{
+			name:    "ResubscribeToTask",
+			methods: []string{http.MethodPost},
+			path:    "/tasks/" + string(taskID) + ":subscribe",
+		},
+		{
+			name:    "SetAndListTaskPushConfig",
+			methods: []string{http.MethodGet, http.MethodPost},
+			path:    "/tasks/" + string(taskID) + "/pushNotificationConfigs",
+			body:    config,
+		},
+		{
+			name:    "GetAndDeleteTaskPushConfig",
+			methods: []string{http.MethodGet, http.MethodDelete},
+			path:    "/tasks/" + string(taskID) + "/pushNotificationConfigs/" + string(config.ID),
+			body:    config,
+		},
+		{
+			name:    "GetExtendedAgentCard",
+			methods: []string{http.MethodGet},
+			path:    "/extendedAgentCard",
+		},
+	}
+	store := testutil.NewTestTaskStoreWithConfig(&taskstore.InMemoryStoreConfig{
+		Authenticator: authenticator,
+	}).WithTasks(t, task)
+	pushstore := testutil.NewTestPushConfigStore()
+	pushsender := testutil.NewTestPushSender(t).SetSendPushError(nil)
+	mock := &mockAgentExecutor{
+		ExecuteFunc: func(ctx context.Context, execCtx *ExecutorContext) iter.Seq2[a2a.Event, error] {
+			return func(yield func(a2a.Event, error) bool) {
+				yield(a2a.NewMessage(a2a.MessageRoleAgent, a2a.NewTextPart("test message")), nil)
+			}
+		},
+		CancelFunc: func(ctx context.Context, execCtx *ExecutorContext) iter.Seq2[a2a.Event, error] {
+			return func(yield func(a2a.Event, error) bool) {
+				yield(&a2a.Task{
+					ID:     taskID,
+					Status: a2a.TaskStatus{State: a2a.TaskStateCanceled},
+				}, nil)
+			}
+		},
+	}
+
+	reqHandler := NewHandler(
+		mock,
+		WithTaskStore(store),
+		WithPushNotifications(pushstore, pushsender),
+		WithExtendedAgentCard(&a2a.AgentCard{}),
+	)
+	server := httptest.NewServer(NewRESTHandler(reqHandler))
+	defer server.Close()
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			for _, method := range methods {
+				t.Run(method, func(t *testing.T) {
+					ctx := t.Context()
+					var bodyBytes []byte
+					if tc.body != nil {
+						bodyBytes, _ = json.Marshal(tc.body)
+					} else {
+						bodyBytes = []byte("{}")
+					}
+
+					req, err := http.NewRequestWithContext(ctx, method, server.URL+tc.path, bytes.NewBuffer(bodyBytes))
+					if err != nil {
+						t.Fatalf("failed to create request: %v", err)
+					}
+
+					resp, err := server.Client().Do(req)
+					if err != nil {
+						t.Fatalf("request failed: %v", err)
+					}
+
+					defer func() {
+						if err := resp.Body.Close(); err != nil {
+							t.Error(ctx, "failed to close http response body", err)
+						}
+					}()
+
+					if slices.Contains(tc.methods, method) {
+						// HAPPY PATH
+						if resp.StatusCode != http.StatusOK {
+							errBody, _ := io.ReadAll(resp.Body)
+							t.Errorf("got %d want 200 OK for correct method %s. \nServer error details: %s", resp.StatusCode, method, string(errBody))
+						}
+					} else {
+						// SAD PATH
+						if resp.StatusCode == http.StatusOK {
+							t.Errorf("got %v want non OK for wrong method %s, ", resp.StatusCode, method)
+						}
+					}
+				})
+			}
+		})
+	}
+}
+
+func TestREST_InvalidPayloads(t *testing.T) {
+	method := http.MethodPost
+	payload := "[]"
+	expectedErr := a2a.ErrParseError
+	taskID := a2a.NewTaskID()
+
+	testCases := []struct {
+		name string
+		path string
+	}{
+		{
+			name: "SendMessage with invalid payload",
+			path: "/message:send",
+		},
+		{
+			name: "SendMessageStream with invalid payload",
+			path: "/message:stream",
+		},
+		{
+			name: "SetTaskPushConfig with invalid payload",
+			path: "/tasks/" + string(taskID) + "/pushNotificationConfigs",
+		},
+	}
+
+	reqHandler := NewHandler(&mockAgentExecutor{})
+	server := httptest.NewServer(NewRESTHandler(reqHandler))
+	defer server.Close()
+
+	ctx := t.Context()
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req, err := http.NewRequestWithContext(ctx, method, server.URL+tc.path, bytes.NewBufferString(payload))
+			if err != nil {
+				t.Fatalf("failed to create request: %v", err)
+			}
+			req.Header.Set("Content-Type", "application/json")
+
+			resp, err := server.Client().Do(req)
+
+			if err != nil {
+				t.Fatalf("request failed: %v", err)
+			}
+
+			if resp.StatusCode != http.StatusBadRequest {
+				t.Errorf("got %d, want 400 Bad Request", resp.StatusCode)
+			}
+
+			if contentType := resp.Header.Get("Content-Type"); contentType != "application/json" {
+				t.Errorf("got Content-Type %q, want application/json", contentType)
+			}
+
+			gotErr := rest.ToA2AError(resp)
+
+			if !errors.Is(gotErr, expectedErr) {
+				t.Errorf("got error %v, want %v", gotErr, expectedErr)
+			}
+		})
+	}
+}
+
+func TestREST_ListTasksParseErrors(t *testing.T) {
+	tests := []struct {
+		name  string
+		query string
+	}{
+		{
+			name:  "invalid pageSize",
+			query: "?pageSize=abc",
+		},
+		{
+			name:  "invalid includeArtifacts",
+			query: "?includeArtifacts=notbool",
+		},
+		{
+			name:  "multiple invalid params",
+			query: "?pageSize=abc&includeArtifacts=notbool",
+		},
+	}
+
+	auth := func(ctx context.Context) (string, error) { return "TestUser", nil }
+	store := testutil.NewTestTaskStoreWithConfig(&taskstore.InMemoryStoreConfig{
+		Authenticator: auth,
+	})
+	reqHandler := NewHandler(&mockAgentExecutor{}, WithTaskStore(store))
+	server := httptest.NewServer(NewRESTHandler(reqHandler))
+	t.Cleanup(server.Close)
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := t.Context()
+
+			req, err := http.NewRequestWithContext(ctx, "GET", server.URL+"/tasks"+tc.query, nil)
+			if err != nil {
+				t.Fatalf("http.NewRequestWithContext() error = %v", err)
+			}
+
+			resp, err := server.Client().Do(req)
+			if err != nil {
+				t.Fatalf("server.Client().Do() error = %v", err)
+			}
+			defer func() { _ = resp.Body.Close() }()
+
+			if resp.StatusCode == http.StatusOK {
+				t.Fatalf("resp.StatusCode = %d, want non-200 for invalid query params", resp.StatusCode)
+			}
+
+			gotErr := rest.ToA2AError(resp)
+			if !errors.Is(gotErr, a2a.ErrInvalidRequest) {
+				t.Fatalf("rest.ToA2AError() = %v, want %v", gotErr, a2a.ErrInvalidRequest)
+			}
+		})
+	}
+}
+
+func TestRESTTenant(t *testing.T) {
+	tid := a2a.NewTaskID()
+	tests := []struct {
+		name       string
+		template   string
+		path       string
+		wantTenant string
+		wantErr    bool
+	}{
+		{
+			name:       "simple",
+			template:   "/{*}",
+			path:       "/my-tenant/tasks/" + string(tid),
+			wantTenant: "my-tenant",
+		},
+		{
+			name:       "complex with tenant",
+			template:   "/locations/*/projects/{*}",
+			path:       "/locations/us-central1/projects/my-project/tasks/" + string(tid),
+			wantTenant: "my-project",
+		},
+		{
+			name:       "multi-segment capture",
+			template:   "{/locations/*/projects/*}",
+			path:       "/locations/us-central1/projects/my-project/tasks/" + string(tid),
+			wantTenant: "locations/us-central1/projects/my-project",
+		},
+		{
+			name:       "trailing slash",
+			template:   "/{*}",
+			path:       "/my-tenant/tasks/" + string(tid),
+			wantTenant: "my-tenant",
+		},
+		{
+			name:     "no match",
+			template: "/fixed/{*}",
+			path:     "/other/my-tenant/tasks/" + string(tid),
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := t.Context()
+			gotTenant := ""
+			task := &a2a.Task{ID: tid, ContextID: a2a.NewContextID()}
+			store := testutil.NewTestTaskStore().WithTasks(t, task)
+			interceptor := &testInterceptor{
+				BeforeFn: func(ctx context.Context, callCtx *CallContext, req *Request) (context.Context, any, error) {
+					gotTenant = callCtx.Tenant()
+					return ctx, nil, nil
+				},
+			}
+			handler := NewHandler(&mockAgentExecutor{}, WithTaskStore(store), WithCallInterceptors(interceptor))
+			server := httptest.NewServer(NewTenantRESTHandler(tt.template, handler))
+			defer server.Close()
+
+			req, err := http.NewRequestWithContext(ctx, "GET", server.URL+tt.path, nil)
+			if err != nil {
+				t.Fatalf("http.NewRequestWithContext() error = %v", err)
+			}
+
+			resp, err := server.Client().Do(req)
+			if err != nil {
+				t.Fatalf("server.Client().Do() error = %v", err)
+			}
+			defer func() {
+				if err := resp.Body.Close(); err != nil {
+					t.Errorf("resp.Body.Close() error = %v", err)
+				}
+			}()
+
+			if tt.wantErr && resp.StatusCode == http.StatusOK {
+				t.Fatal("GetTask() error = nil, want to fail")
+			}
+			if tt.wantErr {
+				return
+			}
+			if resp.StatusCode != http.StatusOK {
+				errBody, _ := io.ReadAll(resp.Body)
+				t.Errorf("got %d, want 200 OK. Error: %s", resp.StatusCode, string(errBody))
+			}
+			if gotTenant != tt.wantTenant {
+				t.Errorf("got tenant %q, want %q", gotTenant, tt.wantTenant)
+			}
+		})
+	}
+}
+
+type testInterceptor struct {
+	PassthroughCallInterceptor
+	BeforeFn func(ctx context.Context, callCtx *CallContext, req *Request) (context.Context, any, error)
+}
+
+func TestREST_ServiceParams(t *testing.T) {
+	ctx := t.Context()
+	var gotAuth []string
+	interceptor := &testInterceptor{
+		BeforeFn: func(ctx context.Context, callCtx *CallContext, req *Request) (context.Context, any, error) {
+			gotAuth, _ = callCtx.ServiceParams().Get("authorization")
+			return ctx, nil, nil
+		},
+	}
+
+	handler := NewHandler(&mockAgentExecutor{}, WithCallInterceptors(interceptor))
+	server := httptest.NewServer(NewRESTHandler(handler))
+	defer server.Close()
+
+	req, err := http.NewRequestWithContext(ctx, "GET", server.URL+"/tasks/test-task", nil)
+	if err != nil {
+		t.Fatalf("http.NewRequestWithContext() error = %v", err)
+	}
+	req.Header.Set("Authorization", "Bearer test-token")
+
+	resp, err := server.Client().Do(req)
+	if err != nil {
+		t.Fatalf("server.Client().Do() error = %v", err)
+	}
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Error(ctx, "failed to close http response body", err)
+		}
+	}()
+
+	if len(gotAuth) == 0 || gotAuth[0] != "Bearer test-token" {
+		t.Errorf("ServiceParams[authorization] = %v, want [Bearer test-token]", gotAuth)
+	}
+}
+
+func (i *testInterceptor) Before(ctx context.Context, callCtx *CallContext, req *Request) (context.Context, any, error) {
+	if i.BeforeFn != nil {
+		return i.BeforeFn(ctx, callCtx, req)
+	}
+	return ctx, nil, nil
+}

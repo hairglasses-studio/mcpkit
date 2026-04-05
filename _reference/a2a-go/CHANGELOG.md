@@ -1,0 +1,292 @@
+# Changelog
+
+## [2.1.0](https://github.com/a2aproject/a2a-go/compare/v2.0.1...v2.1.0) (2026-04-01)
+
+
+### Features
+
+* observability improvements ([#295](https://github.com/a2aproject/a2a-go/issues/295)) ([0c90bc7](https://github.com/a2aproject/a2a-go/commit/0c90bc78f3f3828b524fe1035d238a3830e6cb6b))
+
+
+### Bug Fixes
+
+* blocking=true compatibility ([#305](https://github.com/a2aproject/a2a-go/issues/305)) ([8fbdbee](https://github.com/a2aproject/a2a-go/commit/8fbdbee04dec953c5dd9aae1ce83517bbadb0786)), closes [#301](https://github.com/a2aproject/a2a-go/issues/301)
+* correct json discriminator keys ([#298](https://github.com/a2aproject/a2a-go/issues/298)) ([dfb4052](https://github.com/a2aproject/a2a-go/commit/dfb4052201d8db9ba5a854988caebd6d421bfd7f))
+* correct json discriminator keys ([#300](https://github.com/a2aproject/a2a-go/issues/300)) ([b4471e6](https://github.com/a2aproject/a2a-go/commit/b4471e68a5ad082965793e8b557f45fd41675a6a))
+
+## [2.0.1](https://github.com/a2aproject/a2a-go/compare/v2.0.0...v2.0.1) (2026-03-24)
+
+
+### Features
+
+* **a2acompat:** add HTTP+JSON REST support to a2av0 compat layer ([#280](https://github.com/a2aproject/a2a-go/issues/280)) ([bac00e7](https://github.com/a2aproject/a2a-go/commit/bac00e7a1a6974eb62feded3637d661624534f58))
+* agent executor cleaner ([#276](https://github.com/a2aproject/a2a-go/issues/276)) ([9c95980](https://github.com/a2aproject/a2a-go/commit/9c95980a0764f263872b9d10e4ce75984f4b6756))
+
+
+### Bug Fixes
+
+* ensure correct concurrent cancellation results ([#287](https://github.com/a2aproject/a2a-go/issues/287)) ([d0f8981](https://github.com/a2aproject/a2a-go/commit/d0f8981fa1b81d8e0aa09df8db6ad044387ba8b4)), closes [#245](https://github.com/a2aproject/a2a-go/issues/245)
+
+
+### Documentation
+
+* **a2aclient:** add Example_* test functions for pkg.go.dev documentation ([#263](https://github.com/a2aproject/a2a-go/issues/263)) ([f8dae97](https://github.com/a2aproject/a2a-go/commit/f8dae97f47c11ad7a8327a85de592cde95d7083d))
+* update diagrams, docs and instructions ([#289](https://github.com/a2aproject/a2a-go/issues/289)) ([ed33c7a](https://github.com/a2aproject/a2a-go/commit/ed33c7a5ed98a64cffaa1181d8493d0dfb550702))
+
+## [1.0.0](https://github.com/a2aproject/a2a-go/compare/v1.0.0-alpha.3...v1.0.0) (2026-03-17)
+
+
+### Features
+
+* implement the new rest error handling ([#282](https://github.com/a2aproject/a2a-go/issues/282)) ([a3bda30](https://github.com/a2aproject/a2a-go/commit/a3bda30ccd6258c9f3af3e88e483f11213f2f2bf))
+* use v2 suffix for module ID and provide compat support ([#270](https://github.com/a2aproject/a2a-go/issues/270)) ([dd1b6ba](https://github.com/a2aproject/a2a-go/commit/dd1b6ba1a32aac7b8051c9a9be9da5f661a7f443)), closes [#250](https://github.com/a2aproject/a2a-go/issues/250)
+
+
+### Bug Fixes
+
+* a2asrv jsonrpc Content-Type ([#265](https://github.com/a2aproject/a2a-go/issues/265)) ([2568a46](https://github.com/a2aproject/a2a-go/commit/2568a4609b59dedbece4f324d5829ba9160d3e24))
+* bugs before going from alpha ([#279](https://github.com/a2aproject/a2a-go/issues/279)) ([b1f055c](https://github.com/a2aproject/a2a-go/commit/b1f055ce0fbd90295b9e9ce91dc6ae92f6618cd5))
+* GetTaskRequest nil pointer assignment check ([#258](https://github.com/a2aproject/a2a-go/issues/258)) ([440bb79](https://github.com/a2aproject/a2a-go/commit/440bb793d8fb2e4a6cde8c2cfb43ff4c5235943b))
+* inject headers into service params ([#277](https://github.com/a2aproject/a2a-go/issues/277)) ([d33f3bd](https://github.com/a2aproject/a2a-go/commit/d33f3bd9c2e18b4d45995dc0bbf4f76e44a729bd)), closes [#275](https://github.com/a2aproject/a2a-go/issues/275)
+* propagate cancelation signal using task store ([#272](https://github.com/a2aproject/a2a-go/issues/272)) ([5e1d462](https://github.com/a2aproject/a2a-go/commit/5e1d4625242b918bc40e513617c23c63308ce2fb)), closes [#245](https://github.com/a2aproject/a2a-go/issues/245)
+* regenerate spec and fix returnImmediately ([#284](https://github.com/a2aproject/a2a-go/issues/284)) ([2eee0b9](https://github.com/a2aproject/a2a-go/commit/2eee0b9a0008a4f61a1ddea034f9f0e10897ae05))
+* task modified after save ([#266](https://github.com/a2aproject/a2a-go/issues/266)) ([c15febe](https://github.com/a2aproject/a2a-go/commit/c15febe52b1c856c4e7aa0d8b55478f9523efdf0))
+* taskupdater result mutable ([#274](https://github.com/a2aproject/a2a-go/issues/274)) ([6038d92](https://github.com/a2aproject/a2a-go/commit/6038d92c6709d352c9496f2c3973f1a9da730bb0))
+* update pushsender ([#256](https://github.com/a2aproject/a2a-go/issues/256)) ([5f7a594](https://github.com/a2aproject/a2a-go/commit/5f7a594a85a1653ba8d41a7fc0f0924cef8f6b3d))
+* use enum values as in the spec ([#261](https://github.com/a2aproject/a2a-go/issues/261)) ([eb98981](https://github.com/a2aproject/a2a-go/commit/eb98981e2fd6b698925200bc02fef52b9c75288f)), closes [#251](https://github.com/a2aproject/a2a-go/issues/251)
+
+
+### Documentation
+
+* **a2asrv:** add Example_* test functions for pkg.go.dev documentation ([#262](https://github.com/a2aproject/a2a-go/issues/262)) ([7888e37](https://github.com/a2aproject/a2a-go/commit/7888e3704df17222376eda1bfbc876a06ea6d665))
+* add example tests a2a ([#240](https://github.com/a2aproject/a2a-go/issues/240)) ([4fe08a9](https://github.com/a2aproject/a2a-go/commit/4fe08a95d47e2c85e642775a3eac2a363ecdb323))
+
+## [1.0.0-alpha.3](https://github.com/a2aproject/a2a-go/compare/v1.0.0-alpha.2...v1.0.0-alpha.3) (2026-02-27)
+
+### Bug Fixes
+
+* `a2a.Part` metadata handling fixed.
+
+## [1.0.0-alpha.2](https://github.com/a2aproject/a2a-go/compare/v1.0.0-alpha...v1.0.0-alpha.2) (2026-02-27)
+
+Versioning is introduced on the SDK level, the new version is `github.com/a2aproject/a2a-go/v1`.
+
+### Features
+
+* gRPC protocol binding uses standard `google.rpc.ErrorInfo` for error details.
+* `a2asrv.NewTenantRESTHandler` provides a utility for setting up multi-tenant deplyments.
+* `a2a.Task` snapshot is emitted as the first event on task resubscription.
+* `REST` transport supports configurable keep-alive and panic recovery for SSE connections.
+* `a2asrv.WithCapabilityChecks` handler option rejecting requests for which no support is declared in `a2a.AgentCapabilities`.
+* `a2acompat` works against the old `github.com/a2aproject/a2a-go` library and provides adapters for common dependencies.
+* Compatibility handling of extensions header. 
+
+### Bug Fixes
+
+* JSONRPC handler request scope is not terminated when panic is recovered during SSE streaming.
+* Correct `HistoryLength` handling for 0 and nil cases.
+
+## [1.0.0-alpha](https://github.com/a2aproject/a2a-go/compare/v0.3.7...v1.0.0-alpha) (2026-02-23)
+
+### Features
+Implements A2A spec [1.0-rc revision](https://github.com/a2aproject/A2A/blob/629190aea9fe5838bb712008e6d24156680af197/specification/a2a.proto) with JSONRPC and gRPC protocol bindings.
+
+### Non-breaking changes
+
+* `a2aclient.Factory` implements protocol version negotiation.
+* New errors added: `ExtensionSupportRequiredError` and `VersionNotSupportedError`.
+* Client sends `A2A-Version` header.
+* ListTasks RPC implementation.
+* `a2a` package provides `Part` constructor functions.
+
+### Spec-specific breaking changes
+
+In addition to breaking core type changes updates:
+
+* Agent output validations: task must be the first event emitted by AgentExecutor, artifact parts must be non-empty. 
+* `Final` field removed from `TaskStatusUpdateEvent`, state is used to determine whether event is final.
+* RPCs renamed: TaskSubscription -> SubscribeToTask, GetAgentCard -> GetExtendedAgentCard.
+* JSONRPC uses the same method naming as gRPC.
+
+### SDK breaking changes:
+
+For motivation behind some of the changes refer to [the change announcement](https://github.com/a2aproject/a2a-go/discussions/205).
+
+* `a2asrv.AgentExecutor` changes: `Execute` and `Cancel` now return `iter.Seq2[a2a.Event, error]` instead of writing events to a queue.
+* `a2asrv/taskstore` package gets introduced with `TaskStore` interface and the the default in-memory implementation.
+* `a2a.TaskVersion` gets moved to `a2asrv/taskstore`.
+* `TaskStore.Save` method gets replaced with separate `Create` and `Update` methods.
+* `TaskStore.Update` is called with `a2a.Event` set to user `a2a.Message` on task history update.
+* `TaskStore.Get` return types is `taskstore.StoredTask` which is (task, version) pair.
+* `eventqueue.Queue` gets replaced with separate `eventqueue.Reader` and `eventqueue.Writer`. `eventqueue.Manager` methods updated appropriately.
+* `eventqueue.Message` gets introduced for grouping `a2a.Task`, `taskstore.TaskVersion` and `a2a.ProtocolVersion`. 
+* `a2aclient.CallInterceptor` and `a2asrv.CallInterceptor` can now return a value from `Before` to return a result without performing the actual call.
+* `a2aclient.WithInterceptors` gets renamed to `a2aclient.WithCallInterceptors` and `a2asrv.WithCallInterceptor` gets renamed to `a2asrv.WithCallInterceptors` and takes vararg so that methods are consistent with each other.
+* `a2asrv.User` get changed from an interface to a struct with an `Attributes map[string]any` field.
+* `a2asrv.RequestContext` gets renamed into `a2asrv.ExecutorContext`. `User` and `ServiceParams` are added to the struct, these should be used intead of `CallContext`.
+* `a2asrv.ReqMeta` and `a2aclient.CallMeta` are renamed to `ServiceParams`.
+* `a2asrv.PushSender` and `a2asrv.PushConfigStore` are moved to `a2asrv/push`.
+* `a2aclient.ServiceParams` are now passed explicitly to `a2aclient.Transport`.
+* Methods which attach something to `context.Context` start with `Attach` prefix, methods used to create constructor-function options start with `With`. 
+* `a2aclient.NewStaticServiceParamsInjector` replaced with `a2aclient.AttachServiceParams` for sending request headers.
+* gRPC transport for `a2aclient` was moved to `a2agrpc` package. This removes gRPC as the mandatory dependency from the client.  
+
+### v0.3 compatibility:
+
+Backward compatibility implementation as discussed in [A2A spec repo](https://github.com/a2aproject/A2A/discussions/1416) is provided by `github.com/a2aproject/a2a-go/a2acompat/a2av0` package.
+
+`a2agrpc` and `a2apb` are versioned, where `v0` contains mappers from `v0.3.6` types to core types, and `v1` implements the latest protocol version.
+
+For an example backward-compatibility setup refer to [e2e/compat](https://github.com/a2aproject/a2a-go/blob/release/spec-v1/e2e/compat/compat_test.go).
+
+## [0.3.7](https://github.com/a2aproject/a2a-go/compare/v0.3.6...v0.3.7) (2026-02-20)
+
+
+### Features
+
+* implement tasks/list RPC ([#210](https://github.com/a2aproject/a2a-go/issues/210)) ([6e04698](https://github.com/a2aproject/a2a-go/commit/6e04698e63d4cb7d67a2aed700babd9bd6664b51))
+* retry cancelations ([#222](https://github.com/a2aproject/a2a-go/issues/222)) ([3057474](https://github.com/a2aproject/a2a-go/commit/30574743207ae68a96588fc81926ad7de3d9887e))
+
+
+### Bug Fixes
+
+* handle internal error: tck failure ([#186](https://github.com/a2aproject/a2a-go/issues/186)) ([b55fbfd](https://github.com/a2aproject/a2a-go/commit/b55fbfd6417fb48a89dd838611f35a6899d17e12))
+* **sse:** support data: prefix without space ([#188](https://github.com/a2aproject/a2a-go/issues/188)) ([6657a6d](https://github.com/a2aproject/a2a-go/commit/6657a6dc3b6872d425f03d6f340b7c1a82c55810)), closes [#162](https://github.com/a2aproject/a2a-go/issues/162)
+
+
+## [0.3.6](https://github.com/a2aproject/a2a-go/compare/v0.3.5...v0.3.6) (2026-01-30)
+
+
+### Features
+
+* callinterceptor supports payload override ([#177](https://github.com/a2aproject/a2a-go/issues/177)) ([baf66d8](https://github.com/a2aproject/a2a-go/commit/baf66d81f7d27e42dd2b4e28bd80b9f9a5f441e6))
+* callinterceptor supports payload override-client ([#181](https://github.com/a2aproject/a2a-go/issues/181)) ([1d74565](https://github.com/a2aproject/a2a-go/commit/1d74565274004ebc0cffa5cc4cf829d44e836abb))
+* custom errors ([#180](https://github.com/a2aproject/a2a-go/issues/180)) ([2152258](https://github.com/a2aproject/a2a-go/commit/215225853305214f2dc868d8b69cf734e2b271ca))
+* custom panic handler ([#185](https://github.com/a2aproject/a2a-go/issues/185)) ([d3af3bf](https://github.com/a2aproject/a2a-go/commit/d3af3bf4b7651116369518c80c099dc51a2f0e65))
+* db-backend cluster setup ([#133](https://github.com/a2aproject/a2a-go/issues/133)) ([4f7471c](https://github.com/a2aproject/a2a-go/commit/4f7471c3dad2ede7c6fabe1f2d33b6afed55cc54)), closes [#115](https://github.com/a2aproject/a2a-go/issues/115)
+* extension utilities ([#165](https://github.com/a2aproject/a2a-go/issues/165)) ([6c78425](https://github.com/a2aproject/a2a-go/commit/6c7842516e84ac2a1985ef828910357e00d4cff9))
+
+
+### Bug Fixes
+
+* add opt-in keep-alive. Fixes [#168](https://github.com/a2aproject/a2a-go/issues/168) ([#171](https://github.com/a2aproject/a2a-go/issues/171)) ([64880fc](https://github.com/a2aproject/a2a-go/commit/64880fcf19e58c8237905206b191ff08b6aaa365))
+* reflect origin if provided when serving public agentcard ([#183](https://github.com/a2aproject/a2a-go/issues/183)) ([535bb1f](https://github.com/a2aproject/a2a-go/commit/535bb1f014c243eb69d5b0ab370fa883ca0fc8cf)), closes [#174](https://github.com/a2aproject/a2a-go/issues/174)
+
+
+## [0.3.5](https://github.com/a2aproject/a2a-go/compare/v0.3.4...v0.3.5) (2026-01-23)
+
+
+### Bug Fixes
+
+* added MessageSendParams validations in handleSendMessage ([#160](https://github.com/a2aproject/a2a-go/issues/160)) ([1c66cb3](https://github.com/a2aproject/a2a-go/commit/1c66cb395c71ba02f8cb60ed2abdce6b8246e0f4))
+* Address default blocking for JSONRpc server ([#156](https://github.com/a2aproject/a2a-go/issues/156)) ([5a5b403](https://github.com/a2aproject/a2a-go/commit/5a5b40338a7d35f52d06482014a4436cfee3d036))
+* final event overriding task failure event ([#172](https://github.com/a2aproject/a2a-go/issues/172)) ([8a97b84](https://github.com/a2aproject/a2a-go/commit/8a97b849e4e631c3f61bb18976d6cba4b4a0ce60))
+* return correct jsonrpc errors ([#161](https://github.com/a2aproject/a2a-go/issues/161)) ([950ce82](https://github.com/a2aproject/a2a-go/commit/950ce82b9635c923b2d2735d7b4a8f2d45ac5388))
+* return the root cause of the error. Fixes [#167](https://github.com/a2aproject/a2a-go/issues/167) ([#169](https://github.com/a2aproject/a2a-go/issues/169)) ([b699c67](https://github.com/a2aproject/a2a-go/commit/b699c67172ca578452285a03f9a12870be0f93d4))
+* wrong field set as meta ([#164](https://github.com/a2aproject/a2a-go/issues/164)) ([2173f5e](https://github.com/a2aproject/a2a-go/commit/2173f5e324eed39e80e2cd133209b2036969cf70)), closes [#163](https://github.com/a2aproject/a2a-go/issues/163)
+
+## [0.3.4](https://github.com/a2aproject/a2a-go/compare/v0.3.3...v0.3.4) (2026-01-14)
+
+
+### Features
+
+* introduce and integrate TaskVersion ([#127](https://github.com/a2aproject/a2a-go/issues/127)) ([5cf0332](https://github.com/a2aproject/a2a-go/commit/5cf0332a9d049648a9d116a412703678decada72))
+* taskstore list ([#126](https://github.com/a2aproject/a2a-go/issues/126)) ([9987486](https://github.com/a2aproject/a2a-go/commit/9987486f6d049be709f49d044df18afd7e17cbb9))
+* taskstore pagination ([#136](https://github.com/a2aproject/a2a-go/issues/136)) ([fffb4d4](https://github.com/a2aproject/a2a-go/commit/fffb4d45c57c8cf2081fcbc95151a7a5a152407d))
+* workqueue ([#132](https://github.com/a2aproject/a2a-go/issues/132)) ([dcc3a89](https://github.com/a2aproject/a2a-go/commit/dcc3a893b05fde7dc2593ff32002fd673f4a6b0d)), closes [#115](https://github.com/a2aproject/a2a-go/issues/115)
+
+
+### Bug Fixes
+
+* nil parts must be empty array when encoded to JSON  ([#140](https://github.com/a2aproject/a2a-go/issues/140)) ([049190c](https://github.com/a2aproject/a2a-go/commit/049190c4cde20bd12313ee5cb451440b77c980cc))
+* provide request-level metadata in RequestContext ([#152](https://github.com/a2aproject/a2a-go/issues/152)) ([bf3096c](https://github.com/a2aproject/a2a-go/commit/bf3096c9babf0046d7c8f837bf9c0692a6786f99))
+* **sse:** increase buffer size for large SSE payloads ([#149](https://github.com/a2aproject/a2a-go/issues/149)) ([1287239](https://github.com/a2aproject/a2a-go/commit/1287239a8378f09ec2dd0e7e57704645ed207c9d))
+
+## [0.3.3](https://github.com/a2aproject/a2a-go/compare/v0.3.2...v0.3.3) (2025-12-08)
+
+
+### Features
+
+* allow creating grpc transport from service client ([#117](https://github.com/a2aproject/a2a-go/issues/117)) ([e95c064](https://github.com/a2aproject/a2a-go/commit/e95c0644be3f25976994879ecbd064a20c8e80f6))
+* concurrency control ([#110](https://github.com/a2aproject/a2a-go/issues/110)) ([4e8bcc1](https://github.com/a2aproject/a2a-go/commit/4e8bcc106872b74ce871828e85f774bc27df8195))
+
+
+### Bug Fixes
+
+* increase default timeout on jsonrpc client to account for streaming ([#134](https://github.com/a2aproject/a2a-go/issues/134)) ([6d7290b](https://github.com/a2aproject/a2a-go/commit/6d7290b35491aab2d121b61b059f7b5e06e5052b)), closes [#125](https://github.com/a2aproject/a2a-go/issues/125)
+* make log package capture the source properly ([#112](https://github.com/a2aproject/a2a-go/issues/112)) ([0ec064d](https://github.com/a2aproject/a2a-go/commit/0ec064d000af0a4a34bf4957ccf5014c61f2a60d))
+* return a task in failed state as a result ([#114](https://github.com/a2aproject/a2a-go/issues/114)) ([80e20aa](https://github.com/a2aproject/a2a-go/commit/80e20aa7a01a611e1bf6a2093ceb69bae2e806ff))
+
+
+### Documentation
+
+* Added CONTRIBUTING.md. ([#119](https://github.com/a2aproject/a2a-go/issues/119)) ([f666ec6](https://github.com/a2aproject/a2a-go/commit/f666ec6aa08c522e93f0351ae8014175ebe13296))
+
+## [0.3.2](https://github.com/a2aproject/a2a-go/compare/v0.3.1...v0.3.2) (2025-11-14)
+
+
+### Bug Fixes
+
+* allow request meta extension and hide mistakenly exported type ([#106](https://github.com/a2aproject/a2a-go/issues/106)) ([46fa0cb](https://github.com/a2aproject/a2a-go/commit/46fa0cb89d3af2690aed1a65e5f43191db3cd727))
+
+## [0.3.1](https://github.com/a2aproject/a2a-go/compare/v0.3.0...v0.3.1) (2025-11-13)
+
+
+### Bug Fixes
+
+* nil meta becomes empty struct in send message conversion ([#105](https://github.com/a2aproject/a2a-go/issues/105)) ([60d3fcb](https://github.com/a2aproject/a2a-go/commit/60d3fcb0ef74271a12c0b035aa779fd573760a45))
+* remove keep-alive messages ([#100](https://github.com/a2aproject/a2a-go/issues/100)) ([493e497](https://github.com/a2aproject/a2a-go/commit/493e49785b3e7ec8512addf20d44ea7810d5f387))
+* use UUIDv7 in type ID generators ([#102](https://github.com/a2aproject/a2a-go/issues/102)) ([3a809ea](https://github.com/a2aproject/a2a-go/commit/3a809eaf262d28dd96a5ac0ace39f90fc7af346e)), closes [#101](https://github.com/a2aproject/a2a-go/issues/101)
+
+## 0.3.0 (2025-11-04)
+
+
+### Features
+
+* add JSON-RPC client transport implementation ([#79](https://github.com/a2aproject/a2a-go/issues/79)) ([1690088](https://github.com/a2aproject/a2a-go/commit/16900888cf3e84822b84611a8b85aefab7d1044f))
+* agent card resolver ([#48](https://github.com/a2aproject/a2a-go/issues/48)) ([0951293](https://github.com/a2aproject/a2a-go/commit/0951293e320a35202d2ca51a1761adb6e769419a))
+* blocking flag handling ([#97](https://github.com/a2aproject/a2a-go/issues/97)) ([f7aa465](https://github.com/a2aproject/a2a-go/commit/f7aa4653452b4f845facf237802ee9ab0e52846f)), closes [#96](https://github.com/a2aproject/a2a-go/issues/96)
+* client API proposal ([#32](https://github.com/a2aproject/a2a-go/issues/32)) ([b6ca54f](https://github.com/a2aproject/a2a-go/commit/b6ca54fa76f3a6d9c90e89d0dd7569442a1e9149))
+* client auth interceptor ([#90](https://github.com/a2aproject/a2a-go/issues/90)) ([25b9aae](https://github.com/a2aproject/a2a-go/commit/25b9aae1cdb6dece5c2b6cdb32716e4d2ebbd021))
+* client interceptor invocations ([#51](https://github.com/a2aproject/a2a-go/issues/51)) ([3e9f2ae](https://github.com/a2aproject/a2a-go/commit/3e9f2aef25c67a0cef56823b5f282a11cea59bb6))
+* core types JSON codec ([#42](https://github.com/a2aproject/a2a-go/issues/42)) ([c5b3982](https://github.com/a2aproject/a2a-go/commit/c5b3982a41aa01c428ad0e3b56aadc99157b23ee))
+* define core types and interfaces ([#16](https://github.com/a2aproject/a2a-go/issues/16)) ([69b96ea](https://github.com/a2aproject/a2a-go/commit/69b96ea0715cbdefe6d22f08e3fb0a11755f9476))
+* disallow custom types and circular refs in Metadata ([#43](https://github.com/a2aproject/a2a-go/issues/43)) ([53bc928](https://github.com/a2aproject/a2a-go/commit/53bc9283dddd591a3563e6b1ea070b1972967bfa))
+* get task implementation ([#59](https://github.com/a2aproject/a2a-go/issues/59)) ([f74d854](https://github.com/a2aproject/a2a-go/commit/f74d85423c678a907ae3a0f95cdb94ae3f2ebe1e))
+* grpc authenticated agent card and producer utils ([#85](https://github.com/a2aproject/a2a-go/issues/85)) ([9d82f31](https://github.com/a2aproject/a2a-go/commit/9d82f31874995065d2dac2afbb5c408ab9a42fc8)), closes [#82](https://github.com/a2aproject/a2a-go/issues/82)
+* grpc client transport ([#66](https://github.com/a2aproject/a2a-go/issues/66)) ([fee703e](https://github.com/a2aproject/a2a-go/commit/fee703e5d87e1c48fffe8138d8b57c1f37556bb8))
+* grpc code generation from A2A .proto spec ([#11](https://github.com/a2aproject/a2a-go/issues/11)) ([2993b98](https://github.com/a2aproject/a2a-go/commit/2993b9830c072cfc6bc1feac81ad6695fc919a3a))
+* handling artifacts and implementing send message stream ([#52](https://github.com/a2aproject/a2a-go/issues/52)) ([c3fa631](https://github.com/a2aproject/a2a-go/commit/c3fa6310a7b67d7f0771e688bbbd00730950ddb6))
+* implement an a2aclient.Factory ([#50](https://github.com/a2aproject/a2a-go/issues/50)) ([49deee7](https://github.com/a2aproject/a2a-go/commit/49deee794474104bb7ebaf281895e6dd47d03f0c))
+* implementing grpc server wrapper ([#37](https://github.com/a2aproject/a2a-go/issues/37)) ([071e952](https://github.com/a2aproject/a2a-go/commit/071e9522534e7aeaf0375451a73dc0b175e516b4))
+* implementing message-message interaction ([#34](https://github.com/a2aproject/a2a-go/issues/34)) ([b568979](https://github.com/a2aproject/a2a-go/commit/b5689797dc63c25c2e8165830dc5f556ce784ad3))
+* implementing task pushes ([#86](https://github.com/a2aproject/a2a-go/issues/86)) ([c210240](https://github.com/a2aproject/a2a-go/commit/c210240cc39787c6a66b508d4a5cb976612d5c5a))
+* input-required and auth-required handling ([#70](https://github.com/a2aproject/a2a-go/issues/70)) ([3ac89ba](https://github.com/a2aproject/a2a-go/commit/3ac89ba98318964a960be7ae6b2be07909e7ac75))
+* jsonrpc server ([#91](https://github.com/a2aproject/a2a-go/issues/91)) ([5491030](https://github.com/a2aproject/a2a-go/commit/549103074cdcf8f3a12cdd1f0bcbbc3a599dd0f1))
+* logger ([#56](https://github.com/a2aproject/a2a-go/issues/56)) ([86ab9d2](https://github.com/a2aproject/a2a-go/commit/86ab9d2e8e41b27fd605c4025f04ffe1fcdcd368))
+* request context loading ([#60](https://github.com/a2aproject/a2a-go/issues/60)) ([ab7a29b](https://github.com/a2aproject/a2a-go/commit/ab7a29b1ff309361fcb240f9fb0d4eb00c022c53))
+* result aggregation part 1 - task store ([#38](https://github.com/a2aproject/a2a-go/issues/38)) ([d3c02f5](https://github.com/a2aproject/a2a-go/commit/d3c02f578ce72ce0ba2bf15299afc07d88f75594))
+* result aggregation part 3 - concurrent task executor ([#40](https://github.com/a2aproject/a2a-go/issues/40)) ([265c3e7](https://github.com/a2aproject/a2a-go/commit/265c3e7f183aa79cbbd1d3cba02cdb24d43d80f5))
+* result aggregation part 4 - integration ([#41](https://github.com/a2aproject/a2a-go/issues/41)) ([bab72d9](https://github.com/a2aproject/a2a-go/commit/bab72d9c72aa13614b2fac74925eb158c1daf91f))
+* SDK type utilities ([#31](https://github.com/a2aproject/a2a-go/issues/31)) ([32b77b4](https://github.com/a2aproject/a2a-go/commit/32b77b492b838f0f6284ce63ed0558886c811781))
+* server middleware API ([#63](https://github.com/a2aproject/a2a-go/issues/63)) ([738bf85](https://github.com/a2aproject/a2a-go/commit/738bf85565ebe190e163c87fb79d695254a4438b))
+* server middleware integration ([#64](https://github.com/a2aproject/a2a-go/issues/64)) ([5dc8be0](https://github.com/a2aproject/a2a-go/commit/5dc8be03b20f96a684ce3703c14d6c6b5f9234ee))
+* smarter a2aclient ([#88](https://github.com/a2aproject/a2a-go/issues/88)) ([322d05b](https://github.com/a2aproject/a2a-go/commit/322d05bc4fb73b4316adf88bbf3c42fb1e73379a))
+* task event factory ([#95](https://github.com/a2aproject/a2a-go/issues/95)) ([fbf3bcf](https://github.com/a2aproject/a2a-go/commit/fbf3bcff0c4af7424733aeaf02a7b982c9b6e743)), closes [#84](https://github.com/a2aproject/a2a-go/issues/84)
+* task executor docs ([#36](https://github.com/a2aproject/a2a-go/issues/36)) ([b6868df](https://github.com/a2aproject/a2a-go/commit/b6868df38d11f097e7a8d71bfec2d91ec9e7399e))
+* task update logic ([0ac987f](https://github.com/a2aproject/a2a-go/commit/0ac987fcacd94d374ea9141ca917afa12814665f))
+
+
+### Bug Fixes
+
+* Execute() callers missing events ([#74](https://github.com/a2aproject/a2a-go/issues/74)) ([4c3389f](https://github.com/a2aproject/a2a-go/commit/4c3389f887cbcc0d402a5d20a7a7112d5890f64d))
+* mark task failed when execution fails ([#94](https://github.com/a2aproject/a2a-go/issues/94)) ([ee0e7ed](https://github.com/a2aproject/a2a-go/commit/ee0e7ed693792782f4c3e0b3dc2361f03007a91f))
+* push semantics update ([#93](https://github.com/a2aproject/a2a-go/issues/93)) ([76bff9f](https://github.com/a2aproject/a2a-go/commit/76bff9f8fadd4d2d9611c872d07d4efc626bafaf))
+* race detector queue closed access ([c07b7d0](https://github.com/a2aproject/a2a-go/commit/c07b7d0014056a6b499d0363a13a3efc7b03519b))
+* regenerate proto and update converters ([#81](https://github.com/a2aproject/a2a-go/issues/81)) ([c732060](https://github.com/a2aproject/a2a-go/commit/c732060cb007a661a059fe51b9a3907fb1790af5))
+* streaming ([#92](https://github.com/a2aproject/a2a-go/issues/92)) ([ca7a64b](https://github.com/a2aproject/a2a-go/commit/ca7a64bd7b6d056b40b56b6ba14b38ef2eea8f8a))
+
+
+### Miscellaneous Chores
+
+* release 0.3.0 ([fa7cfba](https://github.com/a2aproject/a2a-go/commit/fa7cfbad3bbcf9fefe91a7fb769ee34f074a700a))

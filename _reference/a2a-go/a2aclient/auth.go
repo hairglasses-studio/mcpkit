@@ -1,0 +1,156 @@
+// Copyright 2025 The A2A Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package a2aclient
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"sync"
+
+	"github.com/a2aproject/a2a-go/v2/a2a"
+	"github.com/a2aproject/a2a-go/v2/log"
+)
+
+// ErrCredentialNotFound is returned by [CredentialsService] if a credential for the provided
+// (sessionId, scheme) pair was not found.
+var ErrCredentialNotFound = errors.New("credential not found")
+
+// SessionID is a client-generated identifier used for scoping auth credentials.
+type SessionID string
+
+// Used to store a SessionID in context.Context.
+type sessionIDKey struct{}
+
+// AttachSessionID allows callers to attach a session identifier to the request.
+// [CallInterceptor] can access this identifier using [SessionIDFrom].
+func AttachSessionID(ctx context.Context, sid SessionID) context.Context {
+	return context.WithValue(ctx, sessionIDKey{}, sid)
+}
+
+// SessionIDFrom allows to get a previously attached session identifier from Context.
+func SessionIDFrom(ctx context.Context) (SessionID, bool) {
+	sid, ok := ctx.Value(sessionIDKey{}).(SessionID)
+	return sid, ok
+}
+
+// AuthCredential represents a security-scheme specific credential (eg. a JWT token).
+type AuthCredential string
+
+// AuthInterceptor implements [CallInterceptor].
+// It uses SessionID provided using [AttachSessionID] to lookup credentials
+// and attach them according to the security scheme specified in the agent card.
+// Credentials fetching is delegated to [CredentialsService].
+type AuthInterceptor struct {
+	PassthroughInterceptor
+	Service CredentialsService
+}
+
+var _ CallInterceptor = (*AuthInterceptor)(nil)
+
+// Before implements the CallInterceptor interface.
+// It retrieves credentials for the current session and security requirements,
+// and attaches the appropriate authorization parameters (e.g. Bearer token or API Key)
+// to the request's ServiceParams.
+func (ai *AuthInterceptor) Before(ctx context.Context, req *Request) (context.Context, any, error) {
+	if req.Card == nil || req.Card.SecurityRequirements == nil || req.Card.SecuritySchemes == nil {
+		return ctx, nil, nil
+	}
+
+	sessionID, ok := SessionIDFrom(ctx)
+	if !ok {
+		return ctx, nil, nil
+	}
+
+	for _, requirement := range req.Card.SecurityRequirements {
+		for schemeName := range requirement {
+			credential, err := ai.Service.Get(ctx, sessionID, schemeName)
+			if errors.Is(err, ErrCredentialNotFound) {
+				continue
+			}
+			if err != nil {
+				log.Error(ctx, "credentials service error", err)
+				continue
+			}
+			scheme, ok := req.Card.SecuritySchemes[schemeName]
+			if !ok {
+				continue
+			}
+			switch v := scheme.(type) {
+			case a2a.HTTPAuthSecurityScheme, a2a.OAuth2SecurityScheme:
+				req.ServiceParams["Authorization"] = []string{fmt.Sprintf("Bearer %s", credential)}
+				return ctx, nil, nil
+			case a2a.APIKeySecurityScheme:
+				req.ServiceParams[v.Name] = []string{string(credential)}
+				return ctx, nil, nil
+			}
+		}
+	}
+
+	return ctx, nil, nil
+}
+
+// CredentialsService is used by [AuthInterceptor] for resolving credentials.
+type CredentialsService interface {
+	// Get retrieves the credential for the given session ID and security scheme name.
+	Get(ctx context.Context, sid SessionID, scheme a2a.SecuritySchemeName) (AuthCredential, error)
+}
+
+// SessionCredentials is a map of scheme names to auth credentials.
+type SessionCredentials map[a2a.SecuritySchemeName]AuthCredential
+
+// InMemoryCredentialsStore implements [CredentialsService].
+type InMemoryCredentialsStore struct {
+	mu          sync.RWMutex
+	credentials map[SessionID]SessionCredentials
+}
+
+var _ CredentialsService = (*InMemoryCredentialsStore)(nil)
+
+// NewInMemoryCredentialsStore initializes an in-memory implementation of [CredentialsService].
+func NewInMemoryCredentialsStore() *InMemoryCredentialsStore {
+	return &InMemoryCredentialsStore{
+		credentials: make(map[SessionID]SessionCredentials),
+	}
+}
+
+// Get retrieves the credential for the given session ID and security scheme name.
+func (s *InMemoryCredentialsStore) Get(ctx context.Context, sid SessionID, scheme a2a.SecuritySchemeName) (AuthCredential, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	forSession, ok := s.credentials[sid]
+	if !ok {
+		return AuthCredential(""), ErrCredentialNotFound
+	}
+
+	credential, ok := forSession[scheme]
+	if !ok {
+		return AuthCredential(""), ErrCredentialNotFound
+	}
+
+	return credential, nil
+}
+
+// Set stores the credential for the given session ID and security scheme name.
+func (s *InMemoryCredentialsStore) Set(sid SessionID, scheme a2a.SecuritySchemeName, credential AuthCredential) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if _, ok := s.credentials[sid]; !ok {
+		s.credentials[sid] = make(map[a2a.SecuritySchemeName]AuthCredential)
+	}
+	s.credentials[sid][scheme] = credential
+}
