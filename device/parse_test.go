@@ -260,32 +260,58 @@ func TestParseMIDI_ChannelExtraction(t *testing.T) {
 	}
 }
 
-func TestParseMIDI_SysExSkipped(t *testing.T) {
+func TestParseMIDI_SysEx(t *testing.T) {
 	t.Parallel()
 	// SysEx message: F0 <data bytes> F7
-	// Should produce no events.
+	// Should produce one EventMIDISysEx event.
 	buf := []byte{0xF0, 0x7E, 0x7F, 0x09, 0x01, 0xF7}
 	events := parseMIDIBytes(testDeviceID, buf, len(buf))
 
-	if len(events) != 0 {
-		t.Errorf("expected 0 events for SysEx, got %d", len(events))
+	if len(events) != 1 {
+		t.Fatalf("expected 1 event for SysEx, got %d", len(events))
+	}
+	ev := events[0]
+	if ev.Type != EventMIDISysEx {
+		t.Errorf("Type = %v, want EventMIDISysEx", ev.Type)
+	}
+	if ev.Source != "midi:sysex" {
+		t.Errorf("Source = %q, want %q", ev.Source, "midi:sysex")
+	}
+	if ev.DeviceID != testDeviceID {
+		t.Errorf("DeviceID = %v, want %v", ev.DeviceID, testDeviceID)
+	}
+	// SysEx data should include the full message (F0 through F7).
+	expectedSysEx := []byte{0xF0, 0x7E, 0x7F, 0x09, 0x01, 0xF7}
+	if len(ev.SysEx) != len(expectedSysEx) {
+		t.Fatalf("SysEx length = %d, want %d", len(ev.SysEx), len(expectedSysEx))
+	}
+	for i, b := range ev.SysEx {
+		if b != expectedSysEx[i] {
+			t.Errorf("SysEx[%d] = 0x%02X, want 0x%02X", i, b, expectedSysEx[i])
+		}
+	}
+	if ev.Value != float64(len(expectedSysEx)) {
+		t.Errorf("Value = %f, want %f", ev.Value, float64(len(expectedSysEx)))
 	}
 }
 
 func TestParseMIDI_SysExFollowedByNoteOn(t *testing.T) {
 	t.Parallel()
-	// SysEx followed by a real message — ensure the real message is parsed.
+	// SysEx followed by a real message — both should be parsed.
 	buf := []byte{
 		0xF0, 0x7E, 0x7F, 0x09, 0x01, 0xF7, // SysEx
 		0x90, 60, 100, // Note On
 	}
 	events := parseMIDIBytes(testDeviceID, buf, len(buf))
 
-	if len(events) != 1 {
-		t.Fatalf("expected 1 event (NoteOn after SysEx), got %d", len(events))
+	if len(events) != 2 {
+		t.Fatalf("expected 2 events (SysEx + NoteOn), got %d", len(events))
 	}
-	if events[0].Type != EventMIDINote {
-		t.Errorf("Type = %v, want EventMIDINote", events[0].Type)
+	if events[0].Type != EventMIDISysEx {
+		t.Errorf("events[0].Type = %v, want EventMIDISysEx", events[0].Type)
+	}
+	if events[1].Type != EventMIDINote {
+		t.Errorf("events[1].Type = %v, want EventMIDINote", events[1].Type)
 	}
 }
 
@@ -438,6 +464,88 @@ func TestParseMIDI_ThreeMessagesBackToBack(t *testing.T) {
 	}
 	if events[2].Type != EventMIDINote || events[2].Pressed {
 		t.Errorf("events[2]: want NoteOff, got Type=%v Pressed=%v", events[2].Type, events[2].Pressed)
+	}
+}
+
+func TestParseMIDI_SysExUnterminated(t *testing.T) {
+	t.Parallel()
+	// SysEx without EOX terminator — data runs to end of buffer.
+	buf := []byte{0xF0, 0x7E, 0x7F, 0x09, 0x01}
+	events := parseMIDIBytes(testDeviceID, buf, len(buf))
+
+	if len(events) != 1 {
+		t.Fatalf("expected 1 event for unterminated SysEx, got %d", len(events))
+	}
+	ev := events[0]
+	if ev.Type != EventMIDISysEx {
+		t.Errorf("Type = %v, want EventMIDISysEx", ev.Type)
+	}
+	// Unterminated SysEx: includes F0 + data bytes, no F7.
+	if len(ev.SysEx) != 5 {
+		t.Errorf("SysEx length = %d, want 5", len(ev.SysEx))
+	}
+	if ev.SysEx[0] != 0xF0 {
+		t.Errorf("SysEx[0] = 0x%02X, want 0xF0", ev.SysEx[0])
+	}
+}
+
+func TestParseMIDI_SysExEmpty(t *testing.T) {
+	t.Parallel()
+	// Minimal SysEx: just F0 F7 (no data bytes).
+	buf := []byte{0xF0, 0xF7}
+	events := parseMIDIBytes(testDeviceID, buf, len(buf))
+
+	if len(events) != 1 {
+		t.Fatalf("expected 1 event for empty SysEx, got %d", len(events))
+	}
+	ev := events[0]
+	if ev.Type != EventMIDISysEx {
+		t.Errorf("Type = %v, want EventMIDISysEx", ev.Type)
+	}
+	if len(ev.SysEx) != 2 {
+		t.Errorf("SysEx length = %d, want 2 (F0 + F7)", len(ev.SysEx))
+	}
+}
+
+func TestParseMIDI_SysExBetweenMessages(t *testing.T) {
+	t.Parallel()
+	// NoteOn, then SysEx, then CC — all three should parse.
+	buf := []byte{
+		0x90, 60, 100,                         // Note On
+		0xF0, 0x7E, 0x7F, 0x09, 0x01, 0xF7,   // SysEx
+		0xB0, 1, 64,                            // CC
+	}
+	events := parseMIDIBytes(testDeviceID, buf, len(buf))
+
+	if len(events) != 3 {
+		t.Fatalf("expected 3 events, got %d", len(events))
+	}
+	if events[0].Type != EventMIDINote {
+		t.Errorf("events[0].Type = %v, want EventMIDINote", events[0].Type)
+	}
+	if events[1].Type != EventMIDISysEx {
+		t.Errorf("events[1].Type = %v, want EventMIDISysEx", events[1].Type)
+	}
+	if events[2].Type != EventMIDICC {
+		t.Errorf("events[2].Type = %v, want EventMIDICC", events[2].Type)
+	}
+}
+
+func TestParseMIDI_NonF0SystemMessage(t *testing.T) {
+	t.Parallel()
+	// System messages other than SysEx (e.g., 0xF8 timing clock) should be skipped.
+	// 0xF8 is a single-byte system message, followed by valid NoteOn.
+	buf := []byte{
+		0xF8,           // Timing Clock (system realtime, no data bytes)
+		0x90, 60, 100,  // Note On
+	}
+	events := parseMIDIBytes(testDeviceID, buf, len(buf))
+
+	if len(events) != 1 {
+		t.Fatalf("expected 1 event (NoteOn after system realtime), got %d", len(events))
+	}
+	if events[0].Type != EventMIDINote {
+		t.Errorf("events[0].Type = %v, want EventMIDINote", events[0].Type)
 	}
 }
 
