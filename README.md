@@ -19,6 +19,7 @@ Built on [github.com/mark3labs/mcp-go](https://github.com/mark3labs/mcp-go), mcp
 - **Dual-SDK support** — works with mcp-go today; `//go:build official_sdk` tags enable migration to the official Go SDK without rewriting tool code
 - **Typed handlers** — `TypedHandler[In, Out]` generates schemas from Go structs, populates `structuredContent`, and eliminates manual JSON wiring
 - **Middleware chain** — composable middleware applied per-tool or globally; standard signature across all packages
+- **Response truncation** — configurable byte-budget middleware that caps oversized tool responses and appends guidance messages (`middleware/truncate`)
 - **Production resilience** — circuit breakers, rate limiters, and caching via the `resilience` package
 - **Auth** — JWT/JWKS validation, OAuth 2.1 discovery and client flow, Bearer middleware, DPoP proof validation, workload identity (GCP/AWS)
 - **RBAC and audit logging** — role-based tool access control and structured audit trails via the `security` package
@@ -91,6 +92,7 @@ npx @modelcontextprotocol/inspector go run main.go      # interactive debugger
 |---------|---------|---------------|
 | `registry` | Tool registration, middleware chain, server integration, tool integrity verification | none |
 | `handler` | TypedHandler generics, param extraction, result builders, elicitation | `registry` |
+| `middleware/truncate` | Response size limiting with byte budgets, configurable guidance messages, error passthrough | `registry` |
 | `resilience` | CircuitBreaker, RateLimiter, CacheEntry generics, middleware | `registry` |
 | `mcptest` | Test server/client, assertion helpers, HTTP pool, session replay, snapshot testing, benchmark helpers | `registry` |
 | `auth` | JWT/JWKS validation, OAuth discovery + client flow, Bearer middleware, DPoP proof validation + HTTP middleware, workload identity (GCP/AWS), context identity | `registry`, `client` |
@@ -128,7 +130,7 @@ npx @modelcontextprotocol/inspector go run main.go      # interactive debugger
 ## Dependency Layers
 
 - **Layer 1** (no internal deps): `registry`, `health`, `sanitize`, `secrets`, `client`
-- **Layer 2** (depend on Layer 1): `resources`, `prompts`, `handler`, `resilience`, `mcptest`, `auth`, `observability`, `logging`, `sampling`, `roots`, `research`, `discovery`, `dispatcher`, `extensions`, `memory`, `finops`, `lifecycle`, `eval`, `roadmap`, `gateway/multi`
+- **Layer 2** (depend on Layer 1): `resources`, `prompts`, `handler`, `resilience`, `middleware/truncate`, `mcptest`, `auth`, `observability`, `logging`, `sampling`, `roots`, `research`, `discovery`, `dispatcher`, `extensions`, `memory`, `finops`, `lifecycle`, `eval`, `roadmap`, `gateway/multi`
 - **Layer 3** (depend on Layer 2): `security`, `gateway`, `ralph`, `skills`, `rdcycle`
 - **Layer 4** (depend on Layer 3): `orchestrator`, `handoff`, `workflow`, `bootstrap`
 
