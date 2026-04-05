@@ -13,7 +13,7 @@ import (
 // Scorer evaluates a tool's output against expected values.
 type Scorer interface {
 	Name() string
-	Score(output string, isError bool, expected interface{}) Score
+	Score(output string, isError bool, expected any) Score
 }
 
 // ExactMatch returns a scorer that checks if the output exactly matches the
@@ -26,7 +26,7 @@ type exactMatch struct{}
 
 func (s *exactMatch) Name() string { return "exact_match" }
 
-func (s *exactMatch) Score(output string, isError bool, expected interface{}) Score {
+func (s *exactMatch) Score(output string, isError bool, expected any) Score {
 	want, _ := expected.(string)
 	if output == want {
 		return Score{Scorer: s.Name(), Value: 1.0}
@@ -44,7 +44,7 @@ type containsScorer struct{}
 
 func (s *containsScorer) Name() string { return "contains" }
 
-func (s *containsScorer) Score(output string, isError bool, expected interface{}) Score {
+func (s *containsScorer) Score(output string, isError bool, expected any) Score {
 	want, _ := expected.(string)
 	if strings.Contains(output, want) {
 		return Score{Scorer: s.Name(), Value: 1.0}
@@ -62,7 +62,7 @@ type regexScorer struct{}
 
 func (s *regexScorer) Name() string { return "regex" }
 
-func (s *regexScorer) Score(output string, isError bool, expected interface{}) Score {
+func (s *regexScorer) Score(output string, isError bool, expected any) Score {
 	pattern, _ := expected.(string)
 	re, err := regexp.Compile(pattern)
 	if err != nil {
@@ -87,7 +87,7 @@ type isErrorScorer struct {
 
 func (s *isErrorScorer) Name() string { return "is_error" }
 
-func (s *isErrorScorer) Score(output string, isError bool, expected interface{}) Score {
+func (s *isErrorScorer) Score(output string, isError bool, expected any) Score {
 	if isError == s.want {
 		return Score{Scorer: s.Name(), Value: 1.0}
 	}
@@ -107,8 +107,8 @@ type jsonPathScorer struct {
 
 func (s *jsonPathScorer) Name() string { return "jsonpath" }
 
-func (s *jsonPathScorer) Score(output string, isError bool, expected interface{}) Score {
-	var data interface{}
+func (s *jsonPathScorer) Score(output string, isError bool, expected any) Score {
+	var data any
 	if err := json.Unmarshal([]byte(output), &data); err != nil {
 		return Score{Scorer: s.Name(), Value: 0.0, Reason: fmt.Sprintf("invalid JSON: %v", err)}
 	}
@@ -116,7 +116,7 @@ func (s *jsonPathScorer) Score(output string, isError bool, expected interface{}
 	parts := strings.Split(s.path, ".")
 	current := data
 	for _, part := range parts {
-		m, ok := current.(map[string]interface{})
+		m, ok := current.(map[string]any)
 		if !ok {
 			return Score{Scorer: s.Name(), Value: 0.0, Reason: fmt.Sprintf("path %q: not an object at %q", s.path, part)}
 		}
@@ -144,7 +144,7 @@ type notEmptyScorer struct{}
 
 func (s *notEmptyScorer) Name() string { return "not_empty" }
 
-func (s *notEmptyScorer) Score(output string, isError bool, expected interface{}) Score {
+func (s *notEmptyScorer) Score(output string, isError bool, expected any) Score {
 	if output != "" {
 		return Score{Scorer: s.Name(), Value: 1.0}
 	}
@@ -188,18 +188,18 @@ func (s *errorRateScorer) ScoreResult(result Result) Score {
 }
 
 // Custom returns a scorer with a user-provided scoring function.
-func Custom(name string, fn func(output string, isError bool, expected interface{}) Score) Scorer {
+func Custom(name string, fn func(output string, isError bool, expected any) Score) Scorer {
 	return &customScorer{name: name, fn: fn}
 }
 
 type customScorer struct {
 	name string
-	fn   func(output string, isError bool, expected interface{}) Score
+	fn   func(output string, isError bool, expected any) Score
 }
 
 func (s *customScorer) Name() string { return s.name }
 
-func (s *customScorer) Score(output string, isError bool, expected interface{}) Score {
+func (s *customScorer) Score(output string, isError bool, expected any) Score {
 	sc := s.fn(output, isError, expected)
 	sc.Scorer = s.name
 	return sc

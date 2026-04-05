@@ -155,7 +155,7 @@ func TestStats_counters(t *testing.T) {
 	ctx := context.Background()
 
 	const n = 10
-	for i := 0; i < n; i++ {
+	for i := range n {
 		_, err := d.Submit(ctx, newJob("t", makeHandler("ok")))
 		if err != nil {
 			t.Fatalf("submit %d: %v", i, err)
@@ -207,8 +207,8 @@ func TestPriorityOrdering(t *testing.T) {
 	lowJob := &Job{Name: "low", Ctx: context.Background(), Handler: record("low"), Priority: PriorityLow}
 	highJob := &Job{Name: "high", Ctx: context.Background(), Handler: record("high"), Priority: PriorityHigh}
 
-	go d.Submit(context.Background(), lowJob)   //nolint:errcheck
-	go d.Submit(context.Background(), highJob)  //nolint:errcheck
+	go d.Submit(context.Background(), lowJob)  //nolint:errcheck
+	go d.Submit(context.Background(), highJob) //nolint:errcheck
 
 	time.Sleep(10 * time.Millisecond)
 	close(blocker)
@@ -258,7 +258,7 @@ func TestGroupLimit(t *testing.T) {
 
 	ctx := context.Background()
 	done := make(chan struct{}, 2)
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		go func() {
 			j := &Job{Name: "g", Ctx: ctx, Handler: slowGroupHandler, Group: "g"}
 			d.Submit(ctx, j) //nolint:errcheck
@@ -283,7 +283,7 @@ func TestShutdown_graceful(t *testing.T) {
 
 	submitted := 5
 	results := make(chan *registry.CallToolResult, submitted)
-	for i := 0; i < submitted; i++ {
+	for range submitted {
 		go func() {
 			r, _ := d.Submit(context.Background(), newJob("t", makeSlowHandler(10*time.Millisecond, "ok")))
 			results <- r
@@ -300,7 +300,7 @@ func TestShutdown_graceful(t *testing.T) {
 func TestShutdown_timeout(t *testing.T) {
 	d := New(Config{Workers: 1})
 
-	blocker := make(chan struct{}) // never closed
+	blocker := make(chan struct{})                                                                                                              // never closed
 	go d.Submit(context.Background(), newJob("inf", func(ctx context.Context, req registry.CallToolRequest) (*registry.CallToolResult, error) { //nolint:errcheck
 		<-blocker
 		return registry.MakeTextResult("never"), nil
@@ -345,7 +345,7 @@ func TestPriorityFunc(t *testing.T) {
 	}))
 	time.Sleep(10 * time.Millisecond)
 
-	go d.Submit(context.Background(), &Job{Name: "normal", Ctx: context.Background(), Handler: record("normal")})    //nolint:errcheck
+	go d.Submit(context.Background(), &Job{Name: "normal", Ctx: context.Background(), Handler: record("normal")})       //nolint:errcheck
 	go d.Submit(context.Background(), &Job{Name: "important", Ctx: context.Background(), Handler: record("important")}) //nolint:errcheck
 	time.Sleep(10 * time.Millisecond)
 
@@ -394,8 +394,8 @@ func TestMiddleware_Integration(t *testing.T) {
 
 func TestMiddleware_GroupFromDefinition(t *testing.T) {
 	d := New(Config{
-		Workers:    4,
-		QueueSize:  100,
+		Workers:     4,
+		QueueSize:   100,
 		GroupLimits: map[string]int{"api": 1},
 	})
 	defer d.Shutdown(context.Background()) //nolint:errcheck
@@ -422,12 +422,10 @@ func TestMiddleware_GroupFromDefinition(t *testing.T) {
 	wrapped := mw("api-tool", td, handler)
 
 	var wg sync.WaitGroup
-	for i := 0; i < 3; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 3 {
+		wg.Go(func() {
 			wrapped(context.Background(), registry.CallToolRequest{}) //nolint:errcheck
-		}()
+		})
 	}
 	wg.Wait()
 

@@ -125,7 +125,7 @@ func TestMiddleware_GenAITokenUsageFromContext(t *testing.T) {
 		t.Fatal("expected at least one exported span")
 	}
 
-	attrMap := make(map[string]interface{}, len(spans[0].Attributes))
+	attrMap := make(map[string]any, len(spans[0].Attributes))
 	for _, a := range spans[0].Attributes {
 		attrMap[string(a.Key)] = a.Value.AsInterface()
 	}
@@ -175,7 +175,7 @@ func TestMiddleware_GenAITokenUsageFromHolder(t *testing.T) {
 		t.Fatal("expected at least one exported span")
 	}
 
-	attrMap := make(map[string]interface{}, len(spans[0].Attributes))
+	attrMap := make(map[string]any, len(spans[0].Attributes))
 	for _, a := range spans[0].Attributes {
 		attrMap[string(a.Key)] = a.Value.AsInterface()
 	}
@@ -247,7 +247,7 @@ func TestMiddleware_GenAINoModel(t *testing.T) {
 		t.Fatal("expected at least one exported span")
 	}
 
-	attrMap := make(map[string]interface{}, len(spans[0].Attributes))
+	attrMap := make(map[string]any, len(spans[0].Attributes))
 	for _, a := range spans[0].Attributes {
 		attrMap[string(a.Key)] = a.Value.AsInterface()
 	}

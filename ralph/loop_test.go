@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -897,13 +898,7 @@ func TestLoop_AllowsReadyTask(t *testing.T) {
 		t.Errorf("Status = %q, want %q", status.Status, StatusCompleted)
 	}
 	// t1 should be completed (it was ready and mark_done=true).
-	found := false
-	for _, id := range status.CompletedIDs {
-		if id == "t1" {
-			found = true
-			break
-		}
-	}
+	found := slices.Contains(status.CompletedIDs, "t1")
 	if !found {
 		t.Errorf("t1 not in CompletedIDs = %v", status.CompletedIDs)
 	}
@@ -1329,13 +1324,6 @@ func TestInjectSubTasks(t *testing.T) {
 	}
 }
 
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 // --- Per-tool timeout tests (Commit 1) ---
 
 // slowModule provides a tool that blocks until context is cancelled.
@@ -1435,9 +1423,9 @@ func TestLoop_ToolTimeoutDefault(t *testing.T) {
 
 // failingSampler fails a specified number of times then delegates to a scriptedSampler.
 type failingSampler struct {
-	failCount  int
-	calls      int
-	inner      *scriptedSampler
+	failCount int
+	calls     int
+	inner     *scriptedSampler
 }
 
 func (s *failingSampler) CreateMessage(ctx context.Context, req sampling.CreateMessageRequest) (*sampling.CreateMessageResult, error) {

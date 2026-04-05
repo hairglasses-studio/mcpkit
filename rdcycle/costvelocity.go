@@ -7,9 +7,9 @@ import (
 
 // CycleRecord stores the cost and progress of a single R&D cycle.
 type CycleRecord struct {
-	CycleNum    int     `json:"cycle_num"`
-	Cost        float64 `json:"cost"`
-	Productive  bool    `json:"productive"` // true if the cycle made meaningful progress
+	CycleNum   int     `json:"cycle_num"`
+	Cost       float64 `json:"cost"`
+	Productive bool    `json:"productive"` // true if the cycle made meaningful progress
 }
 
 // VelocityAlarm describes why the governor is raising an alarm.
@@ -66,10 +66,7 @@ func (g *CostVelocityGovernor) Check() *VelocityAlarm {
 	}
 
 	// Check rolling average cost.
-	windowStart := len(g.history) - g.WindowSize
-	if windowStart < 0 {
-		windowStart = 0
-	}
+	windowStart := max(len(g.history)-g.WindowSize, 0)
 	window := g.history[windowStart:]
 
 	totalCost := 0.0
@@ -113,10 +110,7 @@ func (g *CostVelocityGovernor) ShouldHalt() bool {
 	}
 
 	// Check cost velocity.
-	windowStart := len(g.history) - g.WindowSize
-	if windowStart < 0 {
-		windowStart = 0
-	}
+	windowStart := max(len(g.history)-g.WindowSize, 0)
 	window := g.history[windowStart:]
 
 	totalCost := 0.0

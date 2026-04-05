@@ -204,10 +204,7 @@ func (r *MultiCycleRunner) Run(ctx context.Context) error {
 				return fmt.Errorf("rdloop: %d consecutive cycle failures", consecutiveFails)
 			}
 			// Exponential backoff: 60s, 120s, 240s, 480s...
-			backoff := time.Duration(consecutiveFails) * 60 * time.Second
-			if backoff > 10*time.Minute {
-				backoff = 10 * time.Minute
-			}
+			backoff := min(time.Duration(consecutiveFails)*60*time.Second, 10*time.Minute)
 			log.Printf("rdloop: backing off %s before next cycle (fail %d/8)", backoff, consecutiveFails)
 			select {
 			case <-ctx.Done():
@@ -301,15 +298,15 @@ func (r *MultiCycleRunner) runOneCycle(ctx context.Context, cycleNum int, specFi
 	})
 
 	loopCfg := ralph.Config{
-		SpecFile:      specFile,
-		ProgressFile:  progressFile,
-		ToolRegistry:  reg,
-		Sampler:       r.cfg.Sampler,
-		MaxIterations: r.cfg.Profile.MaxIterations,
-		MaxTokens:     r.cfg.Profile.MaxTokensPerReq,
-		CostTracker:   tracker,
-		ForceRestart:  true,
-		TemplateVars:  templateVars,
+		SpecFile:       specFile,
+		ProgressFile:   progressFile,
+		ToolRegistry:   reg,
+		Sampler:        r.cfg.Sampler,
+		MaxIterations:  r.cfg.Profile.MaxIterations,
+		MaxTokens:      r.cfg.Profile.MaxTokensPerReq,
+		CostTracker:    tracker,
+		ForceRestart:   true,
+		TemplateVars:   templateVars,
 		CircuitBreaker: circuitBreaker,
 		CostGovernor:   costGovernor,
 		ExitGate:       ralph.ExitGate{RequireAllTasksDone: true},
@@ -318,9 +315,9 @@ func (r *MultiCycleRunner) runOneCycle(ctx context.Context, cycleNum int, specFi
 			rdcycle.NewCostAdapter(int64(r.cfg.Profile.MaxIterations)*int64(r.cfg.Profile.MaxTokensPerReq), r.cfg.Profile.MaxIterations),
 			tracker,
 		),
-		HistoryWindow: 5,
+		HistoryWindow:   5,
 		AutoVerifyLevel: ralph.AutoVerifyFull,
-		ProjectRoot:   ".",
+		ProjectRoot:     ".",
 		PhaseMaxTokens: map[string]int{
 			"scan": 4096, "plan": 8192, "implement": 16384,
 			"verify": 4096, "reflect": 2048, "report": 4096, "schedule": 2048,

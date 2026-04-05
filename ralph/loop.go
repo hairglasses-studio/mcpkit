@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -369,11 +370,8 @@ func (l *Loop) Run(ctx context.Context) error {
 			allowMark := doneSet[decision.TaskID]
 			if !allowMark {
 				readyNow := ReadyTasks(spec.Tasks, doneSet)
-				for _, id := range readyNow {
-					if id == decision.TaskID {
-						allowMark = true
-						break
-					}
+				if slices.Contains(readyNow, decision.TaskID) {
+					allowMark = true
 				}
 			}
 			if allowMark {
@@ -453,8 +451,7 @@ func (l *Loop) Run(ctx context.Context) error {
 	}
 }
 
-
-func makeCallToolRequest(name string, args map[string]interface{}) registry.CallToolRequest {
+func makeCallToolRequest(name string, args map[string]any) registry.CallToolRequest {
 	return mcp.CallToolRequest{
 		Params: mcp.CallToolParams{
 			Name:      name,
@@ -488,10 +485,8 @@ func (l *Loop) recordIteration(iteration int, taskID string, toolCalls []string,
 }
 
 func appendUnique(slice []string, item string) []string {
-	for _, s := range slice {
-		if s == item {
-			return slice
-		}
+	if slices.Contains(slice, item) {
+		return slice
 	}
 	return append(slice, item)
 }

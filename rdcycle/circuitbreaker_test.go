@@ -156,10 +156,10 @@ func TestCircuitBreakerConcurrentAccess(t *testing.T) {
 	cb := NewCircuitBreaker(100, time.Hour)
 	done := make(chan struct{})
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		go func() {
 			defer func() { done <- struct{}{} }()
-			for j := 0; j < 50; j++ {
+			for j := range 50 {
 				cb.CanExecute()
 				cb.RecordResult(j%2 == 0, false)
 				cb.State()
@@ -167,7 +167,7 @@ func TestCircuitBreakerConcurrentAccess(t *testing.T) {
 			}
 		}()
 	}
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		<-done
 	}
 }

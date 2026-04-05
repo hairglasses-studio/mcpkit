@@ -16,26 +16,26 @@ import (
 // propagating them to the real test. Fatalf/Fatal call runtime.Goexit() so
 // that the probed function terminates naturally (matching real testing.T).
 type probeT struct {
-	testing.TB   // embed real TB for any methods we don't override
-	mu     sync.Mutex
-	failed bool
+	testing.TB // embed real TB for any methods we don't override
+	mu         sync.Mutex
+	failed     bool
 }
 
-func (p *probeT) Helper()                          {}
-func (p *probeT) Log(_ ...interface{})             {}
-func (p *probeT) Logf(_ string, _ ...interface{}) {}
-func (p *probeT) Errorf(_ string, _ ...interface{}) {
+func (p *probeT) Helper()                 {}
+func (p *probeT) Log(_ ...any)            {}
+func (p *probeT) Logf(_ string, _ ...any) {}
+func (p *probeT) Errorf(_ string, _ ...any) {
 	p.mu.Lock()
 	p.failed = true
 	p.mu.Unlock()
 }
-func (p *probeT) Fatalf(_ string, _ ...interface{}) {
+func (p *probeT) Fatalf(_ string, _ ...any) {
 	p.mu.Lock()
 	p.failed = true
 	p.mu.Unlock()
 	runtime.Goexit()
 }
-func (p *probeT) Fatal(_ ...interface{}) {
+func (p *probeT) Fatal(_ ...any) {
 	p.mu.Lock()
 	p.failed = true
 	p.mu.Unlock()

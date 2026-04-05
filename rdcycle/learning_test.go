@@ -107,7 +107,7 @@ func TestLearningEngine_TaskMutations_Empty(t *testing.T) {
 func TestLearningEngine_TaskMutations_SkipRecurring(t *testing.T) {
 	path := testNotesPath(t)
 	var notes []ImprovementNote
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		n := ImprovementNote{CycleID: fmt.Sprintf("c%d", i)}
 		if i < 3 {
 			n.WhatFailed = []string{"scan flake"}
@@ -154,7 +154,7 @@ func TestLearningEngine_TaskMutations_AddVerify(t *testing.T) {
 func TestLearningEngine_TaskMutations_MetaImprove(t *testing.T) {
 	path := testNotesPath(t)
 	var notes []ImprovementNote
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		notes = append(notes, ImprovementNote{CycleID: fmt.Sprintf("c%d", i)})
 	}
 	writeTestNotes(t, path, notes)

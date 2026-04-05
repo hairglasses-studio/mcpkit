@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"slices"
 	"testing"
 )
 
@@ -59,13 +60,7 @@ func TestNewMetadata_BearerMethodsSupported(t *testing.T) {
 
 	meta := cfg.NewMetadata()
 
-	containsHeader := false
-	for _, m := range meta.BearerMethodsSupported {
-		if m == "header" {
-			containsHeader = true
-			break
-		}
-	}
+	containsHeader := slices.Contains(meta.BearerMethodsSupported, "header")
 	if !containsHeader {
 		t.Errorf("BearerMethodsSupported = %v, want it to contain \"header\"", meta.BearerMethodsSupported)
 	}

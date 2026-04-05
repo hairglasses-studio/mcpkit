@@ -30,7 +30,7 @@ func ExampleNewRateLimiter() {
 
 	// First five calls should succeed immediately (burst tokens available).
 	allowed := 0
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		if lim.Allow() {
 			allowed++
 		}

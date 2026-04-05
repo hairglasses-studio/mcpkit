@@ -3,6 +3,7 @@ package workflow
 import (
 	"context"
 	"fmt"
+	"maps"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -91,7 +92,7 @@ func TestForkNode_ParallelExecution(t *testing.T) {
 	release := make(chan struct{})
 
 	branches := make(map[string]NodeFunc, numBranches)
-	for i := 0; i < numBranches; i++ {
+	for i := range numBranches {
 		name := fmt.Sprintf("b%d", i)
 		branches[name] = func(_ context.Context, s State) (State, error) {
 			atomic.AddInt32(&ready, 1)
@@ -329,9 +330,7 @@ func TestForkNode_InGraph(t *testing.T) {
 	mustAddNode(t, g, "start", noop)
 	mustAddNode(t, g, "collect", func(_ context.Context, s State) (State, error) {
 		collectSaw = make(map[string]any, len(s.Data))
-		for k, v := range s.Data {
-			collectSaw[k] = v
-		}
+		maps.Copy(collectSaw, s.Data)
 		return s, nil
 	})
 

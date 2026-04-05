@@ -23,8 +23,10 @@ type FileToolModule struct {
 	Root string
 }
 
-func (m *FileToolModule) Name() string        { return "file_tools" }
-func (m *FileToolModule) Description() string { return "File I/O tools for reading, writing, and listing project files" }
+func (m *FileToolModule) Name() string { return "file_tools" }
+func (m *FileToolModule) Description() string {
+	return "File I/O tools for reading, writing, and listing project files"
+}
 
 func (m *FileToolModule) Tools() []registry.ToolDefinition {
 	return []registry.ToolDefinition{
@@ -333,16 +335,16 @@ func (m *FileToolModule) handleCheckCoverage(ctx context.Context, input CheckCov
 // Looks for patterns like "coverage: 85.2% of statements".
 func parseCoverage(output string) float64 {
 	// Find "coverage: XX.X% of statements"
-	idx := strings.Index(output, "coverage: ")
-	if idx < 0 {
+	_, after, ok := strings.Cut(output, "coverage: ")
+	if !ok {
 		return 0
 	}
-	rest := output[idx+len("coverage: "):]
-	pctIdx := strings.Index(rest, "%")
-	if pctIdx < 0 {
+	rest := after
+	before, _, ok := strings.Cut(rest, "%")
+	if !ok {
 		return 0
 	}
-	pctStr := rest[:pctIdx]
+	pctStr := before
 	var pct float64
 	fmt.Sscanf(pctStr, "%f", &pct)
 	return pct

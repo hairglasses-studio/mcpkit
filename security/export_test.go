@@ -34,7 +34,7 @@ func TestJSONLExporter_MultipleEvents(t *testing.T) {
 	var buf bytes.Buffer
 	exp := NewJSONLExporter(&buf)
 
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		_ = exp.Export(AuditEvent{Type: AuditToolCall, User: "user"})
 	}
 

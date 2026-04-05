@@ -6,11 +6,11 @@ import "time"
 
 // Case defines a single evaluation case for a tool.
 type Case struct {
-	Name     string                 `json:"name"`
-	Tool     string                 `json:"tool"`
-	Args     map[string]interface{} `json:"args,omitempty"`
-	Expected interface{}            `json:"expected,omitempty"`
-	Tags     []string               `json:"tags,omitempty"`
+	Name     string         `json:"name"`
+	Tool     string         `json:"tool"`
+	Args     map[string]any `json:"args,omitempty"`
+	Expected any            `json:"expected,omitempty"`
+	Tags     []string       `json:"tags,omitempty"`
 }
 
 // Score records the result of a single scorer applied to a case.
@@ -50,11 +50,11 @@ type ResultScorer interface {
 
 // Suite defines a collection of evaluation cases with shared scorers.
 type Suite struct {
-	Name           string         `json:"name"`
-	Cases          []Case         `json:"cases"`
-	Scorers        []Scorer       `json:"-"`
-	ResultScorers  []ResultScorer `json:"-"`
-	Threshold      float64        `json:"threshold"` // minimum average score to pass (default 1.0)
+	Name          string         `json:"name"`
+	Cases         []Case         `json:"cases"`
+	Scorers       []Scorer       `json:"-"`
+	ResultScorers []ResultScorer `json:"-"`
+	Threshold     float64        `json:"threshold"` // minimum average score to pass (default 1.0)
 }
 
 // Summary is the aggregate result of running a suite.

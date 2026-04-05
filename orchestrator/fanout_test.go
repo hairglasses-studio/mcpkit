@@ -3,6 +3,7 @@ package orchestrator
 import (
 	"context"
 	"errors"
+	"maps"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -147,9 +148,7 @@ func TestFanOutMergeFunc(t *testing.T) {
 			if out == nil {
 				continue
 			}
-			for k, v := range out.Data {
-				combined[k] = v
-			}
+			maps.Copy(combined, out.Data)
 		}
 		return &StageOutput{Data: combined, Status: "ok"}
 	}

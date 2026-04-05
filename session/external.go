@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"maps"
 	"time"
 )
 
@@ -47,9 +48,7 @@ func Snapshot(s Session) *SerializableSession {
 	// type-assert to access internal data for snapshots.
 	if ms, ok := s.(*session); ok {
 		ms.mu.RLock()
-		for k, v := range ms.data {
-			ss.Data[k] = v
-		}
+		maps.Copy(ss.Data, ms.data)
 		ms.mu.RUnlock()
 	}
 	return ss
@@ -64,9 +63,7 @@ func Restore(ss *SerializableSession) Session {
 		createdAt: ss.CreatedAt,
 		expiresAt: ss.ExpiresAt,
 	}
-	for k, v := range ss.Data {
-		s.data[k] = v
-	}
+	maps.Copy(s.data, ss.Data)
 	return s
 }
 

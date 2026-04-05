@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
 	"sync"
 	"time"
@@ -207,10 +208,8 @@ func (m *HandoffManager) FindAgent(skill string) (AgentRef, bool) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	for _, a := range m.agents {
-		for _, s := range a.Skills {
-			if s == skill {
-				return a, true
-			}
+		if slices.Contains(a.Skills, skill) {
+			return a, true
 		}
 	}
 	return AgentRef{}, false

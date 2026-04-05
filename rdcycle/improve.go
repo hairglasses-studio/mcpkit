@@ -134,10 +134,7 @@ func analyzeCostTrend(notes []ImprovementNote) string {
 	}
 
 	// Look at last 3 (or fewer) cycles.
-	start := len(notes) - 3
-	if start < 0 {
-		start = 0
-	}
+	start := max(len(notes)-3, 0)
 	recent := notes[start:]
 
 	increasing := 0

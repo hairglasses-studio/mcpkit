@@ -50,8 +50,8 @@ func GetResponseFormat(req registry.CallToolRequest) ResponseFormat {
 
 // ResponseFormatSchema returns the JSON Schema property definition for a
 // response_format parameter. Add this to your tool's inputSchema properties.
-func ResponseFormatSchema() map[string]interface{} {
-	return map[string]interface{}{
+func ResponseFormatSchema() map[string]any {
+	return map[string]any{
 		"type":        "string",
 		"enum":        []string{"detailed", "concise"},
 		"default":     "detailed",

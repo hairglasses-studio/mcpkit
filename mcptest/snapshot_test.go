@@ -135,7 +135,7 @@ func TestNormaliseResult_TimestampStripping(t *testing.T) {
 	if got == nil {
 		t.Fatal("normaliseResult returned nil for valid result")
 	}
-	m, ok := got.(map[string]interface{})
+	m, ok := got.(map[string]any)
 	if !ok {
 		t.Fatalf("normaliseResult returned %T, want map", got)
 	}
@@ -160,7 +160,7 @@ func TestNormaliseResult_StructuredContentTimestampStripping(t *testing.T) {
 	if got == nil {
 		t.Fatal("normaliseResult returned nil")
 	}
-	m, ok := got.(map[string]interface{})
+	m, ok := got.(map[string]any)
 	if !ok {
 		t.Fatalf("got %T, want map", got)
 	}
@@ -170,7 +170,7 @@ func TestNormaliseResult_StructuredContentTimestampStripping(t *testing.T) {
 		// No structured content in map means it was nil — test passes vacuously.
 		return
 	}
-	scMap, ok := sc.(map[string]interface{})
+	scMap, ok := sc.(map[string]any)
 	if !ok {
 		// structuredContent is not a map (e.g., string/number) — non-map branch covered.
 		return

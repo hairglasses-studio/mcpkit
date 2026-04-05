@@ -10,7 +10,7 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
-func makeReq(args map[string]interface{}) mcp.CallToolRequest {
+func makeReq(args map[string]any) mcp.CallToolRequest {
 	req := mcp.CallToolRequest{}
 	req.Params.Arguments = args
 	return req
@@ -74,7 +74,7 @@ func TestErrorResult(t *testing.T) {
 // ==================== JSONResult ====================
 
 func TestJSONResult_Map(t *testing.T) {
-	r := JSONResult(map[string]interface{}{"status": "ok", "count": 42})
+	r := JSONResult(map[string]any{"status": "ok", "count": 42})
 	got := extractText(t, r)
 	if !strings.Contains(got, `"status": "ok"`) {
 		t.Errorf("JSONResult missing status field, got: %s", got)
@@ -94,21 +94,21 @@ func TestJSONResult_Unmarshalable(t *testing.T) {
 // ==================== GetStringParam ====================
 
 func TestGetStringParam(t *testing.T) {
-	req := makeReq(map[string]interface{}{"name": "alice"})
+	req := makeReq(map[string]any{"name": "alice"})
 	if got := GetStringParam(req, "name"); got != "alice" {
 		t.Errorf("GetStringParam = %q, want %q", got, "alice")
 	}
 }
 
 func TestGetStringParam_Missing(t *testing.T) {
-	req := makeReq(map[string]interface{}{"other": "val"})
+	req := makeReq(map[string]any{"other": "val"})
 	if got := GetStringParam(req, "name"); got != "" {
 		t.Errorf("GetStringParam missing key = %q, want empty", got)
 	}
 }
 
 func TestGetStringParam_WrongType(t *testing.T) {
-	req := makeReq(map[string]interface{}{"name": 123})
+	req := makeReq(map[string]any{"name": 123})
 	if got := GetStringParam(req, "name"); got != "" {
 		t.Errorf("GetStringParam wrong type = %q, want empty", got)
 	}
@@ -124,21 +124,21 @@ func TestGetStringParam_NilArgs(t *testing.T) {
 // ==================== GetIntParam ====================
 
 func TestGetIntParam(t *testing.T) {
-	req := makeReq(map[string]interface{}{"count": float64(7)})
+	req := makeReq(map[string]any{"count": float64(7)})
 	if got := GetIntParam(req, "count", 0); got != 7 {
 		t.Errorf("GetIntParam = %d, want 7", got)
 	}
 }
 
 func TestGetIntParam_Default(t *testing.T) {
-	req := makeReq(map[string]interface{}{})
+	req := makeReq(map[string]any{})
 	if got := GetIntParam(req, "count", 42); got != 42 {
 		t.Errorf("GetIntParam default = %d, want 42", got)
 	}
 }
 
 func TestGetIntParam_WrongType(t *testing.T) {
-	req := makeReq(map[string]interface{}{"count": "not a number"})
+	req := makeReq(map[string]any{"count": "not a number"})
 	if got := GetIntParam(req, "count", 99); got != 99 {
 		t.Errorf("GetIntParam wrong type = %d, want 99", got)
 	}
@@ -154,21 +154,21 @@ func TestGetIntParam_NilArgs(t *testing.T) {
 // ==================== GetBoolParam ====================
 
 func TestGetBoolParam(t *testing.T) {
-	req := makeReq(map[string]interface{}{"flag": true})
+	req := makeReq(map[string]any{"flag": true})
 	if got := GetBoolParam(req, "flag", false); !got {
 		t.Error("GetBoolParam = false, want true")
 	}
 }
 
 func TestGetBoolParam_Default(t *testing.T) {
-	req := makeReq(map[string]interface{}{})
+	req := makeReq(map[string]any{})
 	if got := GetBoolParam(req, "flag", true); !got {
 		t.Error("GetBoolParam default = false, want true")
 	}
 }
 
 func TestGetBoolParam_WrongType(t *testing.T) {
-	req := makeReq(map[string]interface{}{"flag": "yes"})
+	req := makeReq(map[string]any{"flag": "yes"})
 	if got := GetBoolParam(req, "flag", false); got {
 		t.Error("GetBoolParam wrong type = true, want false")
 	}
@@ -184,14 +184,14 @@ func TestGetBoolParam_NilArgs(t *testing.T) {
 // ==================== GetFloatParam ====================
 
 func TestGetFloatParam(t *testing.T) {
-	req := makeReq(map[string]interface{}{"price": float64(19.99)})
+	req := makeReq(map[string]any{"price": float64(19.99)})
 	if got := GetFloatParam(req, "price", 0); got != 19.99 {
 		t.Errorf("GetFloatParam = %f, want 19.99", got)
 	}
 }
 
 func TestGetFloatParam_Default(t *testing.T) {
-	req := makeReq(map[string]interface{}{})
+	req := makeReq(map[string]any{})
 	if got := GetFloatParam(req, "price", 9.99); got != 9.99 {
 		t.Errorf("GetFloatParam default = %f, want 9.99", got)
 	}
@@ -207,14 +207,14 @@ func TestGetFloatParam_NilArgs(t *testing.T) {
 // ==================== HasParam ====================
 
 func TestHasParam_Present(t *testing.T) {
-	req := makeReq(map[string]interface{}{"key": "value"})
+	req := makeReq(map[string]any{"key": "value"})
 	if !HasParam(req, "key") {
 		t.Error("HasParam should return true for present key")
 	}
 }
 
 func TestHasParam_Absent(t *testing.T) {
-	req := makeReq(map[string]interface{}{"other": "value"})
+	req := makeReq(map[string]any{"other": "value"})
 	if HasParam(req, "key") {
 		t.Error("HasParam should return false for absent key")
 	}
@@ -228,7 +228,7 @@ func TestHasParam_NilArgs(t *testing.T) {
 }
 
 func TestHasParam_NilValue(t *testing.T) {
-	req := makeReq(map[string]interface{}{"key": nil})
+	req := makeReq(map[string]any{"key": nil})
 	if !HasParam(req, "key") {
 		t.Error("HasParam should return true when key exists with nil value")
 	}
@@ -237,8 +237,8 @@ func TestHasParam_NilValue(t *testing.T) {
 // ==================== GetStringArrayParam ====================
 
 func TestGetStringArrayParam(t *testing.T) {
-	req := makeReq(map[string]interface{}{
-		"tags": []interface{}{"a", "b", "c"},
+	req := makeReq(map[string]any{
+		"tags": []any{"a", "b", "c"},
 	})
 	got := GetStringArrayParam(req, "tags")
 	if len(got) != 3 || got[0] != "a" || got[1] != "b" || got[2] != "c" {
@@ -247,8 +247,8 @@ func TestGetStringArrayParam(t *testing.T) {
 }
 
 func TestGetStringArrayParam_Empty(t *testing.T) {
-	req := makeReq(map[string]interface{}{
-		"tags": []interface{}{},
+	req := makeReq(map[string]any{
+		"tags": []any{},
 	})
 	got := GetStringArrayParam(req, "tags")
 	if len(got) != 0 {
@@ -257,7 +257,7 @@ func TestGetStringArrayParam_Empty(t *testing.T) {
 }
 
 func TestGetStringArrayParam_Missing(t *testing.T) {
-	req := makeReq(map[string]interface{}{})
+	req := makeReq(map[string]any{})
 	got := GetStringArrayParam(req, "tags")
 	if got != nil {
 		t.Errorf("GetStringArrayParam missing = %v, want nil", got)
@@ -265,7 +265,7 @@ func TestGetStringArrayParam_Missing(t *testing.T) {
 }
 
 func TestGetStringArrayParam_WrongType(t *testing.T) {
-	req := makeReq(map[string]interface{}{"tags": "not-an-array"})
+	req := makeReq(map[string]any{"tags": "not-an-array"})
 	got := GetStringArrayParam(req, "tags")
 	if got != nil {
 		t.Errorf("GetStringArrayParam wrong type = %v, want nil", got)
@@ -273,8 +273,8 @@ func TestGetStringArrayParam_WrongType(t *testing.T) {
 }
 
 func TestGetStringArrayParam_MixedTypes(t *testing.T) {
-	req := makeReq(map[string]interface{}{
-		"tags": []interface{}{"a", 42, "b", true},
+	req := makeReq(map[string]any{
+		"tags": []any{"a", 42, "b", true},
 	})
 	got := GetStringArrayParam(req, "tags")
 	if len(got) != 2 || got[0] != "a" || got[1] != "b" {

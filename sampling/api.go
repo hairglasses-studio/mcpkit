@@ -110,7 +110,7 @@ func (c *APISamplingClient) CreateMessage(ctx context.Context, req CreateMessage
 
 	var resp *apiResponse
 	var lastErr error
-	for attempt := 0; attempt < 4; attempt++ {
+	for attempt := range 4 {
 		if attempt > 0 {
 			backoff := time.Duration(math.Pow(2, float64(attempt))) * time.Second
 			select {

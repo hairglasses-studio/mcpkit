@@ -34,14 +34,14 @@ func newTransport(t testing.TB, s *Server) transport {
 	return transport{session: session, srv: s}
 }
 
-func (tr *transport) callTool(ctx context.Context, t testing.TB, name string, args map[string]interface{}) (*registry.CallToolResult, error) {
+func (tr *transport) callTool(ctx context.Context, t testing.TB, name string, args map[string]any) (*registry.CallToolResult, error) {
 	t.Helper()
 
-	reqBody := map[string]interface{}{
+	reqBody := map[string]any{
 		"jsonrpc": "2.0",
 		"id":      1,
 		"method":  "tools/call",
-		"params": map[string]interface{}{
+		"params": map[string]any{
 			"name":      name,
 			"arguments": args,
 		},
@@ -84,11 +84,11 @@ func (tr *transport) callTool(ctx context.Context, t testing.TB, name string, ar
 func (tr *transport) readResource(ctx context.Context, t testing.TB, uri string) (*registry.ReadResourceResult, error) {
 	t.Helper()
 
-	reqBody := map[string]interface{}{
+	reqBody := map[string]any{
 		"jsonrpc": "2.0",
 		"id":      1,
 		"method":  "resources/read",
-		"params": map[string]interface{}{
+		"params": map[string]any{
 			"uri": uri,
 		},
 	}
@@ -135,14 +135,14 @@ func (tr *transport) readResource(ctx context.Context, t testing.TB, uri string)
 func (tr *transport) getPrompt(ctx context.Context, t testing.TB, name string, args map[string]string) (*registry.GetPromptResult, error) {
 	t.Helper()
 
-	params := map[string]interface{}{
+	params := map[string]any{
 		"name": name,
 	}
 	if args != nil {
 		params["arguments"] = args
 	}
 
-	reqBody := map[string]interface{}{
+	reqBody := map[string]any{
 		"jsonrpc": "2.0",
 		"id":      1,
 		"method":  "prompts/get",

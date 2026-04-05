@@ -72,8 +72,8 @@ func (p *EnvProvider) List(_ context.Context) ([]string, error) {
 		key := parts[0]
 		if p.prefix == "" {
 			keys = append(keys, key)
-		} else if strings.HasPrefix(key, p.prefix) {
-			keys = append(keys, strings.TrimPrefix(key, p.prefix))
+		} else if after, ok := strings.CutPrefix(key, p.prefix); ok {
+			keys = append(keys, after)
 		}
 	}
 	return keys, nil
@@ -91,7 +91,7 @@ func (p *EnvProvider) Exists(_ context.Context, key string) (bool, error) {
 	return exists, nil
 }
 
-func (p *EnvProvider) Priority() int    { return p.priority }
+func (p *EnvProvider) Priority() int     { return p.priority }
 func (p *EnvProvider) IsAvailable() bool { return true }
 func (p *EnvProvider) Close() error      { return nil }
 

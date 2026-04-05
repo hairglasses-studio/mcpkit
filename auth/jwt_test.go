@@ -262,7 +262,7 @@ func TestJWKSValidator_CachesKeys(t *testing.T) {
 
 	validator := NewJWKSValidator(JWKSConfig{JWKSURL: srv.URL, CacheTTL: time.Hour})
 
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		token := signJWT(t, key,
 			map[string]any{"alg": "RS256", "typ": "JWT", "kid": kid},
 			map[string]any{"sub": fmt.Sprintf("user-%d", i), "exp": time.Now().Add(time.Hour).Unix()},

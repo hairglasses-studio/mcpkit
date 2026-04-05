@@ -193,14 +193,14 @@ func NewSessionClient(t testing.TB, s *SessionServer) *SessionClient {
 }
 
 // CallTool calls a tool with the session ID attached to the context.
-func (sc *SessionClient) CallTool(name string, args map[string]interface{}) *registry.CallToolResult {
+func (sc *SessionClient) CallTool(name string, args map[string]any) *registry.CallToolResult {
 	sc.Client.t.Helper()
 	ctx := WithSessionID(context.Background(), sc.sessionID)
 	return sc.Client.CallToolWithContext(ctx, name, args)
 }
 
 // CallToolE calls a tool with the session ID attached, returning both result and error.
-func (sc *SessionClient) CallToolE(name string, args map[string]interface{}) (*registry.CallToolResult, error) {
+func (sc *SessionClient) CallToolE(name string, args map[string]any) (*registry.CallToolResult, error) {
 	sc.Client.t.Helper()
 	ctx := WithSessionID(context.Background(), sc.sessionID)
 	result, err := sc.Client.tr.callTool(ctx, sc.Client.t, name, args)

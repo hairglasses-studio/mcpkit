@@ -246,10 +246,10 @@ func TestDynamicUpstreamRegistry_ConcurrentAccess(t *testing.T) {
 	const workers = 20
 	var wg sync.WaitGroup
 	wg.Add(workers)
-	for i := 0; i < workers; i++ {
+	for range workers {
 		go func() {
 			defer wg.Done()
-			for j := 0; j < 50; j++ {
+			for range 50 {
 				_ = d.List()
 				_, _ = d.Get("none")
 				_ = d.Len()

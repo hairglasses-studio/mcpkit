@@ -38,9 +38,9 @@ func (p *linuxInputProvider) Enumerate(_ context.Context) ([]Info, error) {
 	}
 
 	var devices []Info
-	blocks := strings.Split(string(data), "\n\n")
+	blocks := strings.SplitSeq(string(data), "\n\n")
 
-	for _, block := range blocks {
+	for block := range blocks {
 		lines := strings.Split(block, "\n")
 		var name, vendor, product, eventPath string
 		var hasKey, hasAbs, hasFF bool
@@ -56,15 +56,15 @@ func (p *linuxInputProvider) Enumerate(_ context.Context) ([]Info, error) {
 					isVirtual = true
 				}
 			case strings.HasPrefix(line, "I: "):
-				for _, part := range strings.Fields(line) {
-					if strings.HasPrefix(part, "Vendor=") {
-						vendor = strings.ToLower(strings.TrimPrefix(part, "Vendor="))
-					} else if strings.HasPrefix(part, "Product=") {
-						product = strings.ToLower(strings.TrimPrefix(part, "Product="))
+				for part := range strings.FieldsSeq(line) {
+					if after, ok := strings.CutPrefix(part, "Vendor="); ok {
+						vendor = strings.ToLower(after)
+					} else if after, ok := strings.CutPrefix(part, "Product="); ok {
+						product = strings.ToLower(after)
 					}
 				}
 			case strings.HasPrefix(line, "H: Handlers="):
-				for _, h := range strings.Fields(strings.TrimPrefix(line, "H: Handlers=")) {
+				for h := range strings.FieldsSeq(strings.TrimPrefix(line, "H: Handlers=")) {
 					if strings.HasPrefix(h, "event") {
 						eventPath = "/dev/input/" + h
 					}
@@ -157,10 +157,10 @@ type linuxEvdevConnection struct {
 	alive      bool
 }
 
-func (c *linuxEvdevConnection) Info() Info                { return c.deviceInfo }
-func (c *linuxEvdevConnection) Events() <-chan Event      { return c.events }
-func (c *linuxEvdevConnection) Feedback() DeviceFeedback  { return nil }
-func (c *linuxEvdevConnection) Alive() bool               { return c.alive }
+func (c *linuxEvdevConnection) Info() Info               { return c.deviceInfo }
+func (c *linuxEvdevConnection) Events() <-chan Event     { return c.events }
+func (c *linuxEvdevConnection) Feedback() DeviceFeedback { return nil }
+func (c *linuxEvdevConnection) Alive() bool              { return c.alive }
 
 func (c *linuxEvdevConnection) Start(ctx context.Context) error {
 	ctx, c.cancel = context.WithCancel(ctx)
@@ -253,7 +253,7 @@ func enumMIDIAmidi() []Info {
 	}
 
 	var devices []Info
-	for _, line := range strings.Split(string(out), "\n") {
+	for line := range strings.SplitSeq(string(out), "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" || strings.HasPrefix(line, "Dir") {
 			continue

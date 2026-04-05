@@ -292,7 +292,7 @@ func TestImprovementSource_FetchEmpty(t *testing.T) {
 func TestImprovementSource_SelfImproveAt10(t *testing.T) {
 	notesPath := filepath.Join(t.TempDir(), "notes.json")
 	var notes []ImprovementNote
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		notes = append(notes, ImprovementNote{CycleID: fmt.Sprintf("c%d", i)})
 	}
 	SaveNotes(notesPath, notes)

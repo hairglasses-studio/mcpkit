@@ -35,7 +35,7 @@ func TestCircuitBreakerClosedToOpen(t *testing.T) {
 	}
 
 	errFail := errors.New("fail")
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		cb.Execute(context.Background(), func(_ context.Context) error {
 			return errFail
 		})

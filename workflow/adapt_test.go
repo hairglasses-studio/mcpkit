@@ -2,6 +2,7 @@ package workflow
 
 import (
 	"context"
+	"maps"
 	"testing"
 
 	"github.com/hairglasses-studio/mcpkit/orchestrator"
@@ -14,9 +15,7 @@ import (
 func TestFromStageFunc(t *testing.T) {
 	stage := func(_ context.Context, input orchestrator.StageInput) (*orchestrator.StageOutput, error) {
 		result := make(map[string]any)
-		for k, v := range input.Data {
-			result[k] = v
-		}
+		maps.Copy(result, input.Data)
 		result["stage_ran"] = true
 		return &orchestrator.StageOutput{
 			Data:   result,

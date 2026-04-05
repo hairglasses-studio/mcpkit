@@ -20,7 +20,7 @@ func TestNewServer(t *testing.T) {
 
 func TestClient_CallTool(t *testing.T) {
 	_, c := setupTestServer(t)
-	result := c.CallTool("test_echo", map[string]interface{}{"message": "hello"})
+	result := c.CallTool("test_echo", map[string]any{"message": "hello"})
 	AssertToolResult(t, result, "hello")
 	AssertNotError(t, result)
 }
@@ -33,7 +33,7 @@ func TestClient_CallToolError(t *testing.T) {
 
 func TestAssertToolResultContains(t *testing.T) {
 	_, c := setupTestServer(t)
-	result := c.CallTool("test_echo", map[string]interface{}{"message": "hello world"})
+	result := c.CallTool("test_echo", map[string]any{"message": "hello world"})
 	AssertToolResultContains(t, result, "world")
 }
 
@@ -47,8 +47,8 @@ func TestRecorder(t *testing.T) {
 	s := NewServer(t, reg)
 	c := NewClient(t, s)
 
-	c.CallTool("test_echo", map[string]interface{}{"message": "hi"})
-	c.CallTool("test_echo", map[string]interface{}{"message": "bye"})
+	c.CallTool("test_echo", map[string]any{"message": "hi"})
+	c.CallTool("test_echo", map[string]any{"message": "bye"})
 
 	rec.AssertCallCount(t, 2)
 	rec.AssertCalled(t, "test_echo")
@@ -69,7 +69,7 @@ func TestRecorderReset(t *testing.T) {
 	s := NewServer(t, reg)
 	c := NewClient(t, s)
 
-	c.CallTool("test_echo", map[string]interface{}{"message": "hi"})
+	c.CallTool("test_echo", map[string]any{"message": "hi"})
 	rec.Reset()
 	rec.AssertCallCount(t, 0)
 }
@@ -129,12 +129,12 @@ func TestAssertPromptContains(t *testing.T) {
 func TestClient_CallToolWithContext(t *testing.T) {
 	_, c := setupTestServer(t)
 	ctx := context.Background()
-	result := c.CallToolWithContext(ctx, "test_echo", map[string]interface{}{"message": "ctx-test"})
+	result := c.CallToolWithContext(ctx, "test_echo", map[string]any{"message": "ctx-test"})
 	AssertToolResult(t, result, "ctx-test")
 }
 
 func TestBuildCallToolRequest(t *testing.T) {
-	args := map[string]interface{}{"x": 1}
+	args := map[string]any{"x": 1}
 	req := buildCallToolRequest("my-tool", args)
 	if req.Params.Name != "my-tool" {
 		t.Errorf("Params.Name = %q, want %q", req.Params.Name, "my-tool")
@@ -151,7 +151,7 @@ func TestBenchmarkToolHelpers(t *testing.T) {
 	// a real *testing.B run via t.Run so coverage is collected.
 	result := testing.Benchmark(func(b *testing.B) {
 		reg := newEchoRegistry()
-		BenchmarkTool(b, reg, "echo", map[string]interface{}{"message": "unit"})
+		BenchmarkTool(b, reg, "echo", map[string]any{"message": "unit"})
 	})
 	if result.N == 0 {
 		t.Error("BenchmarkTool should have run at least once")
@@ -161,7 +161,7 @@ func TestBenchmarkToolHelpers(t *testing.T) {
 func TestBenchmarkToolParallelHelper(t *testing.T) {
 	result := testing.Benchmark(func(b *testing.B) {
 		reg := newEchoRegistry()
-		BenchmarkToolParallel(b, reg, "echo", map[string]interface{}{"message": "parallel"})
+		BenchmarkToolParallel(b, reg, "echo", map[string]any{"message": "parallel"})
 	})
 	if result.N == 0 {
 		t.Error("BenchmarkToolParallel should have run at least once")
@@ -171,8 +171,8 @@ func TestBenchmarkToolParallelHelper(t *testing.T) {
 func TestBenchmarkSuiteHelper(t *testing.T) {
 	result := testing.Benchmark(func(b *testing.B) {
 		reg := newEchoRegistry()
-		BenchmarkSuite(b, reg, func(name string) map[string]interface{} {
-			return map[string]interface{}{"message": "suite"}
+		BenchmarkSuite(b, reg, func(name string) map[string]any {
+			return map[string]any{"message": "suite"}
 		})
 	})
 	if result.N == 0 {

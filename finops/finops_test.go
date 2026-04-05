@@ -13,7 +13,7 @@ import (
 )
 
 // makeTestRequest creates a CallToolRequest with the given name and arguments.
-func makeTestRequest(name string, args map[string]interface{}) registry.CallToolRequest {
+func makeTestRequest(name string, args map[string]any) registry.CallToolRequest {
 	return mcp.CallToolRequest{
 		Params: mcp.CallToolParams{
 			Name:      name,
@@ -154,7 +154,7 @@ func TestMiddleware_RecordsUsage(t *testing.T) {
 	mw := Middleware(tracker)
 	wrapped := mw("test-tool", registry.ToolDefinition{Category: "test"}, handler)
 
-	result, err := wrapped(context.Background(), makeTestRequest("test-tool", map[string]interface{}{
+	result, err := wrapped(context.Background(), makeTestRequest("test-tool", map[string]any{
 		"query": "test input",
 	}))
 
@@ -206,7 +206,7 @@ func TestMiddleware_BudgetEnforcement(t *testing.T) {
 	wrapped := mw("test-tool", registry.ToolDefinition{Category: "test"}, handler)
 
 	ctx := context.Background()
-	req := makeTestRequest("test-tool", map[string]interface{}{"q": "x"})
+	req := makeTestRequest("test-tool", map[string]any{"q": "x"})
 
 	// First call — should succeed and consume tokens.
 	result1, err := wrapped(ctx, req)
@@ -226,7 +226,7 @@ func TestMiddleware_BudgetEnforcement(t *testing.T) {
 
 	// Keep calling until the budget is exceeded.
 	var budgetResult *registry.CallToolResult
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		r, e := wrapped(ctx, req)
 		if e != nil {
 			t.Fatalf("call %d: unexpected error: %v", i+2, e)
@@ -264,9 +264,9 @@ func TestMiddleware_NoBudget(t *testing.T) {
 	wrapped := mw("tool", registry.ToolDefinition{}, handler)
 
 	ctx := context.Background()
-	req := makeTestRequest("tool", map[string]interface{}{"k": "v"})
+	req := makeTestRequest("tool", map[string]any{"k": "v"})
 
-	for i := 0; i < 50; i++ {
+	for i := range 50 {
 		result, err := wrapped(ctx, req)
 		if err != nil {
 			t.Fatalf("call %d: unexpected error: %v", i+1, err)
@@ -286,7 +286,7 @@ func TestMiddleware_NoBudget(t *testing.T) {
 func TestEstimateFromRequest(t *testing.T) {
 	t.Parallel()
 
-	req := makeTestRequest("search", map[string]interface{}{
+	req := makeTestRequest("search", map[string]any{
 		"query": "what is the meaning of life",
 		"limit": 10,
 	})
@@ -389,7 +389,7 @@ func TestMiddleware_OnBudgetExceededCallback(t *testing.T) {
 	wrapped := mw("tool", registry.ToolDefinition{Category: "cat"}, handler)
 
 	ctx := context.Background()
-	req := makeTestRequest("tool", map[string]interface{}{"x": "y"})
+	req := makeTestRequest("tool", map[string]any{"x": "y"})
 
 	// First call: succeeds (budget not yet exceeded before execution).
 	wrapped(ctx, req) //nolint:errcheck

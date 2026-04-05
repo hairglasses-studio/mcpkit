@@ -165,13 +165,13 @@ func TestSessionClient_SessionDataPersists(t *testing.T) {
 	sc := NewSessionClient(t, srv)
 
 	// Store a value
-	sc.CallTool("session_set", map[string]interface{}{
+	sc.CallTool("session_set", map[string]any{
 		"key":   "color",
 		"value": "blue",
 	})
 
 	// Retrieve it in a subsequent call
-	result := sc.CallTool("session_get", map[string]interface{}{
+	result := sc.CallTool("session_get", map[string]any{
 		"key": "color",
 	})
 	AssertToolResult(t, result, "blue")

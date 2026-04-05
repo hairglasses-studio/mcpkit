@@ -27,12 +27,12 @@ func AgentAsTool(manager *HandoffManager, agentName string) registry.ToolDefinit
 			Description: desc,
 			InputSchema: registry.ToolInputSchema{
 				Type: "object",
-				Properties: map[string]interface{}{
-					"task": map[string]interface{}{
+				Properties: map[string]any{
+					"task": map[string]any{
 						"type":        "string",
 						"description": "Description of the task to delegate",
 					},
-					"max_iterations": map[string]interface{}{
+					"max_iterations": map[string]any{
 						"type":        "integer",
 						"description": "Maximum iterations for the agent",
 					},

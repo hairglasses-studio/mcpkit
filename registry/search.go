@@ -162,7 +162,7 @@ func (r *ToolRegistry) SearchTools(query string) []ToolSearchResult {
 						bestMatchType = "description"
 					}
 				} else {
-					for _, dw := range strings.Fields(descLower) {
+					for dw := range strings.FieldsSeq(descLower) {
 						if len(dw) < 3 {
 							continue
 						}

@@ -20,8 +20,8 @@ func buildRecorderWithCalls(t *testing.T, toolName string, n int) *Recorder {
 	reg.RegisterModule(&testModule{})
 	s := NewServer(t, reg)
 	c := NewClient(t, s)
-	for i := 0; i < n; i++ {
-		c.CallTool(toolName, map[string]interface{}{"message": "ping"})
+	for range n {
+		c.CallTool(toolName, map[string]any{"message": "ping"})
 	}
 	return rec
 }
@@ -118,8 +118,8 @@ func TestRecorder_CallsFor_Matching(t *testing.T) {
 	s := NewServer(t, reg)
 	c := NewClient(t, s)
 
-	c.CallTool("test_echo", map[string]interface{}{"message": "a"})
-	c.CallTool("test_echo", map[string]interface{}{"message": "b"})
+	c.CallTool("test_echo", map[string]any{"message": "a"})
+	c.CallTool("test_echo", map[string]any{"message": "b"})
 	c.CallTool("test_error", nil)
 
 	echoOnly := rec.CallsFor("test_echo")
@@ -164,9 +164,9 @@ func TestRecorder_Reset_ThenRecord(t *testing.T) {
 	s := NewServer(t, reg)
 	c := NewClient(t, s)
 
-	c.CallTool("test_echo", map[string]interface{}{"message": "before"})
+	c.CallTool("test_echo", map[string]any{"message": "before"})
 	rec.Reset()
-	c.CallTool("test_echo", map[string]interface{}{"message": "after"})
+	c.CallTool("test_echo", map[string]any{"message": "after"})
 
 	if n := rec.CallCount(); n != 1 {
 		t.Errorf("CallCount() after reset + one call = %d, want 1", n)
@@ -210,7 +210,7 @@ func TestRecorder_CapturesResult(t *testing.T) {
 	s := NewServer(t, reg)
 	c := NewClient(t, s)
 
-	c.CallTool("test_echo", map[string]interface{}{"message": "captured"})
+	c.CallTool("test_echo", map[string]any{"message": "captured"})
 
 	calls := rec.Calls()
 	if len(calls) == 0 {
@@ -230,7 +230,7 @@ func TestRecorder_CapturesArgs(t *testing.T) {
 	s := NewServer(t, reg)
 	c := NewClient(t, s)
 
-	c.CallTool("test_echo", map[string]interface{}{"message": "arg-value"})
+	c.CallTool("test_echo", map[string]any{"message": "arg-value"})
 
 	calls := rec.Calls()
 	if len(calls) == 0 {

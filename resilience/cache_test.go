@@ -139,14 +139,14 @@ func TestConcurrentGetOrFetch(t *testing.T) {
 	}
 
 	done := make(chan int, 10)
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		go func() {
 			v, _ := c.GetOrFetch(context.Background(), fetch)
 			done <- v
 		}()
 	}
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		v := <-done
 		if v != 99 {
 			t.Fatalf("got %d, want 99", v)

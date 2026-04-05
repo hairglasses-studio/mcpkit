@@ -66,19 +66,19 @@ type IterationLog struct {
 
 // ToolCall represents a single tool invocation within a multi-tool decision.
 type ToolCall struct {
-	Name      string                 `json:"name"`
-	Arguments map[string]interface{} `json:"arguments,omitempty"`
+	Name      string         `json:"name"`
+	Arguments map[string]any `json:"arguments,omitempty"`
 }
 
 // Decision is the JSON structure the LLM returns each iteration.
 type Decision struct {
-	Complete  bool                   `json:"complete"`
-	TaskID    string                 `json:"task_id,omitempty"`
-	ToolName  string                 `json:"tool_name,omitempty"`
-	Arguments map[string]interface{} `json:"arguments,omitempty"`
-	ToolCalls []ToolCall             `json:"tool_calls,omitempty"`
-	Reasoning string                 `json:"reasoning,omitempty"`
-	MarkDone  bool                   `json:"mark_done,omitempty"`
+	Complete  bool           `json:"complete"`
+	TaskID    string         `json:"task_id,omitempty"`
+	ToolName  string         `json:"tool_name,omitempty"`
+	Arguments map[string]any `json:"arguments,omitempty"`
+	ToolCalls []ToolCall     `json:"tool_calls,omitempty"`
+	Reasoning string         `json:"reasoning,omitempty"`
+	MarkDone  bool           `json:"mark_done,omitempty"`
 }
 
 // ConversationTurn records one full iteration for multi-turn conversation history.
@@ -155,21 +155,21 @@ type ExitGate struct {
 
 // Config configures a Loop execution.
 type Config struct {
-	MaxIterations int
-	SpecFile      string
-	ProgressFile  string
-	ToolRegistry  *registry.ToolRegistry
-	Sampler       sampling.SamplingClient
-	MaxTokens     int
-	Hooks         Hooks
-	CostTracker   *finops.Tracker       // optional: records token usage per iteration
-	EstimateFunc  func(string) int      // optional: override token estimation (default: len/4)
-	ForceRestart  bool              // if true, ignore existing progress and start fresh
-	TemplateVars  map[string]string // optional: template variable substitution for spec file
-	ToolTimeout   time.Duration     // max time per tool call (default 30s)
-	SamplerRetries int              // max retry attempts on sampler error (default 2)
-	SamplerBackoff time.Duration    // initial backoff, doubles each retry (default 2s)
-	BudgetLimit    int64            // max total tokens before stopping (0 = unlimited)
+	MaxIterations  int
+	SpecFile       string
+	ProgressFile   string
+	ToolRegistry   *registry.ToolRegistry
+	Sampler        sampling.SamplingClient
+	MaxTokens      int
+	Hooks          Hooks
+	CostTracker    *finops.Tracker   // optional: records token usage per iteration
+	EstimateFunc   func(string) int  // optional: override token estimation (default: len/4)
+	ForceRestart   bool              // if true, ignore existing progress and start fresh
+	TemplateVars   map[string]string // optional: template variable substitution for spec file
+	ToolTimeout    time.Duration     // max time per tool call (default 30s)
+	SamplerRetries int               // max retry attempts on sampler error (default 2)
+	SamplerBackoff time.Duration     // initial backoff, doubles each retry (default 2s)
+	BudgetLimit    int64             // max total tokens before stopping (0 = unlimited)
 	// ModelSelector optionally returns a model hint for sampling requests.
 	// Called each iteration with the current iteration number and completed task IDs.
 	// Return empty string for no preference.
@@ -216,17 +216,17 @@ type Config struct {
 
 // Loop is the autonomous iteration runner.
 type Loop struct {
-	config   Config
-	mu       sync.Mutex
-	progress Progress
-	stopCh   chan struct{}
-	stopped  bool
-	history          []ConversationTurn // multi-turn conversation history
-	specModified     bool               // true when TaskDecomposer has modified the spec
-	checkpointFile   string             // resolved checkpoint file path
-	stuckHint        string             // corrective hint injected by stuck detector
-	costDowngrade    bool               // set when CostGovernor requests a downgrade
-	consecutiveSamplerFails int         // consecutive sampler errors without success
+	config                  Config
+	mu                      sync.Mutex
+	progress                Progress
+	stopCh                  chan struct{}
+	stopped                 bool
+	history                 []ConversationTurn // multi-turn conversation history
+	specModified            bool               // true when TaskDecomposer has modified the spec
+	checkpointFile          string             // resolved checkpoint file path
+	stuckHint               string             // corrective hint injected by stuck detector
+	costDowngrade           bool               // set when CostGovernor requests a downgrade
+	consecutiveSamplerFails int                // consecutive sampler errors without success
 }
 
 // CostDowngradeRequested reports whether the CostGovernor has issued a downgrade

@@ -257,7 +257,7 @@ func TestMiddleware_ConcurrentCalls(t *testing.T) {
 
 	const n = 20
 	errs := make(chan error, n)
-	for i := 0; i < n; i++ {
+	for range n {
 		go func() {
 			result, err := wrapped(context.Background(), registry.CallToolRequest{})
 			if err != nil {
@@ -272,7 +272,7 @@ func TestMiddleware_ConcurrentCalls(t *testing.T) {
 		}()
 	}
 
-	for i := 0; i < n; i++ {
+	for i := range n {
 		if err := <-errs; err != nil {
 			t.Errorf("concurrent call %d: unexpected error: %v", i, err)
 		}

@@ -28,10 +28,7 @@ func SelectStrategy(notes []ImprovementNote, consecutiveSuccess int, budgetPct f
 
 	if len(notes) >= 2 {
 		recentFailures := 0
-		start := len(notes) - 3
-		if start < 0 {
-			start = 0
-		}
+		start := max(len(notes)-3, 0)
 		for _, n := range notes[start:] {
 			if len(n.WhatFailed) > 0 {
 				recentFailures++

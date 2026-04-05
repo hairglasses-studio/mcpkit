@@ -63,7 +63,7 @@ func AssertNotError(t testing.TB, result *registry.CallToolResult) {
 }
 
 // AssertStructured unmarshals the structured content into the target and validates.
-func AssertStructured(t testing.TB, result *registry.CallToolResult, target interface{}) {
+func AssertStructured(t testing.TB, result *registry.CallToolResult, target any) {
 	t.Helper()
 	if result == nil {
 		t.Fatal("result is nil")

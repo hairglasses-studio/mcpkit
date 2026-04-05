@@ -124,11 +124,11 @@ func ExtractResourceText(result *ReadResourceResult) (string, bool) {
 // ExtractArguments returns the tool arguments as map[string]interface{}.
 // In mcp-go, Arguments is type `any` and needs a type assertion.
 // In the official SDK, Arguments is json.RawMessage and needs unmarshaling.
-func ExtractArguments(req CallToolRequest) map[string]interface{} {
+func ExtractArguments(req CallToolRequest) map[string]any {
 	if req.Params.Arguments == nil {
 		return nil
 	}
-	args, ok := req.Params.Arguments.(map[string]interface{})
+	args, ok := req.Params.Arguments.(map[string]any)
 	if !ok {
 		return nil
 	}

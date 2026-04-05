@@ -183,7 +183,7 @@ func TestHandleImprove_StableNoBudgetSuggestion(t *testing.T) {
 	notesPath := filepath.Join(dir, "notes.json")
 
 	var notes []ImprovementNote
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		notes = append(notes, ImprovementNote{
 			CycleID:     fmt.Sprintf("c%d", i+1),
 			CycleNumber: i + 1,

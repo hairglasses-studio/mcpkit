@@ -68,7 +68,7 @@ func TestUpstreamResilience_CircuitBreaker(t *testing.T) {
 	req := mcp.CallToolRequest{}
 
 	// Two failures should open the circuit
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		_, err := handler(ctx, req)
 		if err == nil {
 			t.Fatalf("expected error on call %d", i)

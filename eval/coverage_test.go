@@ -124,7 +124,7 @@ func TestJSONPath_NonObjectInPath(t *testing.T) {
 // TestCustomScorer_Name covers the Name() method on customScorer (line 200).
 func TestCustomScorer_Name(t *testing.T) {
 	t.Parallel()
-	scorer := Custom("my_custom", func(output string, isError bool, expected interface{}) Score {
+	scorer := Custom("my_custom", func(output string, isError bool, expected any) Score {
 		return Score{Value: 1.0}
 	})
 	if scorer.Name() != "my_custom" {
@@ -157,7 +157,7 @@ func TestRunT_AllPass(t *testing.T) {
 func TestRunCase_WithArgs(t *testing.T) {
 	t.Parallel()
 
-	var capturedArgs map[string]interface{}
+	var capturedArgs map[string]any
 	argCaptureTool := registry.ToolDefinition{
 		Tool: registry.Tool{Name: "arg_capture", Description: "captures args"},
 		Handler: func(_ context.Context, req registry.CallToolRequest) (*registry.CallToolResult, error) {
@@ -177,7 +177,7 @@ func TestRunCase_WithArgs(t *testing.T) {
 			{
 				Name:     "args-case",
 				Tool:     "arg_capture",
-				Args:     map[string]interface{}{"key": "value"},
+				Args:     map[string]any{"key": "value"},
 				Expected: "got:value",
 			},
 		},

@@ -146,8 +146,8 @@ func TestInMemoryStore_List_Limit(t *testing.T) {
 	ctx := context.Background()
 	s := NewInMemoryStore()
 
-	for i := 0; i < 10; i++ {
-		_ = s.Set(ctx, MemoryEntry{Key: string(rune('a'+i)), Value: "v", Tier: TierSemantic})
+	for i := range 10 {
+		_ = s.Set(ctx, MemoryEntry{Key: string(rune('a' + i)), Value: "v", Tier: TierSemantic})
 	}
 
 	got, err := s.List(ctx, ListOptions{Limit: 3})
@@ -208,8 +208,8 @@ func TestInMemoryStore_Search_Limit(t *testing.T) {
 	ctx := context.Background()
 	s := NewInMemoryStore()
 
-	for i := 0; i < 5; i++ {
-		_ = s.Set(ctx, MemoryEntry{Key: string(rune('a'+i)), Value: "match", Tier: TierSemantic})
+	for i := range 5 {
+		_ = s.Set(ctx, MemoryEntry{Key: string(rune('a' + i)), Value: "match", Tier: TierSemantic})
 	}
 
 	got, err := s.Search(ctx, "match", SearchOptions{Limit: 2})

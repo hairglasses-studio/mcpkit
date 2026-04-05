@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -28,22 +29,12 @@ type AuthServerMetadata struct {
 
 // SupportsPKCE returns true if the authorization server supports S256 PKCE.
 func (m AuthServerMetadata) SupportsPKCE() bool {
-	for _, method := range m.CodeChallengeMethodsSupported {
-		if method == "S256" {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(m.CodeChallengeMethodsSupported, "S256")
 }
 
 // SupportsGrant returns true if the authorization server supports the given grant type.
 func (m AuthServerMetadata) SupportsGrant(grantType string) bool {
-	for _, g := range m.GrantTypesSupported {
-		if g == grantType {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(m.GrantTypesSupported, grantType)
 }
 
 // MetadataDiscovery fetches and caches authorization server metadata.
