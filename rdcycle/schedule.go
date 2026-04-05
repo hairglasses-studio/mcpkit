@@ -23,8 +23,8 @@ type ScheduleInput struct {
 
 // ScheduleOutput is the output of the rdcycle_schedule tool.
 type ScheduleOutput struct {
-	SpecPath string `json:"spec_path"`
-	Written  bool   `json:"written"`
+	SpecPath  string `json:"spec_path"`
+	Written   bool   `json:"written"`
 	SinceDate string `json:"since_date"`
 }
 
@@ -195,12 +195,13 @@ func (m *Module) handleSchedule(ctx context.Context, input ScheduleInput) (Sched
 			}
 		}
 		if len(lessons) > 0 {
-			desc := spec["description"].(string)
-			desc += "\n\nLessons from previous cycles:\n"
+			var desc strings.Builder
+			desc.WriteString(spec["description"].(string))
+			desc.WriteString("\n\nLessons from previous cycles:\n")
 			for _, l := range lessons {
-				desc += "- " + l + "\n"
+				desc.WriteString("- " + l + "\n")
 			}
-			spec["description"] = desc
+			spec["description"] = desc.String()
 		}
 
 		// Every 10 cycles, add self_improve task.

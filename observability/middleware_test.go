@@ -326,7 +326,7 @@ func TestAddGenAISpanAttrs_RecordingSpan_WithModel(t *testing.T) {
 		t.Fatal("expected at least one exported span")
 	}
 
-	attrMap := make(map[string]interface{}, len(spans[0].Attributes))
+	attrMap := make(map[string]any, len(spans[0].Attributes))
 	for _, a := range spans[0].Attributes {
 		attrMap[string(a.Key)] = a.Value.AsInterface()
 	}
@@ -362,7 +362,7 @@ func TestAddGenAISpanAttrs_RecordingSpan_NoModel(t *testing.T) {
 		t.Fatal("expected at least one exported span")
 	}
 
-	attrMap := make(map[string]interface{}, len(spans[0].Attributes))
+	attrMap := make(map[string]any, len(spans[0].Attributes))
 	for _, a := range spans[0].Attributes {
 		attrMap[string(a.Key)] = a.Value.AsInterface()
 	}

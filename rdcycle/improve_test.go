@@ -91,7 +91,7 @@ func TestHandleImprove_BudgetSuggestion(t *testing.T) {
 
 	// 5 cycles with increasing costs should trigger a budget suggestion.
 	var notes []ImprovementNote
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		notes = append(notes, ImprovementNote{
 			CycleID:     fmt.Sprintf("c%d", i),
 			CycleNumber: i + 1,

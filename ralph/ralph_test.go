@@ -325,8 +325,8 @@ func (m *mockSampler) CreateMessage(_ context.Context, _ sampling.CreateMessageR
 func TestDecision_ResolvedToolCalls_Multi(t *testing.T) {
 	d := Decision{
 		ToolCalls: []ToolCall{
-			{Name: "tool_a", Arguments: map[string]interface{}{"x": 1}},
-			{Name: "tool_b", Arguments: map[string]interface{}{"y": 2}},
+			{Name: "tool_a", Arguments: map[string]any{"x": 1}},
+			{Name: "tool_b", Arguments: map[string]any{"y": 2}},
 		},
 	}
 	calls := d.ResolvedToolCalls()
@@ -344,7 +344,7 @@ func TestDecision_ResolvedToolCalls_Multi(t *testing.T) {
 func TestDecision_ResolvedToolCalls_Single(t *testing.T) {
 	d := Decision{
 		ToolName:  "echo",
-		Arguments: map[string]interface{}{"message": "hello"},
+		Arguments: map[string]any{"message": "hello"},
 	}
 	calls := d.ResolvedToolCalls()
 	if len(calls) != 1 {

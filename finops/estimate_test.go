@@ -26,15 +26,14 @@ func TestDefaultEstimate_Short(t *testing.T) {
 		input string
 		want  int
 	}{
-		{"a", 1},    // 1 char  → ceil(1/4) = 1
-		{"ab", 1},   // 2 chars → ceil(2/4) = 1
-		{"abc", 1},  // 3 chars → ceil(3/4) = 1
-		{"abcd", 1}, // 4 chars → ceil(4/4) = 1
+		{"a", 1},     // 1 char  → ceil(1/4) = 1
+		{"ab", 1},    // 2 chars → ceil(2/4) = 1
+		{"abc", 1},   // 3 chars → ceil(3/4) = 1
+		{"abcd", 1},  // 4 chars → ceil(4/4) = 1
 		{"abcde", 2}, // 5 chars → ceil(5/4) = 2
 	}
 
 	for _, tc := range cases {
-		tc := tc
 		t.Run(tc.input, func(t *testing.T) {
 			t.Parallel()
 			got := DefaultEstimate(tc.input)
@@ -54,14 +53,13 @@ func TestDefaultEstimate_Long(t *testing.T) {
 		input string
 		want  int
 	}{
-		{"12345678", 2},       // 8 chars  → (8+3)/4 = 2
-		{"123456789", 3},      // 9 chars  → (9+3)/4 = 3
-		{"1234567890123456", 4}, // 16 chars → (16+3)/4 = 4
+		{"12345678", 2},          // 8 chars  → (8+3)/4 = 2
+		{"123456789", 3},         // 9 chars  → (9+3)/4 = 3
+		{"1234567890123456", 4},  // 16 chars → (16+3)/4 = 4
 		{"12345678901234567", 5}, // 17 chars → (17+3)/4 = 5
 	}
 
 	for _, tc := range cases {
-		tc := tc
 		t.Run(tc.input, func(t *testing.T) {
 			t.Parallel()
 			got := DefaultEstimate(tc.input)
@@ -112,7 +110,7 @@ func TestEstimateFromRequest_NilArgs(t *testing.T) {
 func TestEstimateFromRequest_WithArgs(t *testing.T) {
 	t.Parallel()
 
-	args := map[string]interface{}{
+	args := map[string]any{
 		"query":  "what is the meaning of life",
 		"limit":  42,
 		"active": true,
@@ -133,7 +131,7 @@ func TestEstimateFromRequest_CustomEstimator(t *testing.T) {
 	const tokensPerChar = 7
 	custom := func(text string) int { return len(text) * tokensPerChar }
 
-	args := map[string]interface{}{"key": "val"}
+	args := map[string]any{"key": "val"}
 	req := makeTestRequest("tool", args)
 
 	got := EstimateFromRequest(req, custom)

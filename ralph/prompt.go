@@ -170,10 +170,7 @@ func buildIterationPrompt(spec Spec, progress Progress, tools []registry.ToolDef
 	// Recent log (last 5, truncated to avoid prompt bloat).
 	if len(progress.Log) > 0 {
 		b.WriteString("\n## Recent Activity\n\n")
-		start := len(progress.Log) - 5
-		if start < 0 {
-			start = 0
-		}
+		start := max(len(progress.Log)-5, 0)
 		for _, entry := range progress.Log[start:] {
 			fmt.Fprintf(&b, "- Iteration %d", entry.Iteration)
 			if entry.TaskID != "" {
@@ -221,10 +218,7 @@ func isErrorResult(result string) bool {
 // It takes the last `windowSize` turns from history, interleaving user prompts,
 // assistant responses, and tool results, then appends the current prompt.
 func BuildMessages(history []ConversationTurn, windowSize int, currentPrompt string) []sampling.SamplingMessage {
-	start := len(history) - windowSize
-	if start < 0 {
-		start = 0
-	}
+	start := max(len(history)-windowSize, 0)
 	window := history[start:]
 
 	var messages []sampling.SamplingMessage

@@ -57,19 +57,19 @@ func newEchoRegistry() *registry.ToolRegistry {
 
 func BenchmarkTool_Echo(b *testing.B) {
 	reg := newEchoRegistry()
-	BenchmarkTool(b, reg, "echo", map[string]interface{}{"message": "bench"})
+	BenchmarkTool(b, reg, "echo", map[string]any{"message": "bench"})
 }
 
 func BenchmarkToolParallel_Echo(b *testing.B) {
 	reg := newEchoRegistry()
-	BenchmarkToolParallel(b, reg, "echo", map[string]interface{}{"message": "parallel-bench"})
+	BenchmarkToolParallel(b, reg, "echo", map[string]any{"message": "parallel-bench"})
 }
 
 func BenchmarkSuite_AllEchoTools(b *testing.B) {
 	reg := newEchoRegistry()
-	BenchmarkSuite(b, reg, func(name string) map[string]interface{} {
+	BenchmarkSuite(b, reg, func(name string) map[string]any {
 		if name == "echo" {
-			return map[string]interface{}{"message": "suite-bench"}
+			return map[string]any{"message": "suite-bench"}
 		}
 		return nil
 	})

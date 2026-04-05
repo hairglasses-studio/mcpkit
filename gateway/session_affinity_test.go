@@ -25,14 +25,14 @@ type testSession struct {
 	id string
 }
 
-func (s *testSession) ID() string               { return s.id }
-func (s *testSession) State() session.State      { return session.StateActive }
-func (s *testSession) CreatedAt() time.Time      { return time.Now() }
-func (s *testSession) ExpiresAt() time.Time      { return time.Time{} }
+func (s *testSession) ID() string                 { return s.id }
+func (s *testSession) State() session.State       { return session.StateActive }
+func (s *testSession) CreatedAt() time.Time       { return time.Now() }
+func (s *testSession) ExpiresAt() time.Time       { return time.Time{} }
 func (s *testSession) Get(key string) (any, bool) { return nil, false }
-func (s *testSession) Set(key string, val any)   {}
-func (s *testSession) Delete(key string)         {}
-func (s *testSession) Close() error              { return nil }
+func (s *testSession) Set(key string, val any)    {}
+func (s *testSession) Delete(key string)          {}
+func (s *testSession) Close() error               { return nil }
 
 func TestSessionAffinity_FirstRequestCreatesAffinity(t *testing.T) {
 	t.Parallel()
@@ -109,7 +109,7 @@ func TestSessionAffinity_SameSessionSameUpstream(t *testing.T) {
 	firstUpstream, _ := sa.GetAffinity("sticky-session")
 
 	// Subsequent calls should route to the same upstream.
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		if _, err := handler(ctx, mcp.CallToolRequest{}); err != nil {
 			t.Fatalf("call %d: %v", i, err)
 		}
@@ -144,7 +144,7 @@ func TestSessionAffinity_DifferentSessionsDifferentUpstreams(t *testing.T) {
 
 	// Create enough sessions to ensure at least two distinct upstreams are selected.
 	assigned := make(map[string]string)
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		sessID := "session-" + string(rune('A'+i))
 		ctx := makeSessionCtxWithID(sessID)
 		if _, err := handler(ctx, mcp.CallToolRequest{}); err != nil {
@@ -430,12 +430,12 @@ func TestSessionAffinity_ConcurrentAccess(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(workers)
 
-	for i := 0; i < workers; i++ {
+	for i := range workers {
 		sessID := "conc-sess-" + string(rune('A'+i))
 		go func(sid string) {
 			defer wg.Done()
 			ctx := makeSessionCtxWithID(sid)
-			for j := 0; j < iterations; j++ {
+			for range iterations {
 				_, _ = handler(ctx, mcp.CallToolRequest{})
 				_, _ = sa.GetAffinity(sid)
 				_ = sa.Len()
@@ -444,14 +444,12 @@ func TestSessionAffinity_ConcurrentAccess(t *testing.T) {
 	}
 
 	// Also run concurrent cleanups and removals.
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for j := 0; j < iterations; j++ {
+	wg.Go(func() {
+		for range iterations {
 			sa.CleanupUpstream("nonexistent")
 			sa.RemoveAffinity("nonexistent-sess")
 		}
-	}()
+	})
 
 	wg.Wait()
 
@@ -480,7 +478,7 @@ func TestRoundRobinSelector_Distribution(t *testing.T) {
 	upstreams := []string{"a", "b", "c"}
 
 	counts := make(map[string]int)
-	for i := 0; i < 9; i++ {
+	for range 9 {
 		selected := rr.Select(upstreams)
 		counts[selected]++
 	}

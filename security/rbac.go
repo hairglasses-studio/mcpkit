@@ -3,6 +3,7 @@ package security
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"sync"
 )
@@ -95,7 +96,7 @@ func ParseRBACUsers(env string) map[string][]Role {
 	}
 
 	result := make(map[string][]Role)
-	for _, entry := range strings.Split(env, ",") {
+	for entry := range strings.SplitSeq(env, ",") {
 		entry = strings.TrimSpace(entry)
 		parts := strings.SplitN(entry, ":", 2)
 		if len(parts) != 2 {
@@ -136,10 +137,8 @@ func (r *RBAC) HasPermission(username string, perm Permission) bool {
 	roles := r.GetUserRoles(username)
 	for _, role := range roles {
 		if perms, ok := RolePermissions[role]; ok {
-			for _, p := range perms {
-				if p == perm {
-					return true
-				}
+			if slices.Contains(perms, perm) {
+				return true
 			}
 		}
 	}

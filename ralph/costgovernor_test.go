@@ -35,7 +35,7 @@ func TestCostGovernor_HardBudgetNotTriggeredBelowLimit(t *testing.T) {
 
 func TestCostGovernor_UnproductiveStreakHalt(t *testing.T) {
 	cg := NewCostGovernor(CostGovernorConfig{UnproductiveMax: 3})
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		cg.RecordIteration(10, false)
 	}
 	v := cg.Check()

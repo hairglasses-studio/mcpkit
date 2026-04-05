@@ -1,5 +1,7 @@
 package dispatcher
 
+import "maps"
+
 // groupManager tracks concurrency limits per named group.
 // It is not goroutine-safe on its own; the dispatcher's main lock must be
 // held whenever any method is called.
@@ -57,8 +59,6 @@ func (gm *groupManager) release(group string) {
 // snapshot returns a shallow copy of the active map for inspection.
 func (gm *groupManager) snapshot() map[string]int {
 	out := make(map[string]int, len(gm.active))
-	for k, v := range gm.active {
-		out[k] = v
-	}
+	maps.Copy(out, gm.active)
 	return out
 }

@@ -64,7 +64,7 @@ func TestAgentAsToolHandlerSuccess(t *testing.T) {
 	td := AgentAsTool(m, "worker")
 
 	req := registry.CallToolRequest{}
-	req.Params.Arguments = map[string]interface{}{"task": "write a poem"}
+	req.Params.Arguments = map[string]any{"task": "write a poem"}
 
 	result, err := td.Handler(context.Background(), req)
 	if err != nil {
@@ -98,7 +98,7 @@ func TestAgentAsToolHandlerMissingTask(t *testing.T) {
 
 	// No arguments — task is missing.
 	req := registry.CallToolRequest{}
-	req.Params.Arguments = map[string]interface{}{}
+	req.Params.Arguments = map[string]any{}
 
 	result, err := td.Handler(context.Background(), req)
 	if err != nil {
@@ -117,7 +117,7 @@ func TestAgentAsToolHandlerDelegationError(t *testing.T) {
 	td := AgentAsTool(m, "ghost")
 
 	req := registry.CallToolRequest{}
-	req.Params.Arguments = map[string]interface{}{"task": "impossible task"}
+	req.Params.Arguments = map[string]any{"task": "impossible task"}
 
 	result, err := td.Handler(context.Background(), req)
 	if err != nil {

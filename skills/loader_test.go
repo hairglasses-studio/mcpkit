@@ -12,7 +12,7 @@ import (
 // and adds them to the registry, returning the tool names.
 func makeToolsForSkill(reg *registry.DynamicRegistry, prefix string, n int) []string {
 	names := make([]string, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		name := fmt.Sprintf("%s_tool_%d", prefix, i)
 		reg.AddTool(makeTool(name))
 		names[i] = name

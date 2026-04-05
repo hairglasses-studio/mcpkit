@@ -5,6 +5,7 @@ package skills
 import (
 	"context"
 	"fmt"
+	"slices"
 	"sort"
 	"sync"
 
@@ -113,10 +114,8 @@ func (r *SkillRegistry) toolClaimedByActive(toolName string) bool {
 		if !r.active[sn] {
 			continue
 		}
-		for _, tn := range skill.Tools {
-			if tn == toolName {
-				return true
-			}
+		if slices.Contains(skill.Tools, toolName) {
+			return true
 		}
 	}
 	return false

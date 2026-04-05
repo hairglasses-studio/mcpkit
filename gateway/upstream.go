@@ -4,6 +4,7 @@ package gateway
 
 import (
 	"context"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -50,12 +51,7 @@ func (c UpstreamConfig) allowsTool(name string) bool {
 	if len(c.AllowedTools) == 0 {
 		return true
 	}
-	for _, allowed := range c.AllowedTools {
-		if allowed == name {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(c.AllowedTools, name)
 }
 
 // UpstreamInfo provides status information about an upstream.

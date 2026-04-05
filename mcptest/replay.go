@@ -19,10 +19,10 @@ type Session struct {
 
 // SessionEntry records a single tool call with its result.
 type SessionEntry struct {
-	ToolName string                 `json:"tool_name"`
-	Args     map[string]interface{} `json:"args"`
+	ToolName string                   `json:"tool_name"`
+	Args     map[string]any           `json:"args"`
 	Result   *registry.CallToolResult `json:"result"`
-	IsError  bool                   `json:"is_error"`
+	IsError  bool                     `json:"is_error"`
 }
 
 // Session creates a Session from the recorder's recorded calls.
@@ -77,8 +77,8 @@ func LoadSession(path string) (*Session, error) {
 
 // replayConfig holds options for Replay.
 type replayConfig struct {
-	strictOrder   bool
-	ignoreFields  []string
+	strictOrder  bool
+	ignoreFields []string
 }
 
 // ReplayOption configures the Replay function.
@@ -163,7 +163,7 @@ func resultsMatch(got, want *registry.CallToolResult, ignoreFields []string) boo
 }
 
 // resultToMap converts a CallToolResult to a map for comparison.
-func resultToMap(r *registry.CallToolResult) map[string]interface{} {
+func resultToMap(r *registry.CallToolResult) map[string]any {
 	if r == nil {
 		return nil
 	}
@@ -171,7 +171,7 @@ func resultToMap(r *registry.CallToolResult) map[string]interface{} {
 	if err != nil {
 		return nil
 	}
-	var m map[string]interface{}
+	var m map[string]any
 	if err := json.Unmarshal(data, &m); err != nil {
 		return nil
 	}

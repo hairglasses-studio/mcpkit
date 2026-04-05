@@ -45,7 +45,7 @@ func TestNewTracker_CustomConfig(t *testing.T) {
 	}
 	// Confirm the budget is honoured by checking the stored config value
 	// indirectly: pre-populate enough tokens and verify budget trips.
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		tr.Record(UsageEntry{InputTokens: 50, OutputTokens: 50})
 	}
 	// 10 * (50+50) = 1000 tokens recorded — exceeds the 500-token budget.
@@ -151,8 +151,8 @@ func TestTracker_TotalRunningAccumulation(t *testing.T) {
 	tr := NewTracker()
 
 	steps := []struct {
-		in, out      int
-		wantTotal    int64
+		in, out   int
+		wantTotal int64
 	}{
 		{10, 10, 20},
 		{5, 15, 40},
@@ -215,10 +215,10 @@ func TestTracker_ConcurrentRecord(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(goroutines)
 
-	for i := 0; i < goroutines; i++ {
+	for range goroutines {
 		go func() {
 			defer wg.Done()
-			for j := 0; j < recordsPerGoroutine; j++ {
+			for range recordsPerGoroutine {
 				tr.Record(UsageEntry{
 					ToolName:     "concurrent-tool",
 					Category:     "stress",

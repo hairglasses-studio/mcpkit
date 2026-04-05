@@ -99,7 +99,7 @@ func TestParseDPoPJWT_InvalidPayloadJSON(t *testing.T) {
 	t.Parallel()
 
 	// Valid header JSON but payload base64-decodes to invalid JSON
-	headerBytes, _ := json.Marshal(map[string]interface{}{"typ": "dpop+jwt", "alg": "ES256"})
+	headerBytes, _ := json.Marshal(map[string]any{"typ": "dpop+jwt", "alg": "ES256"})
 	validHeaderEnc := base64.RawURLEncoding.EncodeToString(headerBytes)
 	invalidPayloadEnc := base64.RawURLEncoding.EncodeToString([]byte("invalid-json"))
 	token := validHeaderEnc + "." + invalidPayloadEnc + ".sig"
@@ -122,7 +122,7 @@ func TestParseDPoPJWT_TwoParts(t *testing.T) {
 func TestParseJWKPublicKey_UnsupportedKty(t *testing.T) {
 	t.Parallel()
 
-	jwk := map[string]interface{}{"kty": "OKP", "crv": "Ed25519"}
+	jwk := map[string]any{"kty": "OKP", "crv": "Ed25519"}
 	jwkBytes, _ := json.Marshal(jwk)
 
 	_, _, err := parseJWKPublicKey(jwkBytes)
@@ -147,7 +147,7 @@ func TestParseRSAPublicJWK_MissingParams(t *testing.T) {
 	t.Parallel()
 
 	// Missing both n and e
-	jwk := map[string]interface{}{"kty": "RSA"}
+	jwk := map[string]any{"kty": "RSA"}
 	_, _, err := parseRSAPublicJWK(jwk)
 	if err == nil {
 		t.Fatal("expected error for missing RSA parameters")
@@ -157,7 +157,7 @@ func TestParseRSAPublicJWK_MissingParams(t *testing.T) {
 func TestParseECPublicJWK_UnsupportedCurve(t *testing.T) {
 	t.Parallel()
 
-	jwk := map[string]interface{}{
+	jwk := map[string]any{
 		"kty": "EC",
 		"crv": "P-384",
 		"x":   "somevalue",
@@ -176,7 +176,7 @@ func TestParseECPublicJWK_MissingCoordinates(t *testing.T) {
 	t.Parallel()
 
 	// Correct curve but missing x and y
-	jwk := map[string]interface{}{
+	jwk := map[string]any{
 		"kty": "EC",
 		"crv": "P-256",
 		// x and y missing
@@ -255,7 +255,7 @@ func TestDPoPValidator_UnsupportedAlgorithm(t *testing.T) {
 	v := newTestDPoPValidator()
 
 	// Override the alg to something unsupported
-	proof := signDPoPProof(t, key, "GET", "https://example.com/api", "tok", map[string]interface{}{
+	proof := signDPoPProof(t, key, "GET", "https://example.com/api", "tok", map[string]any{
 		"alg": "HS256",
 	})
 	err := v.ValidateProof(proof, "tok", "GET", "https://example.com/api")

@@ -251,7 +251,7 @@ func TestModule_Start_Success(t *testing.T) {
 		t.Fatal("ralph_start not found")
 	}
 
-	req := makeCallToolRequest("ralph_start", map[string]interface{}{
+	req := makeCallToolRequest("ralph_start", map[string]any{
 		"spec_file": specFile,
 	})
 
@@ -312,7 +312,7 @@ func TestModule_Start_AlreadyRunning(t *testing.T) {
 		}
 	}
 
-	req := makeCallToolRequest("ralph_start", map[string]interface{}{
+	req := makeCallToolRequest("ralph_start", map[string]any{
 		"spec_file": specFile,
 	})
 
@@ -372,7 +372,7 @@ func TestModule_Stop_WithLoop(t *testing.T) {
 		}
 	}
 
-	startReq := makeCallToolRequest("ralph_start", map[string]interface{}{
+	startReq := makeCallToolRequest("ralph_start", map[string]any{
 		"spec_file": specFile,
 	})
 	if _, err := startTool.Handler(context.Background(), startReq); err != nil {
@@ -380,7 +380,7 @@ func TestModule_Stop_WithLoop(t *testing.T) {
 	}
 	time.Sleep(20 * time.Millisecond)
 
-	stopReq := makeCallToolRequest("ralph_stop", map[string]interface{}{})
+	stopReq := makeCallToolRequest("ralph_stop", map[string]any{})
 	result, err := stopTool.Handler(context.Background(), stopReq)
 	if err != nil {
 		t.Fatalf("ralph_stop: %v", err)
@@ -428,7 +428,7 @@ func TestModule_Status_WithLoop(t *testing.T) {
 		}
 	}
 
-	startReq := makeCallToolRequest("ralph_start", map[string]interface{}{
+	startReq := makeCallToolRequest("ralph_start", map[string]any{
 		"spec_file": specFile,
 	})
 	if _, err := startTool.Handler(context.Background(), startReq); err != nil {
@@ -436,7 +436,7 @@ func TestModule_Status_WithLoop(t *testing.T) {
 	}
 	time.Sleep(20 * time.Millisecond)
 
-	statusReq := makeCallToolRequest("ralph_status", map[string]interface{}{})
+	statusReq := makeCallToolRequest("ralph_status", map[string]any{})
 	result, err := statusTool.Handler(context.Background(), statusReq)
 	if err != nil {
 		t.Fatalf("ralph_status: %v", err)

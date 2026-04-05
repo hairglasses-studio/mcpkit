@@ -1,4 +1,3 @@
-
 package research
 
 import (
@@ -23,18 +22,18 @@ type EcosystemOutput struct {
 
 // SourceFinding holds the analysis of a single ecosystem source.
 type SourceFinding struct {
-	Name         string   `json:"name"`
-	URL          string   `json:"url"`
-	StatusCode   int      `json:"status_code"`
-	BodySize     int      `json:"body_size"`
-	KeywordHits  []string `json:"keyword_hits"`
-	Relevance    float64  `json:"relevance"`
-	Error        string   `json:"error,omitempty"`
+	Name        string   `json:"name"`
+	URL         string   `json:"url"`
+	StatusCode  int      `json:"status_code"`
+	BodySize    int      `json:"body_size"`
+	KeywordHits []string `json:"keyword_hits"`
+	Relevance   float64  `json:"relevance"`
+	Error       string   `json:"error,omitempty"`
 }
 
 // Highlight is a notable finding extracted from ecosystem sources.
 type Highlight struct {
-	Source  string  `json:"source"`
+	Source string  `json:"source"`
 	Text   string  `json:"text"`
 	Score  float64 `json:"score"`
 }
@@ -150,14 +149,8 @@ func extractSnippet(body, keyword string, contextLen int) string {
 		return ""
 	}
 
-	start := idx - contextLen/2
-	if start < 0 {
-		start = 0
-	}
-	end := idx + len(keyword) + contextLen/2
-	if end > len(body) {
-		end = len(body)
-	}
+	start := max(idx-contextLen/2, 0)
+	end := min(idx+len(keyword)+contextLen/2, len(body))
 
 	snippet := strings.TrimSpace(body[start:end])
 	// Clean up whitespace

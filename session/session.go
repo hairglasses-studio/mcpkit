@@ -172,10 +172,7 @@ func NewMemStore(opts Options) *MemStore {
 
 	interval := opts.EvictionInterval
 	if interval == 0 && opts.TTL > 0 {
-		interval = opts.TTL / 2
-		if interval < time.Millisecond {
-			interval = time.Millisecond
-		}
+		interval = max(opts.TTL/2, time.Millisecond)
 	}
 
 	if interval > 0 {

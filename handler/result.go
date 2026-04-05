@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/hairglasses-studio/mcpkit/registry"
 )
@@ -39,7 +40,7 @@ func ErrorResult(err error) *registry.CallToolResult {
 }
 
 // JSONResult creates a JSON result for a tool response.
-func JSONResult(data interface{}) *registry.CallToolResult {
+func JSONResult(data any) *registry.CallToolResult {
 	bytes, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
 		return ErrorResult(err)
@@ -55,12 +56,13 @@ func CodedErrorResult(code string, err error) *registry.CallToolResult {
 
 // ActionableErrorResult creates an error result with suggestions for resolution.
 func ActionableErrorResult(code string, err error, suggestions ...string) *registry.CallToolResult {
-	msg := fmt.Sprintf("[%s] %s", code, err.Error())
+	var msg strings.Builder
+	msg.WriteString(fmt.Sprintf("[%s] %s", code, err.Error()))
 	if len(suggestions) > 0 {
-		msg += "\n\nSuggested actions:"
+		msg.WriteString("\n\nSuggested actions:")
 		for _, s := range suggestions {
-			msg += "\n  • " + s
+			msg.WriteString("\n  • " + s)
 		}
 	}
-	return registry.MakeErrorResult(msg)
+	return registry.MakeErrorResult(msg.String())
 }

@@ -3,6 +3,7 @@ package workflow
 import (
 	"context"
 	"fmt"
+	"maps"
 	"sync"
 )
 
@@ -42,9 +43,7 @@ func (g *Graph) AddForkNode(name string, branches map[string]NodeFunc, merge Mer
 
 	// Snapshot the branches map so the closure captures a stable copy.
 	branchCopy := make(map[string]NodeFunc, len(branches))
-	for k, v := range branches {
-		branchCopy[k] = v
-	}
+	maps.Copy(branchCopy, branches)
 
 	// Create a NodeFunc that runs all branches in parallel.
 	forkFn := func(ctx context.Context, state State) (State, error) {
@@ -92,12 +91,8 @@ func (g *Graph) AddForkNode(name string, branches map[string]NodeFunc, merge Mer
 func MergeAll(base State, branches map[string]State) (State, error) {
 	result := base.Clone()
 	for _, bs := range branches {
-		for k, v := range bs.Data {
-			result.Data[k] = v
-		}
-		for k, v := range bs.Metadata {
-			result.Metadata[k] = v
-		}
+		maps.Copy(result.Data, bs.Data)
+		maps.Copy(result.Metadata, bs.Metadata)
 	}
 	return result, nil
 }

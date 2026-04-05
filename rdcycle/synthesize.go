@@ -23,20 +23,21 @@ func (ts *TaskSynthesizer) SynthesizeSpec(plan PlanOutput, cycleName string, les
 		return ralph.Spec{}, fmt.Errorf("synthesize: cycle_name is required")
 	}
 
-	desc := fmt.Sprintf("Autonomous R&D cycle: %s.", cycleName)
+	var desc strings.Builder
+	desc.WriteString(fmt.Sprintf("Autonomous R&D cycle: %s.", cycleName))
 	if plan.NextPhase != nil {
-		desc += fmt.Sprintf(" Focus: phase %q.", plan.NextPhase.Name)
+		desc.WriteString(fmt.Sprintf(" Focus: phase %q.", plan.NextPhase.Name))
 	}
 	if len(lessons) > 0 {
-		desc += "\n\nLessons from previous cycles:\n"
+		desc.WriteString("\n\nLessons from previous cycles:\n")
 		for _, l := range lessons {
-			desc += "- " + l + "\n"
+			desc.WriteString("- " + l + "\n")
 		}
 	}
 
 	spec := ralph.Spec{
 		Name:        fmt.Sprintf("R&D Cycle: %s", cycleName),
-		Description: desc,
+		Description: desc.String(),
 		Completion:  "All planned work items are implemented, tests pass, and roadmap is updated.",
 	}
 

@@ -170,7 +170,7 @@ func (v *DPoPValidator) ValidateProof(proof, accessToken, httpMethod, httpURI st
 }
 
 // parseDPoPJWT parses a DPoP proof JWT and returns header and payload as maps.
-func parseDPoPJWT(token string) (header, payload map[string]interface{}, err error) {
+func parseDPoPJWT(token string) (header, payload map[string]any, err error) {
 	parts := strings.Split(token, ".")
 	if len(parts) != 3 {
 		return nil, nil, fmt.Errorf("invalid JWT format")
@@ -200,8 +200,8 @@ type rsaPublicKey struct{ key *rsa.PublicKey }
 type ecPublicKey struct{ key *ecdsa.PublicKey }
 
 // parseJWKPublicKey parses a JWK JSON into a tagged public key and returns the matching algorithm.
-func parseJWKPublicKey(jwkBytes json.RawMessage) (interface{}, string, error) {
-	var jwk map[string]interface{}
+func parseJWKPublicKey(jwkBytes json.RawMessage) (any, string, error) {
+	var jwk map[string]any
 	if err := json.Unmarshal(jwkBytes, &jwk); err != nil {
 		return nil, "", fmt.Errorf("invalid JWK: %w", err)
 	}
@@ -225,7 +225,7 @@ func parseJWKPublicKey(jwkBytes json.RawMessage) (interface{}, string, error) {
 	}
 }
 
-func parseRSAPublicJWK(jwk map[string]interface{}) (*rsa.PublicKey, string, error) {
+func parseRSAPublicJWK(jwk map[string]any) (*rsa.PublicKey, string, error) {
 	nStr, _ := jwk["n"].(string)
 	eStr, _ := jwk["e"].(string)
 	if nStr == "" || eStr == "" {
@@ -250,7 +250,7 @@ func parseRSAPublicJWK(jwk map[string]interface{}) (*rsa.PublicKey, string, erro
 	return &rsa.PublicKey{N: n, E: e}, "RS256", nil
 }
 
-func parseECPublicJWK(jwk map[string]interface{}) (*ecdsa.PublicKey, string, error) {
+func parseECPublicJWK(jwk map[string]any) (*ecdsa.PublicKey, string, error) {
 	crv, _ := jwk["crv"].(string)
 	if crv != "P-256" {
 		return nil, "", fmt.Errorf("unsupported curve: %s", crv)
@@ -333,4 +333,3 @@ func compareURIs(htu, requestURI string) error {
 	}
 	return nil
 }
-

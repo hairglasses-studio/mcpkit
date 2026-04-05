@@ -8,7 +8,8 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
-func ptrFloat(f float64) *float64 { return &f }
+//go:fix inline
+func ptrFloat(f float64) *float64 { return new(f) }
 
 func TestFilterByAudience_KeepsMatching(t *testing.T) {
 	result := &mcp.CallToolResult{
@@ -64,14 +65,14 @@ func TestSortByPriority(t *testing.T) {
 		Content: []mcp.Content{
 			mcp.TextContent{
 				Annotated: mcp.Annotated{
-					Annotations: &mcp.Annotations{Priority: ptrFloat(0.1)},
+					Annotations: &mcp.Annotations{Priority: new(0.1)},
 				},
 				Type: "text",
 				Text: "low",
 			},
 			mcp.TextContent{
 				Annotated: mcp.Annotated{
-					Annotations: &mcp.Annotations{Priority: ptrFloat(0.9)},
+					Annotations: &mcp.Annotations{Priority: new(0.9)},
 				},
 				Type: "text",
 				Text: "high",

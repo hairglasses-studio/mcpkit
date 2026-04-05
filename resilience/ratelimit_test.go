@@ -9,7 +9,7 @@ import (
 func TestRateLimiterAllow(t *testing.T) {
 	lim := NewRateLimiter(100, 5)
 
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		if !lim.Allow() {
 			t.Fatalf("Allow() returned false at request %d, expected true", i+1)
 		}
@@ -81,7 +81,7 @@ func TestRateLimitRegistryConfigure(t *testing.T) {
 func TestRateLimiterRefill(t *testing.T) {
 	lim := NewRateLimiter(1000, 5)
 
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		lim.Allow()
 	}
 	if lim.Allow() {

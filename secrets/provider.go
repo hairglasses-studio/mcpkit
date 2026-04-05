@@ -19,10 +19,10 @@ type Secret struct {
 	Key       string    `json:"key"`
 	Value     string    `json:"value,omitempty"`
 	Source    string    `json:"source"`
-	ExpiresAt time.Time `json:"expires_at,omitempty"`
+	ExpiresAt time.Time `json:"expires_at"`
 	Version   string    `json:"version,omitempty"`
-	CreatedAt time.Time `json:"created_at,omitempty"`
-	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // IsExpired returns true if the secret has expired.

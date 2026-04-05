@@ -84,7 +84,7 @@ func AssertSnapshot(t testing.TB, name string, result *registry.CallToolResult, 
 		t.Fatalf("snapshot: read golden file %s: %v", path, err)
 	}
 
-	var golden interface{}
+	var golden any
 	if err := json.Unmarshal(goldenData, &golden); err != nil {
 		t.Fatalf("snapshot: unmarshal golden file %s: %v", path, err)
 	}
@@ -105,7 +105,7 @@ func AssertSnapshot(t testing.TB, name string, result *registry.CallToolResult, 
 
 // normaliseResult converts a CallToolResult to a comparable representation,
 // applying any configured normalisation (e.g., timestamp stripping).
-func normaliseResult(result *registry.CallToolResult, cfg *snapshotConfig) interface{} {
+func normaliseResult(result *registry.CallToolResult, cfg *snapshotConfig) any {
 	if result == nil {
 		return nil
 	}
@@ -115,7 +115,7 @@ func normaliseResult(result *registry.CallToolResult, cfg *snapshotConfig) inter
 		return nil
 	}
 
-	var m map[string]interface{}
+	var m map[string]any
 	if err := json.Unmarshal(data, &m); err != nil {
 		return nil
 	}
@@ -126,7 +126,7 @@ func normaliseResult(result *registry.CallToolResult, cfg *snapshotConfig) inter
 		}
 		// Also strip from nested structured content
 		if sc, ok := m["structuredContent"]; ok {
-			if scMap, ok := sc.(map[string]interface{}); ok {
+			if scMap, ok := sc.(map[string]any); ok {
 				for _, field := range timestampFields {
 					delete(scMap, field)
 				}

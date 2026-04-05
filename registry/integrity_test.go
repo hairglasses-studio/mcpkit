@@ -297,17 +297,17 @@ func TestIntegrityStore_ThreadSafety(t *testing.T) {
 	const goroutines = 50
 
 	// pre-register tools
-	for i := 0; i < numTools; i++ {
+	for i := range numTools {
 		name := "tool_" + string(rune('a'+i))
 		_ = store.Register(makeTD(name, "initial"))
 	}
 
 	var wg sync.WaitGroup
-	for g := 0; g < goroutines; g++ {
+	for g := range goroutines {
 		wg.Add(1)
 		go func(g int) {
 			defer wg.Done()
-			for i := 0; i < numTools; i++ {
+			for i := range numTools {
 				name := "tool_" + string(rune('a'+i))
 				// mix of Verify (correct) and Verify (tampered)
 				if g%2 == 0 {
@@ -320,13 +320,11 @@ func TestIntegrityStore_ThreadSafety(t *testing.T) {
 	}
 
 	// concurrent Violations() calls
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for i := 0; i < 100; i++ {
+	wg.Go(func() {
+		for range 100 {
 			_ = store.Violations()
 		}
-	}()
+	})
 
 	wg.Wait() // must not race or deadlock
 }

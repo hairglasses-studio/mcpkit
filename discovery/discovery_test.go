@@ -80,7 +80,7 @@ func TestClient_Search_Cache(t *testing.T) {
 	c := NewClient(ClientConfig{BaseURL: srv.URL, CacheTTL: time.Minute})
 	q := SearchQuery{Query: "cache-test", Limit: 5}
 
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		_, err := c.Search(context.Background(), q)
 		if err != nil {
 			t.Fatalf("Search %d: %v", i, err)
@@ -441,6 +441,6 @@ type testModule struct {
 	tools []registry.ToolDefinition
 }
 
-func (m *testModule) Name() string                        { return "test" }
-func (m *testModule) Description() string                 { return "test module" }
-func (m *testModule) Tools() []registry.ToolDefinition   { return m.tools }
+func (m *testModule) Name() string                     { return "test" }
+func (m *testModule) Description() string              { return "test module" }
+func (m *testModule) Tools() []registry.ToolDefinition { return m.tools }

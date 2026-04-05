@@ -2,6 +2,7 @@ package orchestrator
 
 import (
 	"context"
+	"maps"
 	"time"
 )
 
@@ -85,13 +86,9 @@ func Pipeline(ctx context.Context, stages []StageFunc, input StageInput, config 
 
 func mergeData(base map[string]any, out *StageOutput) map[string]any {
 	merged := make(map[string]any)
-	for k, v := range base {
-		merged[k] = v
-	}
+	maps.Copy(merged, base)
 	if out != nil {
-		for k, v := range out.Data {
-			merged[k] = v
-		}
+		maps.Copy(merged, out.Data)
 	}
 	return merged
 }
