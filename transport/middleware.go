@@ -14,9 +14,9 @@ func LoggingMiddleware(logger *slog.Logger) Middleware {
 }
 
 type loggingTransport struct {
-	next   Transport
-	logger *slog.Logger
-	recv   chan Message
+	next    Transport
+	logger  *slog.Logger
+	recv    chan Message
 	started bool
 }
 

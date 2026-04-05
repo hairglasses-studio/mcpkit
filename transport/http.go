@@ -16,8 +16,8 @@ import (
 // each Send call posts a JSON-RPC request and the response body is
 // delivered on the Receive channel.
 type HTTPTransport struct {
-	mu      sync.Mutex
-	client  *http.Client
+	mu       sync.Mutex
+	client   *http.Client
 	endpoint string
 	headers  map[string]string
 	recv     chan Message
