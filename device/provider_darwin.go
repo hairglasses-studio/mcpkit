@@ -74,27 +74,13 @@ static int32_t pollElementValue(IOHIDDeviceRef dev, IOHIDElementRef elem) {
     if (IOHIDDeviceGetValue(dev, elem, &val) != kIOReturnSuccess || !val) return 0;
     return (int32_t)IOHIDValueGetIntegerValue(val);
 }
-
-// hidSetReport sends a HID report (feature or output) to a device.
-// reportType: kIOHIDReportTypeFeature (2) or kIOHIDReportTypeOutput (1).
-static int hidSetReport(IOHIDDeviceRef dev, int reportType, int reportID,
-                        const uint8_t *data, int dataLen) {
-    IOReturn ret = IOHIDDeviceSetReport(dev, (IOHIDReportType)reportType,
-                                        (CFIndex)reportID, data, (CFIndex)dataLen);
-    return (int)ret;
-}
 */
 import "C"
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"image"
-	"image/color"
-	"image/jpeg"
 	"strings"
-	"sync"
 	"time"
 	"unsafe"
 )
@@ -102,9 +88,6 @@ import (
 func init() {
 	RegisterProvider(func() DeviceProvider { return &darwinIOKitProvider{} })
 }
-
-// Compile-time interface checks.
-var _ Grabbable = (*darwinIOKitConnection)(nil)
 
 // ---------------------------------------------------------------------------
 // IOKit HID provider — gamepads, generic HID via IOKit HID Manager
@@ -217,19 +200,6 @@ func (p *darwinIOKitProvider) Enumerate(_ context.Context) ([]Info, error) {
 			manufacturer = C.GoString(&nameBuf[0])
 		}
 
-		caps := Capabilities{
-			Buttons: 14,
-			Axes:    6,
-			Hats:    1,
-		}
-		// Elgato Stream Deck devices support LED output via HID feature reports.
-		if vendorID == elgatoVendorID {
-			if sd, ok := streamDeckModels[productID]; ok {
-				caps.HasLEDs = true
-				caps.Buttons = sd.keys
-			}
-		}
-
 		devices = append(devices, Info{
 			ID:           id,
 			Name:         name,
@@ -238,7 +208,11 @@ func (p *darwinIOKitProvider) Enumerate(_ context.Context) ([]Info, error) {
 			VendorID:     vendorID,
 			ProductID:    productID,
 			Manufacturer: manufacturer,
-			Capabilities: caps,
+			Capabilities: Capabilities{
+				Buttons: 14,
+				Axes:    6,
+				Hats:    1,
+			},
 			PlatformPath: fmt.Sprintf("iokit:%x", locationID),
 			ProviderName: "iokit_hid",
 		})
@@ -294,7 +268,7 @@ func (p *darwinIOKitProvider) Open(_ context.Context, id DeviceID) (DeviceConnec
 		C.CFRelease(C.CFTypeRef(deviceSet))
 		// manager kept alive — owned by connection
 
-		conn := &darwinIOKitConnection{
+		return &darwinIOKitConnection{
 			deviceInfo: Info{
 				ID:           id,
 				Name:         name,
@@ -304,19 +278,7 @@ func (p *darwinIOKitProvider) Open(_ context.Context, id DeviceID) (DeviceConnec
 			manager:   manager,
 			deviceRef: dev,
 			events:    make(chan Event, 64),
-		}
-
-		// Create LED feedback for Stream Deck devices.
-		if vendorID == elgatoVendorID {
-			if sd, ok := streamDeckModels[productID]; ok {
-				conn.feedback = &darwinIOKitFeedback{
-					deviceRef: dev,
-					model:     sd,
-				}
-			}
-		}
-
-		return conn, nil
+		}, nil
 	}
 
 	C.CFRelease(C.CFTypeRef(deviceSet))
@@ -348,22 +310,12 @@ type darwinIOKitConnection struct {
 	events     chan Event
 	cancel     context.CancelFunc
 	alive      bool
-	grabbed    bool
-	feedback   *darwinIOKitFeedback
 }
 
-func (c *darwinIOKitConnection) Info() Info           { return c.deviceInfo }
-func (c *darwinIOKitConnection) Events() <-chan Event { return c.events }
-func (c *darwinIOKitConnection) Alive() bool          { return c.alive }
-
-// Feedback returns a DeviceFeedback for IOKit HID devices that support LED
-// output (e.g., Elgato Stream Deck), or nil for devices without LED support.
-func (c *darwinIOKitConnection) Feedback() DeviceFeedback {
-	if c.feedback == nil {
-		return nil
-	}
-	return c.feedback
-}
+func (c *darwinIOKitConnection) Info() Info               { return c.deviceInfo }
+func (c *darwinIOKitConnection) Events() <-chan Event     { return c.events }
+func (c *darwinIOKitConnection) Feedback() DeviceFeedback { return nil }
+func (c *darwinIOKitConnection) Alive() bool              { return c.alive }
 
 func (c *darwinIOKitConnection) Start(ctx context.Context) error {
 	ret := C.IOHIDDeviceOpen(c.deviceRef, C.kIOHIDOptionsTypeNone)
@@ -542,9 +494,6 @@ func (c *darwinIOKitConnection) Close() error {
 	if c.cancel != nil {
 		c.cancel()
 	}
-	if c.grabbed {
-		c.ReleaseGrab()
-	}
 	if c.deviceRef != 0 {
 		C.IOHIDDeviceClose(c.deviceRef, C.kIOHIDOptionsTypeNone)
 	}
@@ -553,231 +502,6 @@ func (c *darwinIOKitConnection) Close() error {
 		C.CFRelease(C.CFTypeRef(c.manager))
 	}
 	return nil
-}
-
-// Grab claims exclusive access to this HID device via IOHIDDeviceOpen with
-// kIOHIDOptionsTypeSeizeDevice. While grabbed, the kernel stops forwarding
-// events from this device to other clients (e.g., the window server).
-func (c *darwinIOKitConnection) Grab() error {
-	if c.deviceRef == 0 {
-		return fmt.Errorf("device not open")
-	}
-	if c.grabbed {
-		return nil
-	}
-
-	// Close the device handle, then reopen with the seize flag.
-	C.IOHIDDeviceClose(c.deviceRef, C.kIOHIDOptionsTypeNone)
-
-	const kIOHIDOptionsTypeSeizeDevice = C.IOOptionBits(0x01)
-	ret := C.IOHIDDeviceOpen(c.deviceRef, kIOHIDOptionsTypeSeizeDevice)
-	if ret != C.kIOReturnSuccess {
-		// Attempt to reopen without seize so the connection remains usable.
-		C.IOHIDDeviceOpen(c.deviceRef, C.kIOHIDOptionsTypeNone)
-		return fmt.Errorf("IOHIDDeviceOpen(seize) failed: 0x%x", ret)
-	}
-	c.grabbed = true
-	return nil
-}
-
-// ReleaseGrab releases exclusive access by reopening the device with
-// kIOHIDOptionsTypeNone, allowing other clients to receive events again.
-func (c *darwinIOKitConnection) ReleaseGrab() error {
-	if c.deviceRef == 0 || !c.grabbed {
-		return nil
-	}
-
-	C.IOHIDDeviceClose(c.deviceRef, C.kIOHIDOptionsTypeNone)
-
-	ret := C.IOHIDDeviceOpen(c.deviceRef, C.kIOHIDOptionsTypeNone)
-	if ret != C.kIOReturnSuccess {
-		c.grabbed = false
-		return fmt.Errorf("IOHIDDeviceOpen(release) failed: 0x%x", ret)
-	}
-	c.grabbed = false
-	return nil
-}
-
-// ---------------------------------------------------------------------------
-// Elgato Stream Deck constants and model database
-// ---------------------------------------------------------------------------
-
-const elgatoVendorID = 0x0fd9
-
-// streamDeckModel describes a Stream Deck variant's protocol parameters.
-type streamDeckModel struct {
-	keys      int // Number of keys
-	cols      int // Key grid columns
-	rows      int // Key grid rows
-	iconW     int // Key icon width in pixels
-	iconH     int // Key icon height in pixels
-	imgReport int // Report ID for image data
-	pageSize  int // Max payload per HID report page
-	headerLen int // Header length within each page
-}
-
-// streamDeckModels maps product IDs to Stream Deck protocol parameters.
-// All v2+ models use report ID 0x02 for images with JPEG data.
-var streamDeckModels = map[uint16]streamDeckModel{
-	0x0060: {keys: 15, cols: 5, rows: 3, iconW: 72, iconH: 72, imgReport: 0x02, pageSize: 1024, headerLen: 8},     // Original v1 (JPEG on v2 firmware)
-	0x006d: {keys: 6, cols: 3, rows: 2, iconW: 80, iconH: 80, imgReport: 0x02, pageSize: 1024, headerLen: 8},      // Mini
-	0x0063: {keys: 32, cols: 8, rows: 4, iconW: 96, iconH: 96, imgReport: 0x02, pageSize: 1024, headerLen: 8},     // XL
-	0x0080: {keys: 15, cols: 5, rows: 3, iconW: 72, iconH: 72, imgReport: 0x02, pageSize: 1024, headerLen: 8},     // MK.2
-	0x0084: {keys: 3, cols: 3, rows: 1, iconW: 0, iconH: 0, imgReport: 0x02, pageSize: 1024, headerLen: 8},        // Pedal (no display)
-	0x0086: {keys: 8, cols: 4, rows: 2, iconW: 120, iconH: 120, imgReport: 0x02, pageSize: 1024, headerLen: 8},    // Plus
-	0x008f: {keys: 8, cols: 4, rows: 2, iconW: 72, iconH: 72, imgReport: 0x02, pageSize: 1024, headerLen: 8},      // Neo
-}
-
-// ---------------------------------------------------------------------------
-// IOKit HID feedback — LED control for Stream Deck via IOHIDDeviceSetReport
-// ---------------------------------------------------------------------------
-
-// darwinIOKitFeedback implements DeviceFeedback for macOS IOKit HID devices.
-// It supports SetLED for Elgato Stream Deck key image updates and SendRaw
-// for pass-through HID report writes.
-type darwinIOKitFeedback struct {
-	deviceRef C.IOHIDDeviceRef
-	model     streamDeckModel
-	mu        sync.Mutex
-}
-
-// SetLED sets a Stream Deck key to a solid RGB color by generating a JPEG
-// image and sending it via IOHIDDeviceSetReport. The index parameter selects
-// the key (0-based). The alpha channel is ignored (Stream Deck keys are opaque).
-func (f *darwinIOKitFeedback) SetLED(index int, r, g, b, a uint8) error {
-	if index < 0 || index >= f.model.keys {
-		return fmt.Errorf("%w: key index %d out of range (0-%d)", ErrNotSupported, index, f.model.keys-1)
-	}
-
-	// Stream Deck Pedal has no display — only physical buttons.
-	if f.model.iconW == 0 || f.model.iconH == 0 {
-		return fmt.Errorf("%w: device has no display keys", ErrNotSupported)
-	}
-
-	// Generate a solid-color JPEG at the key's native resolution.
-	jpegData, err := solidColorJPEG(f.model.iconW, f.model.iconH, r, g, b)
-	if err != nil {
-		return fmt.Errorf("generate key image: %w", err)
-	}
-
-	return f.sendKeyImage(index, jpegData)
-}
-
-// sendKeyImage sends JPEG data for a single key using the Stream Deck v2
-// paged image protocol. Data is split across multiple HID feature reports,
-// each with a header containing page number, key index, and final-page flag.
-func (f *darwinIOKitFeedback) sendKeyImage(keyIndex int, jpegData []byte) error {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-
-	payloadSize := f.model.pageSize - f.model.headerLen
-	if payloadSize <= 0 {
-		return fmt.Errorf("invalid Stream Deck model config: pageSize %d <= headerLen %d", f.model.pageSize, f.model.headerLen)
-	}
-
-	remaining := len(jpegData)
-	offset := 0
-	page := 0
-
-	for remaining > 0 || page == 0 {
-		chunk := payloadSize
-		if chunk > remaining {
-			chunk = remaining
-		}
-		isLast := remaining <= payloadSize
-
-		report := make([]byte, f.model.pageSize)
-		// Stream Deck v2 image report header (8 bytes):
-		//   [0] = report ID (0x02)
-		//   [1] = 0x07 (set key image command)
-		//   [2] = key index
-		//   [3] = is_last (1 if final page, 0 otherwise)
-		//   [4-5] = payload length (little-endian)
-		//   [6-7] = page number (little-endian)
-		report[0] = byte(f.model.imgReport)
-		report[1] = 0x07
-		report[2] = byte(keyIndex)
-		if isLast {
-			report[3] = 1
-		}
-		report[4] = byte(chunk & 0xFF)
-		report[5] = byte((chunk >> 8) & 0xFF)
-		report[6] = byte(page & 0xFF)
-		report[7] = byte((page >> 8) & 0xFF)
-
-		if chunk > 0 {
-			copy(report[f.model.headerLen:], jpegData[offset:offset+chunk])
-		}
-
-		ret := C.hidSetReport(
-			f.deviceRef,
-			C.int(2), // kIOHIDReportTypeFeature
-			C.int(f.model.imgReport),
-			(*C.uint8_t)(unsafe.Pointer(&report[0])),
-			C.int(len(report)),
-		)
-		if ret != 0 {
-			return fmt.Errorf("IOHIDDeviceSetReport failed: IOReturn 0x%x (page %d, key %d)", ret, page, keyIndex)
-		}
-
-		offset += chunk
-		remaining -= chunk
-		page++
-	}
-
-	return nil
-}
-
-// SetRumble is not supported on Stream Deck devices.
-func (f *darwinIOKitFeedback) SetRumble(int, float64, time.Duration) error {
-	return ErrNotSupported
-}
-
-// SendMIDI is not supported on Stream Deck devices.
-func (f *darwinIOKitFeedback) SendMIDI([]byte) error {
-	return ErrNotSupported
-}
-
-// SendRaw sends a raw HID feature report to the device. The caller is
-// responsible for constructing the correct report format.
-func (f *darwinIOKitFeedback) SendRaw(data []byte) error {
-	if len(data) == 0 {
-		return nil
-	}
-
-	f.mu.Lock()
-	defer f.mu.Unlock()
-
-	reportID := int(data[0])
-	ret := C.hidSetReport(
-		f.deviceRef,
-		C.int(2), // kIOHIDReportTypeFeature
-		C.int(reportID),
-		(*C.uint8_t)(unsafe.Pointer(&data[0])),
-		C.int(len(data)),
-	)
-	if ret != 0 {
-		return fmt.Errorf("IOHIDDeviceSetReport failed: IOReturn 0x%x", ret)
-	}
-	return nil
-}
-
-// solidColorJPEG generates a JPEG image of the given dimensions filled with
-// a solid RGB color. It returns the compressed JPEG bytes.
-func solidColorJPEG(w, h int, r, g, b uint8) ([]byte, error) {
-	img := image.NewRGBA(image.Rect(0, 0, w, h))
-	c := color.RGBA{R: r, G: g, B: b, A: 255}
-	for y := 0; y < h; y++ {
-		for x := 0; x < w; x++ {
-			img.Set(x, y, c)
-		}
-	}
-
-	var buf bytes.Buffer
-	if err := jpeg.Encode(&buf, img, &jpeg.Options{Quality: 90}); err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
 }
 
 // ---------------------------------------------------------------------------
