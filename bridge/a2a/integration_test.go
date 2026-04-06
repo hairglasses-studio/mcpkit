@@ -710,6 +710,504 @@ func TestBridgeRoundTrip_Middleware(t *testing.T) {
 	}
 }
 
+// --- INPUT_REQUIRED simulation ---
+
+// inputRequiredHandler simulates a tool that needs additional input.
+// It returns a result prompting for more information.
+func inputRequiredHandler(_ context.Context, req registry.CallToolRequest) (*registry.CallToolResult, error) {
+	args := registry.ExtractArguments(req)
+	confirmed, _ := args["confirmed"].(bool)
+	if !confirmed {
+		return registry.MakeErrorResult("INPUT_REQUIRED: please confirm the action by setting confirmed=true"), nil
+	}
+	return registry.MakeTextResult("action confirmed and executed"), nil
+}
+
+func TestBridgeRoundTrip_InputRequired(t *testing.T) {
+	reg := registry.NewToolRegistry()
+	reg.RegisterModule(&integrationModule{
+		name: "input-required",
+		tools: []registry.ToolDefinition{
+			{
+				Tool: mcp.NewTool("confirm_action",
+					mcp.WithDescription("Action requiring confirmation"),
+					mcp.WithBoolean("confirmed", mcp.Description("Set to true to confirm")),
+				),
+				Handler: inputRequiredHandler,
+			},
+		},
+	})
+
+	ts := newBridgeTestServer(t, reg, ExecutorConfig{})
+
+	// First call without confirmation: should fail with INPUT_REQUIRED.
+	task1 := ts.sendMessage(t, "confirm_action", nil)
+	if task1.Status.State != a2atypes.TaskStateFailed {
+		t.Fatalf("expected failed state for unconfirmed, got %s", task1.Status.State)
+	}
+	if task1.Status.Message == nil {
+		t.Fatal("expected status message")
+	}
+	errText := task1.Status.Message.Parts[0].Text()
+	if !strings.Contains(errText, "INPUT_REQUIRED") {
+		t.Errorf("expected error to contain INPUT_REQUIRED, got %q", errText)
+	}
+
+	// Second call with confirmation: should succeed.
+	task2 := ts.sendMessage(t, "confirm_action", map[string]any{"confirmed": true})
+	if task2.Status.State != a2atypes.TaskStateCompleted {
+		t.Fatalf("expected completed state for confirmed, got %s", task2.Status.State)
+	}
+	if len(task2.Artifacts) == 0 || len(task2.Artifacts[0].Parts) == 0 {
+		t.Fatal("expected artifact with result")
+	}
+	text := task2.Artifacts[0].Parts[0].Text()
+	if text != "action confirmed and executed" {
+		t.Errorf("expected %q, got %q", "action confirmed and executed", text)
+	}
+}
+
+// --- Streaming progress through the pipeline ---
+
+func TestBridgeRoundTrip_StreamingProgress(t *testing.T) {
+	// This test verifies the streaming progress reporter produces valid events
+	// when used inside a tool handler via the executor.
+	tr := &Translator{}
+
+	// We test ProgressToStatusEvent -> StatusEventToProgress round-trip
+	// at the integration level by simulating progress emission.
+	info := a2atypes.TaskInfo{ContextID: "ctx-stream", TaskID: "task-stream"}
+	event := tr.ProgressToStatusEvent(info, 0.5, "halfway done")
+
+	// Verify the event round-trips correctly.
+	progress, msg := tr.StatusEventToProgress(event)
+	if progress != 0.5 {
+		t.Errorf("expected progress 0.5, got %v", progress)
+	}
+	if msg != "halfway done" {
+		t.Errorf("expected msg %q, got %q", "halfway done", msg)
+	}
+
+	// Also test the streaming reporter with the bridge executor.
+	var progressEvents []a2atypes.Event
+	yield := func(ev a2atypes.Event, err error) bool {
+		progressEvents = append(progressEvents, ev)
+		return true
+	}
+
+	reporter := NewStreamingProgressReporter(info, tr, yield)
+	if err := reporter.Report(context.Background(), 0.25, "step 1"); err != nil {
+		t.Fatalf("report error: %v", err)
+	}
+	if err := reporter.Report(context.Background(), 0.75, "step 2"); err != nil {
+		t.Fatalf("report error: %v", err)
+	}
+
+	if len(progressEvents) != 2 {
+		t.Fatalf("expected 2 progress events, got %d", len(progressEvents))
+	}
+
+	// Verify event content.
+	for i, ev := range progressEvents {
+		sue, ok := ev.(*a2atypes.TaskStatusUpdateEvent)
+		if !ok {
+			t.Fatalf("event[%d] type = %T, want *TaskStatusUpdateEvent", i, ev)
+		}
+		if sue.Status.State != a2atypes.TaskStateWorking {
+			t.Errorf("event[%d] state = %q, want WORKING", i, sue.Status.State)
+		}
+	}
+}
+
+// --- Concurrent mixed success/failure ---
+
+func TestBridge_ConcurrentMixedSuccessFailure(t *testing.T) {
+	reg := registry.NewToolRegistry()
+	reg.RegisterModule(&integrationModule{
+		name: "mixed",
+		tools: []registry.ToolDefinition{
+			{
+				Tool: mcp.NewTool("echo",
+					mcp.WithDescription("Echo message"),
+					mcp.WithString("message", mcp.Description("Message")),
+				),
+				Handler: echoIntegrationHandler,
+			},
+			{
+				Tool:    mcp.NewTool("fail_tool", mcp.WithDescription("Always fails")),
+				Handler: errorIntegrationHandler,
+			},
+		},
+	})
+
+	ts := newBridgeTestServer(t, reg, ExecutorConfig{})
+
+	const numRequests = 20
+	var wg sync.WaitGroup
+	type result struct {
+		idx     int
+		state   a2atypes.TaskState
+		isError bool
+	}
+	results := make(chan result, numRequests)
+
+	for i := range numRequests {
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+			if idx%2 == 0 {
+				// Even: should succeed
+				task := ts.sendMessage(t, "echo", map[string]any{"message": fmt.Sprintf("msg-%d", idx)})
+				results <- result{idx: idx, state: task.Status.State, isError: false}
+			} else {
+				// Odd: should fail
+				task := ts.sendMessage(t, "fail_tool", nil)
+				results <- result{idx: idx, state: task.Status.State, isError: true}
+			}
+		}(i)
+	}
+
+	wg.Wait()
+	close(results)
+
+	var successCount, failCount int
+	for r := range results {
+		if r.isError {
+			if r.state != a2atypes.TaskStateFailed {
+				t.Errorf("request %d: expected failed, got %s", r.idx, r.state)
+			}
+			failCount++
+		} else {
+			if r.state != a2atypes.TaskStateCompleted {
+				t.Errorf("request %d: expected completed, got %s", r.idx, r.state)
+			}
+			successCount++
+		}
+	}
+
+	if successCount != numRequests/2 {
+		t.Errorf("expected %d successes, got %d", numRequests/2, successCount)
+	}
+	if failCount != numRequests/2 {
+		t.Errorf("expected %d failures, got %d", numRequests/2, failCount)
+	}
+}
+
+// --- Agent card from registry with tool filter ---
+
+func TestIntegration_AgentCardWithFilter(t *testing.T) {
+	reg := registry.NewToolRegistry()
+	reg.RegisterModule(&integrationModule{
+		name: "filtered",
+		tools: []registry.ToolDefinition{
+			{
+				Tool:     mcp.NewTool("public_tool", mcp.WithDescription("Public")),
+				Category: "public",
+				Handler:  greetIntegrationHandler,
+			},
+			{
+				Tool:     mcp.NewTool("private_tool", mcp.WithDescription("Private")),
+				Category: "private",
+				IsWrite:  true,
+				Handler:  echoIntegrationHandler,
+			},
+			{
+				Tool:     mcp.NewTool("admin_tool", mcp.WithDescription("Admin only")),
+				Category: "admin",
+				IsWrite:  true,
+				Handler:  echoIntegrationHandler,
+			},
+		},
+	})
+
+	cardGen := NewAgentCardGenerator(reg, nil, CardConfig{
+		Name:        "filtered-agent",
+		Description: "Agent with filtered skills",
+		Version:     "1.0.0",
+		URL:         "http://localhost:8080",
+		ToolFilter: func(name string, td registry.ToolDefinition) bool {
+			// Only expose non-admin tools.
+			return td.Category != "admin"
+		},
+	})
+
+	card := cardGen.Generate()
+
+	if len(card.Skills) != 2 {
+		t.Fatalf("expected 2 skills after filter, got %d", len(card.Skills))
+	}
+
+	skillIDs := make(map[string]bool)
+	for _, s := range card.Skills {
+		skillIDs[s.ID] = true
+	}
+	if skillIDs["admin_tool"] {
+		t.Error("admin_tool should be filtered out")
+	}
+	if !skillIDs["public_tool"] {
+		t.Error("public_tool should be present")
+	}
+	if !skillIDs["private_tool"] {
+		t.Error("private_tool should be present")
+	}
+}
+
+// --- Agent card invalidation ---
+
+func TestIntegration_AgentCardInvalidation(t *testing.T) {
+	reg := registry.NewToolRegistry()
+	reg.RegisterModule(&integrationModule{
+		name: "initial",
+		tools: []registry.ToolDefinition{
+			{
+				Tool:    mcp.NewTool("tool_a", mcp.WithDescription("Tool A")),
+				Handler: greetIntegrationHandler,
+			},
+		},
+	})
+
+	cardGen := NewAgentCardGenerator(reg, nil, CardConfig{
+		Name:    "invalidation-test",
+		Version: "1.0.0",
+	})
+
+	// Generate initial card.
+	card1 := cardGen.Generate()
+	if len(card1.Skills) != 1 {
+		t.Fatalf("expected 1 skill, got %d", len(card1.Skills))
+	}
+
+	// Card() should return cached.
+	card2 := cardGen.Card()
+	if len(card2.Skills) != 1 {
+		t.Fatalf("expected cached card with 1 skill, got %d", len(card2.Skills))
+	}
+
+	// Add a new tool to the registry.
+	reg.RegisterModule(&integrationModule{
+		name: "added",
+		tools: []registry.ToolDefinition{
+			{
+				Tool:    mcp.NewTool("tool_b", mcp.WithDescription("Tool B")),
+				Handler: echoIntegrationHandler,
+			},
+		},
+	})
+
+	// Invalidate and regenerate.
+	cardGen.Invalidate()
+	card3 := cardGen.Card()
+	if len(card3.Skills) != 2 {
+		t.Fatalf("expected 2 skills after invalidation, got %d", len(card3.Skills))
+	}
+}
+
+// --- Error propagation: MCP error -> A2A failure status with details ---
+
+func TestBridgeRoundTrip_ErrorPropagation(t *testing.T) {
+	reg := registry.NewToolRegistry()
+	reg.RegisterModule(&integrationModule{
+		name: "errors",
+		tools: []registry.ToolDefinition{
+			{
+				Tool: mcp.NewTool("go_err_tool", mcp.WithDescription("Returns Go error")),
+				Handler: func(_ context.Context, _ registry.CallToolRequest) (*registry.CallToolResult, error) {
+					return nil, fmt.Errorf("database connection refused: dial tcp 127.0.0.1:5432: connection refused")
+				},
+			},
+			{
+				Tool: mcp.NewTool("coded_err_tool", mcp.WithDescription("Returns coded error result")),
+				Handler: func(_ context.Context, _ registry.CallToolRequest) (*registry.CallToolResult, error) {
+					return registry.MakeErrorResult("validation failed: name is required"), nil
+				},
+			},
+		},
+	})
+
+	ts := newBridgeTestServer(t, reg, ExecutorConfig{})
+
+	// Test Go error propagation.
+	t.Run("go_error", func(t *testing.T) {
+		task := ts.sendMessage(t, "go_err_tool", nil)
+		if task.Status.State != a2atypes.TaskStateFailed {
+			t.Fatalf("expected failed, got %s", task.Status.State)
+		}
+		if task.Status.Message == nil {
+			t.Fatal("expected error message")
+		}
+		errText := task.Status.Message.Parts[0].Text()
+		if !strings.Contains(errText, "connection refused") {
+			t.Errorf("expected error to contain 'connection refused', got %q", errText)
+		}
+	})
+
+	// Test coded error result propagation.
+	t.Run("coded_error", func(t *testing.T) {
+		task := ts.sendMessage(t, "coded_err_tool", nil)
+		if task.Status.State != a2atypes.TaskStateFailed {
+			t.Fatalf("expected failed, got %s", task.Status.State)
+		}
+		if task.Status.Message == nil {
+			t.Fatal("expected error message")
+		}
+		errText := task.Status.Message.Parts[0].Text()
+		if !strings.Contains(errText, "validation failed") {
+			t.Errorf("expected error to contain 'validation failed', got %q", errText)
+		}
+	})
+}
+
+// --- Test concurrent agent card access ---
+
+func TestBridge_ConcurrentAgentCardAccess(t *testing.T) {
+	reg := registry.NewToolRegistry()
+	reg.RegisterModule(&integrationModule{
+		name: "concurrent-card",
+		tools: []registry.ToolDefinition{
+			{
+				Tool:    mcp.NewTool("tool_1", mcp.WithDescription("Tool 1")),
+				Handler: greetIntegrationHandler,
+			},
+			{
+				Tool:    mcp.NewTool("tool_2", mcp.WithDescription("Tool 2")),
+				Handler: echoIntegrationHandler,
+			},
+		},
+	})
+
+	ts := newBridgeTestServer(t, reg, ExecutorConfig{})
+
+	const numRequests = 20
+	var wg sync.WaitGroup
+	errs := make(chan error, numRequests)
+
+	for i := range numRequests {
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+			card := ts.getAgentCard(t)
+			if len(card.Skills) != 2 {
+				errs <- fmt.Errorf("request %d: expected 2 skills, got %d", idx, len(card.Skills))
+			}
+		}(i)
+	}
+
+	wg.Wait()
+	close(errs)
+
+	for err := range errs {
+		t.Error(err)
+	}
+}
+
+// --- Test with context timeout on slow tool via integration ---
+
+func TestBridgeRoundTrip_TimeoutWithDetailedError(t *testing.T) {
+	reg := registry.NewToolRegistry()
+	reg.RegisterModule(&integrationModule{
+		name: "timeout",
+		tools: []registry.ToolDefinition{
+			{
+				Tool:    mcp.NewTool("slow_tool", mcp.WithDescription("Takes too long")),
+				Handler: slowIntegrationHandler,
+			},
+		},
+	})
+
+	// 50ms timeout should trigger well before the 5s handler.
+	ts := newBridgeTestServer(t, reg, ExecutorConfig{
+		TaskTimeout: 50 * time.Millisecond,
+	})
+
+	task := ts.sendMessage(t, "slow_tool", nil)
+	if task.Status.State != a2atypes.TaskStateFailed {
+		t.Errorf("expected failed state, got %s", task.Status.State)
+	}
+
+	// The error should contain context information.
+	if task.Status.Message != nil && len(task.Status.Message.Parts) > 0 {
+		errText := task.Status.Message.Parts[0].Text()
+		if errText == "" {
+			t.Error("expected non-empty error message for timeout")
+		}
+	}
+}
+
+// --- Test multiple middleware in integration ---
+
+func TestBridgeRoundTrip_MultipleMiddleware(t *testing.T) {
+	reg := registry.NewToolRegistry()
+	reg.RegisterModule(&integrationModule{
+		name: "mw-multi",
+		tools: []registry.ToolDefinition{
+			{
+				Tool: mcp.NewTool("greet",
+					mcp.WithDescription("Say hello"),
+					mcp.WithString("name", mcp.Description("Who to greet")),
+				),
+				Handler: greetIntegrationHandler,
+			},
+		},
+	})
+
+	var mu sync.Mutex
+	var callOrder []string
+
+	mw1 := func(name string, _ registry.ToolDefinition, next registry.ToolHandlerFunc) registry.ToolHandlerFunc {
+		return func(ctx context.Context, req registry.CallToolRequest) (*registry.CallToolResult, error) {
+			mu.Lock()
+			callOrder = append(callOrder, "mw1-enter")
+			mu.Unlock()
+			result, err := next(ctx, req)
+			mu.Lock()
+			callOrder = append(callOrder, "mw1-exit")
+			mu.Unlock()
+			return result, err
+		}
+	}
+
+	mw2 := func(name string, _ registry.ToolDefinition, next registry.ToolHandlerFunc) registry.ToolHandlerFunc {
+		return func(ctx context.Context, req registry.CallToolRequest) (*registry.CallToolResult, error) {
+			mu.Lock()
+			callOrder = append(callOrder, "mw2-enter")
+			mu.Unlock()
+			result, err := next(ctx, req)
+			mu.Lock()
+			callOrder = append(callOrder, "mw2-exit")
+			mu.Unlock()
+			return result, err
+		}
+	}
+
+	ts := newBridgeTestServer(t, reg, ExecutorConfig{
+		Middleware: []registry.Middleware{mw1, mw2},
+	})
+
+	task := ts.sendMessage(t, "greet", map[string]any{"name": "chain"})
+	if task.Status.State != a2atypes.TaskStateCompleted {
+		t.Fatalf("expected completed, got %s", task.Status.State)
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	// Middleware should execute in stack order: mw1 wraps mw2.
+	expectedOrder := []string{"mw1-enter", "mw2-enter", "mw2-exit", "mw1-exit"}
+	if len(callOrder) != len(expectedOrder) {
+		t.Fatalf("expected %d calls, got %d: %v", len(expectedOrder), len(callOrder), callOrder)
+	}
+	for i, want := range expectedOrder {
+		if callOrder[i] != want {
+			t.Errorf("callOrder[%d] = %q, want %q", i, callOrder[i], want)
+		}
+	}
+
+	text := task.Artifacts[0].Parts[0].Text()
+	if text != "hello chain" {
+		t.Errorf("expected %q, got %q", "hello chain", text)
+	}
+}
+
 // --- test helper ---
 
 func assertTagPresent(t *testing.T, tags []string, want string) {
