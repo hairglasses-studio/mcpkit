@@ -57,3 +57,6 @@ HANDOFF.md
 # Compiled binaries
 a2a-bridge
 stateless-http
+.claude/skills/
+.ralph/ab_tests/
+.ralph/benchmarks/
