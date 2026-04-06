@@ -72,7 +72,15 @@ The server starts on stdio, waiting for JSON-RPC messages. Test it interactively
 npx @modelcontextprotocol/inspector go run main.go
 ```
 
-**Add to Claude Code** (`.claude/mcp.json`):
+**Add to Codex or Claude Code:**
+
+Recommended Codex install:
+
+```bash
+codex mcp add echo -- go run /absolute/path/to/main.go
+```
+
+Claude compatibility via manual config:
 
 ```json
 {

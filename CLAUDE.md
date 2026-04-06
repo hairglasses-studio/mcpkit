@@ -1,5 +1,7 @@
 # mcpkit
 
+This repo uses [AGENTS.md](AGENTS.md) as the canonical instruction file. Treat this file as compatibility guidance for Claude-specific workflows.
+
 MCP toolkit for building production-grade MCP servers. Built on `github.com/mark3labs/mcp-go`.
 
 ## Commands

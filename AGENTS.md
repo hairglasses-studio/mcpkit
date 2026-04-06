@@ -1,6 +1,15 @@
 # mcpkit — Agent Instructions
 
+> Canonical instructions: AGENTS.md
+
+Use this file as the canonical instruction surface for Codex-first repo guidance. [CLAUDE.md](CLAUDE.md) and [GEMINI.md](GEMINI.md) are compatibility mirrors.
+
 MCP toolkit for building production-grade MCP servers. Built on `github.com/mark3labs/mcp-go`.
+
+## Codex Surfaces
+
+- Canonical workflow skill: `.agents/skills/mcpkit/SKILL.md`
+- Shared subagents: `.codex/agents/`
 
 ## Build & Test
 
