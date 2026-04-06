@@ -1,7 +1,3 @@
-// Package transport provides a transport abstraction layer for MCP servers.
-// It defines interfaces and adapters for stdio, HTTP, and WebSocket transports,
-// enabling servers to switch between communication mechanisms without changing
-// application logic.
 package transport
 
 import (

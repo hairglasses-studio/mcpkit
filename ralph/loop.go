@@ -81,7 +81,13 @@ func (l *Loop) Run(ctx context.Context) error {
 		// Circuit breaker: block if the circuit is open.
 		if l.config.CircuitBreaker != nil && !l.config.CircuitBreaker.CanExecute() {
 			l.setStatus(StatusStopped)
+			l.factorFailThread(ctx, "circuit breaker open")
 			return fmt.Errorf("ralph: circuit breaker open: %s", l.config.CircuitBreaker.OpenReason())
+		}
+
+		// 12-Factor pause/resume check (Factor 6).
+		if err := l.checkPauseRequested(ctx); err != nil {
+			return err
 		}
 
 		l.mu.Lock()
@@ -91,6 +97,7 @@ func (l *Loop) Run(ctx context.Context) error {
 			l.progress.UpdatedAt = time.Now()
 			SaveProgress(l.config.ProgressFile, l.progress)
 			l.mu.Unlock()
+			l.factorFailThread(ctx, fmt.Sprintf("max iterations (%d) reached", l.config.MaxIterations))
 			return fmt.Errorf("ralph: max iterations (%d) reached", l.config.MaxIterations)
 		}
 		l.progress.Iteration = iteration
@@ -203,6 +210,7 @@ func (l *Loop) Run(ctx context.Context) error {
 				fmt.Sprintf("sampler error (after %d retries, %d consecutive): %v", l.config.SamplerRetries, fails, samplerErr))
 			if l.config.MaxConsecutiveSamplerFailures > 0 && fails >= l.config.MaxConsecutiveSamplerFailures {
 				l.setStatus(StatusFailed)
+				l.factorFailThread(ctx, fmt.Sprintf("%d consecutive sampler failures", fails))
 				return fmt.Errorf("ralph: %d consecutive sampler failures, last error: %v", fails, samplerErr)
 			}
 			continue
@@ -286,6 +294,7 @@ func (l *Loop) Run(ctx context.Context) error {
 			}
 			l.recordIteration(iteration, "", nil, "loop completed")
 			l.setStatus(StatusCompleted)
+			l.factorCompleteThread(ctx)
 			return nil
 		}
 
@@ -303,9 +312,14 @@ func (l *Loop) Run(ctx context.Context) error {
 		var toolResults []*registry.CallToolResult
 
 		for _, call := range calls {
+			// 12-Factor thread tracking (Factor 5): log the tool call event.
+			l.appendToolCallEvent(call, decision.TaskID, iteration)
+
 			td, found := l.config.ToolRegistry.GetTool(call.Name)
 			if !found {
-				l.config.Hooks.callError(iteration, fmt.Errorf("tool %q not found", call.Name))
+				notFoundErr := fmt.Errorf("tool %q not found", call.Name)
+				l.config.Hooks.callError(iteration, notFoundErr)
+				l.appendErrorEvent(call.Name, notFoundErr, iteration)
 				toolNames = append(toolNames, call.Name)
 				availableNames := l.config.ToolRegistry.ListTools()
 				resultParts = append(resultParts,
@@ -314,8 +328,19 @@ func (l *Loop) Run(ctx context.Context) error {
 				continue
 			}
 
+			// 12-Factor approval gate (Factor 7): check if human approval is needed.
+			if approved, msg := l.checkApproval(ctx, call.Name); !approved {
+				toolNames = append(toolNames, call.Name)
+				resultParts = append(resultParts, msg)
+				toolResults = append(toolResults, nil)
+				l.appendToolResultEvent(call.Name, msg, true, iteration)
+				continue
+			}
+
 			toolReq := makeCallToolRequest(call.Name, call.Arguments)
-			toolCtx, toolCancel := context.WithTimeout(ctx, l.config.ToolTimeout)
+			// 12-Factor prefetch (Factor 13): enrich context with pre-fetched data.
+			toolCtx := l.buildPrefetchContext(ctx, call.Name)
+			toolCtx, toolCancel := context.WithTimeout(toolCtx, l.config.ToolTimeout)
 			toolResult, err := td.Handler(toolCtx, toolReq)
 			toolCancel()
 
@@ -324,19 +349,26 @@ func (l *Loop) Run(ctx context.Context) error {
 
 			if err != nil {
 				l.config.Hooks.callError(iteration, err)
-				resultParts = append(resultParts, fmt.Sprintf("tool error: %v", err))
+				// 12-Factor error formatting (Factor 9) and thread event.
+				formatted := l.factorFormatError(err)
+				resultParts = append(resultParts, fmt.Sprintf("tool error: %s", formatted))
+				l.appendErrorEvent(call.Name, err, iteration)
 			} else if toolResult != nil && len(toolResult.Content) > 0 {
 				if text, ok := registry.ExtractTextContent(toolResult.Content[0]); ok {
 					if toolResult.IsError {
 						resultParts = append(resultParts, "tool error: "+text)
+						l.appendToolResultEvent(call.Name, text, true, iteration)
 					} else {
 						resultParts = append(resultParts, text)
+						l.appendToolResultEvent(call.Name, text, false, iteration)
 					}
 				} else {
 					resultParts = append(resultParts, "tool returned non-text content")
+					l.appendToolResultEvent(call.Name, "non-text content", false, iteration)
 				}
 			} else {
 				resultParts = append(resultParts, "tool returned empty result")
+				l.appendToolResultEvent(call.Name, "empty result", false, iteration)
 			}
 		}
 
@@ -451,6 +483,7 @@ func (l *Loop) Run(ctx context.Context) error {
 			switch verdict.Action {
 			case "halt":
 				l.setStatus(StatusFailed)
+				l.factorFailThread(ctx, "cost governor halt: "+verdict.Warning)
 				return fmt.Errorf("ralph: cost governor halt: %s", verdict.Warning)
 			case "downgrade":
 				l.mu.Lock()
@@ -460,6 +493,7 @@ func (l *Loop) Run(ctx context.Context) error {
 		} else if l.config.BudgetLimit > 0 && l.config.CostTracker != nil {
 			if l.config.CostTracker.Total() > l.config.BudgetLimit {
 				l.setStatus(StatusFailed)
+				l.factorFailThread(ctx, "token budget exceeded")
 				return fmt.Errorf("ralph: token budget exceeded (limit=%d, used=%d)",
 					l.config.BudgetLimit, l.config.CostTracker.Total())
 			}

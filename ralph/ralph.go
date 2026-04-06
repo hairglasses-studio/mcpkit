@@ -219,6 +219,12 @@ type Config struct {
 	// events are appended to the iteration's activity log. The hook runs
 	// after stop/circuit-breaker checks but before building the LLM prompt.
 	PreFetchHook func(ctx context.Context) []PreFetchEvent
+	// FactorConfig holds optional 12-factor agent integration settings.
+	// When non-nil, enables thread event logging (Factor 5), checkpoint
+	// pause/resume (Factor 6), human approval gating (Factor 7), compact
+	// error formatting (Factor 9), and pre-fetch context injection (Factor 13).
+	// All sub-fields are optional; the loop works identically when nil.
+	FactorConfig *FactorConfig
 }
 
 // PreFetchEvent represents the result of a deterministic pre-fetch call.

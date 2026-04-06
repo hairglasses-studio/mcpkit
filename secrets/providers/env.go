@@ -1,4 +1,3 @@
-// Package providers implements secret providers for various backends.
 package providers
 
 import (
