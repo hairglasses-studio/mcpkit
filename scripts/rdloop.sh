@@ -72,8 +72,8 @@ if [[ "$USE_OP_RUN" != "true" ]]; then
     if [[ -z "${ANTHROPIC_API_KEY:-}" ]]; then
         if command -v op &>/dev/null && op whoami &>/dev/null; then
             echo "Loading ANTHROPIC_API_KEY from 1Password..."
-            export ANTHROPIC_API_KEY=$(op item get "Anthropic API Key (Work - 10K credits)" \
-                --account my.1password.com --vault Personal --fields password --reveal)
+            export ANTHROPIC_API_KEY=$(op item get "${OP_ANTHROPIC_ITEM:-Anthropic API Key}" \
+                --vault "${OP_VAULT:-Personal}" --fields credential --reveal)
         else
             echo "error: ANTHROPIC_API_KEY not set. Set it via env, .env file, or configure 1Password CLI." >&2
             exit 1
@@ -83,8 +83,8 @@ if [[ "$USE_OP_RUN" != "true" ]]; then
     if [[ -z "${GITHUB_TOKEN:-}" ]]; then
         if command -v op &>/dev/null && op whoami &>/dev/null; then
             echo "Loading GITHUB_TOKEN from 1Password..."
-            export GITHUB_TOKEN=$(op item get "AFTRS MCP - mcpkit GitHub PAT" \
-                --account my.1password.com --vault Personal --fields credential --reveal)
+            export GITHUB_TOKEN=$(op item get "${OP_GITHUB_ITEM:-GitHub PAT}" \
+                --vault "${OP_VAULT:-Personal}" --fields credential --reveal)
         else
             echo "warning: GITHUB_TOKEN not set, ecosystem scans will have lower rate limits" >&2
         fi
