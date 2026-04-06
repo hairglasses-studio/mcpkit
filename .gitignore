@@ -53,3 +53,7 @@ HANDOFF.md
 .claude-audit-report*
 .claude-fix-report*
 .claude/
+
+# Compiled binaries
+a2a-bridge
+stateless-http
