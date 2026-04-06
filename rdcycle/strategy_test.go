@@ -1,6 +1,106 @@
 package rdcycle
 
-import "testing"
+import (
+	"math"
+	"testing"
+)
+
+func TestConsecutiveSuccesses_Empty(t *testing.T) {
+	t.Parallel()
+	if got := ConsecutiveSuccesses(nil); got != 0 {
+		t.Errorf("expected 0, got %d", got)
+	}
+}
+
+func TestConsecutiveSuccesses_AllSuccess(t *testing.T) {
+	t.Parallel()
+	notes := []ImprovementNote{
+		{CycleID: "c1"},
+		{CycleID: "c2"},
+		{CycleID: "c3"},
+	}
+	if got := ConsecutiveSuccesses(notes); got != 3 {
+		t.Errorf("expected 3, got %d", got)
+	}
+}
+
+func TestConsecutiveSuccesses_TrailingFailure(t *testing.T) {
+	t.Parallel()
+	notes := []ImprovementNote{
+		{CycleID: "c1"},
+		{CycleID: "c2"},
+		{CycleID: "c3", WhatFailed: []string{"broke"}},
+	}
+	if got := ConsecutiveSuccesses(notes); got != 0 {
+		t.Errorf("expected 0, got %d", got)
+	}
+}
+
+func TestConsecutiveSuccesses_MixedHistory(t *testing.T) {
+	t.Parallel()
+	notes := []ImprovementNote{
+		{CycleID: "c1", WhatFailed: []string{"err"}},
+		{CycleID: "c2"},
+		{CycleID: "c3"},
+		{CycleID: "c4", WhatFailed: []string{"err"}},
+		{CycleID: "c5"},
+		{CycleID: "c6"},
+	}
+	if got := ConsecutiveSuccesses(notes); got != 2 {
+		t.Errorf("expected 2, got %d", got)
+	}
+}
+
+func TestBudgetPct_Unlimited(t *testing.T) {
+	t.Parallel()
+	// Zero budget = unlimited = 1.0
+	if got := BudgetPct(0, 50); got != 1.0 {
+		t.Errorf("expected 1.0, got %f", got)
+	}
+}
+
+func TestBudgetPct_NegativeBudget(t *testing.T) {
+	t.Parallel()
+	if got := BudgetPct(-10, 5); got != 1.0 {
+		t.Errorf("expected 1.0 for negative budget, got %f", got)
+	}
+}
+
+func TestBudgetPct_FullBudget(t *testing.T) {
+	t.Parallel()
+	if got := BudgetPct(100, 0); got != 1.0 {
+		t.Errorf("expected 1.0, got %f", got)
+	}
+}
+
+func TestBudgetPct_HalfSpent(t *testing.T) {
+	t.Parallel()
+	if got := BudgetPct(100, 50); math.Abs(got-0.5) > 0.001 {
+		t.Errorf("expected 0.5, got %f", got)
+	}
+}
+
+func TestBudgetPct_Exhausted(t *testing.T) {
+	t.Parallel()
+	if got := BudgetPct(100, 100); got != 0.0 {
+		t.Errorf("expected 0.0, got %f", got)
+	}
+}
+
+func TestBudgetPct_Overspent(t *testing.T) {
+	t.Parallel()
+	if got := BudgetPct(100, 150); got != 0.0 {
+		t.Errorf("expected 0.0 for overspent, got %f", got)
+	}
+}
+
+func TestBudgetPct_SmallFraction(t *testing.T) {
+	t.Parallel()
+	got := BudgetPct(100, 95)
+	if math.Abs(got-0.05) > 0.001 {
+		t.Errorf("expected 0.05, got %f", got)
+	}
+}
 
 func TestSelectStrategy_DefaultFull(t *testing.T) {
 	s := SelectStrategy(nil, 0, 1.0)
