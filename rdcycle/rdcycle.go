@@ -19,6 +19,9 @@ type CycleConfig struct {
 	// Synthesizer optionally enables adaptive task synthesis for rdcycle_schedule.
 	// When set, schedule uses Synthesizer.Synthesize() instead of the hardcoded template.
 	Synthesizer *Synthesizer
+	// TotalBudget is the dollar budget for the entire R&D cycle series.
+	// Zero means unlimited. Used by SelectStrategy to compute budgetPct.
+	TotalBudget float64
 }
 
 // Artifact represents a piece of work output (code diff, test result, build output).
