@@ -39,6 +39,11 @@ type CircuitBreakerConfig struct {
 	SuccessThreshold int
 	Timeout          time.Duration
 	HalfOpenMaxCalls int
+	// OnCircuitOpen is called when the circuit transitions to the Open state.
+	// Use this for human escalation, alerting, or logging. The callback receives
+	// the circuit breaker name. It is called while holding the lock, so it
+	// should return quickly and not block.
+	OnCircuitOpen func(name string)
 }
 
 // DefaultCircuitBreakerConfig returns sensible defaults.
@@ -181,6 +186,11 @@ func (cb *CircuitBreaker) transition(newState CircuitState) {
 
 	if cb.metrics != nil {
 		cb.metrics.OnStateChange(cb.name, oldState, newState)
+	}
+
+	// Fire the OnCircuitOpen callback when transitioning to Open state.
+	if newState == CircuitOpen && cb.config.OnCircuitOpen != nil {
+		cb.config.OnCircuitOpen(cb.name)
 	}
 }
 
