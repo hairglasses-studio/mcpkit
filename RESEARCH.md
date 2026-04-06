@@ -142,10 +142,10 @@ mcpkit occupies a unique niche: **production-grade Go middleware layer**. While 
 
 ## Hairglasses Studio Sibling Repositories
 
-### jobb
+### [internal MCP server]
 - **Size**: 34 tool modules
 - **Architecture**: Dispatcher pattern — central router delegates to tool-specific handlers
-- **Pros**: Battle-tested at scale, covers job search/tracking domain comprehensively
+- **Pros**: Battle-tested at scale, covers domain comprehensively
 - **Cons**: Monolithic dispatcher, tight coupling between tools, no middleware abstraction
 - **Migration path**: Extract tool modules → implement as mcpkit ToolModule interface, replace dispatcher with registry middleware chain
 
@@ -312,7 +312,7 @@ mcpkit occupies a unique niche: **production-grade Go middleware layer**. While 
 - [x] Logging endpoint integration (logging/)
 
 ### Phase 3: Differentiation (Weeks 5–6)
-- [ ] Dispatcher package (from jobb patterns)
+- [ ] Dispatcher package (from internal server patterns)
 - [x] Sampling middleware (sampling/)
 - [ ] Observability integration tests
 - [ ] Official SDK dual-testing CI
@@ -347,7 +347,7 @@ mcpkit occupies a unique niche: **production-grade Go middleware layer**. While 
 - **After Phase 2**: Assess adoption metrics — if hg-mcp migration succeeds, invest in Tier 3; otherwise, focus on developer experience
 - **After Phase 3**: Re-evaluate WebMCP and Extensions based on spec evolution
 - **After Phase 5**: Evaluate A2A spec stability — if v1.0 ships, fast-track a2a/; otherwise prototype only
-- **After Phase 6**: Assess orchestrator patterns against real-world usage from hg-mcp/jobb migrations
+- **After Phase 6**: Assess orchestrator patterns against real-world usage from internal MCP server migrations
 - **After Phase 7**: Re-evaluate WebMCP bridge and Chrome integration based on adoption signals
 
 </implementation-sequence>
