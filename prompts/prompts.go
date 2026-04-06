@@ -30,6 +30,9 @@ type PromptDefinition struct {
 	Handler  PromptHandlerFunc
 	Category string
 	Tags     []string
+	// Version tracks the prompt version for cache invalidation and A/B testing.
+	// Semantic versioning recommended (e.g., "1.0.0"). Empty means unversioned.
+	Version string
 }
 
 // PromptModule is the interface that prompt modules implement.
