@@ -514,3 +514,102 @@ func TestParsePctPrefix_100Pct(t *testing.T) {
 		t.Errorf("msg = %q, want %q", msg, "Done")
 	}
 }
+
+func TestParsePctPrefix_MalformedNumber(t *testing.T) {
+	t.Parallel()
+	// "[abc%] text" — not a valid number
+	pct, msg := parsePctPrefix("[abc%] text")
+	if pct != -1 {
+		t.Errorf("pct = %v, want -1 (invalid)", pct)
+	}
+	if msg != "" {
+		t.Errorf("msg = %q, want empty", msg)
+	}
+}
+
+func TestParsePctPrefix_PercentOnly(t *testing.T) {
+	t.Parallel()
+	// "[%]" — bracket then percent immediately, idx < 2
+	pct, msg := parsePctPrefix("[%]")
+	if pct != -1 {
+		t.Errorf("pct = %v, want -1 (malformed)", pct)
+	}
+	if msg != "" {
+		t.Errorf("msg = %q, want empty", msg)
+	}
+}
+
+func TestParsePctPrefix_NoMessage(t *testing.T) {
+	t.Parallel()
+	// "[50%]" — no message after prefix
+	pct, msg := parsePctPrefix("[50%]")
+	if math.Abs(pct-0.5) > 0.001 {
+		t.Errorf("pct = %v, want ~0.5", pct)
+	}
+	if msg != "" {
+		t.Errorf("msg = %q, want empty", msg)
+	}
+}
+
+// --- StatusEventToProgress additional edge cases ---
+
+func TestStatusEventToProgress_IntMetadata(t *testing.T) {
+	t.Parallel()
+
+	tr := &Translator{}
+	info := streamingTaskInfo()
+
+	// Metadata with int value instead of float64.
+	event := a2atypes.TaskStatusUpdateEvent{
+		ContextID: info.ContextID,
+		TaskID:    info.TaskID,
+		Status: a2atypes.TaskStatus{
+			State: a2atypes.TaskStateWorking,
+			Message: a2atypes.NewMessageForTask(
+				a2atypes.MessageRoleAgent, info,
+				a2atypes.NewTextPart("[50%] halfway"),
+			),
+		},
+		Metadata: map[string]any{
+			progressMetadataKey: 1, // int, not float64
+		},
+	}
+
+	progress, msg := tr.StatusEventToProgress(event)
+	if progress != 1.0 {
+		t.Errorf("progress = %v, want 1.0 (from int)", progress)
+	}
+	if msg != "halfway" {
+		t.Errorf("message = %q, want %q", msg, "halfway")
+	}
+}
+
+func TestStatusEventToProgress_EmptyMessageParts(t *testing.T) {
+	t.Parallel()
+
+	tr := &Translator{}
+	info := streamingTaskInfo()
+
+	event := a2atypes.TaskStatusUpdateEvent{
+		ContextID: info.ContextID,
+		TaskID:    info.TaskID,
+		Status: a2atypes.TaskStatus{
+			State: a2atypes.TaskStateWorking,
+			Message: &a2atypes.Message{
+				Role:  a2atypes.MessageRoleAgent,
+				Parts: []*a2atypes.Part{},
+			},
+		},
+		Metadata: map[string]any{
+			progressMetadataKey: 0.33,
+		},
+	}
+
+	progress, msg := tr.StatusEventToProgress(event)
+	if math.Abs(progress-0.33) > 0.001 {
+		t.Errorf("progress = %v, want ~0.33", progress)
+	}
+	if msg != "" {
+		t.Errorf("message = %q, want empty", msg)
+	}
+}
