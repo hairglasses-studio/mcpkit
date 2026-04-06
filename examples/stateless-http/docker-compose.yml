@@ -1,0 +1,66 @@
+# Stateless HTTP MCP server with Redis-backed sessions.
+# Demonstrates horizontal scaling: two MCP server instances behind nginx,
+# sharing session state through Redis.
+#
+# Usage:
+#   docker compose up --build
+#   curl http://localhost/session/new
+#   curl -b "mcp_session=<id>" http://localhost/session/info
+#   curl -b "mcp_session=<id>" -X POST http://localhost/session/incr
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  mcp-server-1:
+    build:
+      context: ../../
+      dockerfile: examples/stateless-http/Dockerfile
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - PORT=8080
+      - SERVER_ID=mcp-server-1
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  mcp-server-2:
+    build:
+      context: ../../
+      dockerfile: examples/stateless-http/Dockerfile
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - PORT=8080
+      - SERVER_ID=mcp-server-2
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      mcp-server-1:
+        condition: service_healthy
+      mcp-server-2:
+        condition: service_healthy
