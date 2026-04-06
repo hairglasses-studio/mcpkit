@@ -1,21 +1,5 @@
 //go:build !official_sdk
 
-// Package gate provides a ToolCallGate middleware that pauses between tool
-// selection and execution. A GateFunc callback decides whether to proceed,
-// pause (waiting for human approval), or deny the call entirely.
-//
-// Usage:
-//
-//	gf := func(ctx context.Context, name string, td registry.ToolDefinition, req registry.CallToolRequest) gate.Verdict {
-//	    if td.IsWrite {
-//	        return gate.VerdictPause // require human approval for writes
-//	    }
-//	    return gate.VerdictProceed
-//	}
-//	mw := gate.Middleware(gf)
-//	reg := registry.NewToolRegistry(registry.Config{
-//	    Middleware: []registry.Middleware{mw},
-//	})
 package gate
 
 import (
