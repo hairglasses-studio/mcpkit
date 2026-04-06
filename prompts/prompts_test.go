@@ -459,3 +459,37 @@ func TestHandlerWithArguments(t *testing.T) {
 		t.Errorf("text = %q, want 'Review this Go code'", tc.Text)
 	}
 }
+
+func TestPromptDefinition_Version(t *testing.T) {
+	r := NewPromptRegistry()
+	r.RegisterModule(&testModule{
+		name: "versioned",
+		prompts: []PromptDefinition{
+			{
+				Prompt:  mcp.NewPrompt("versioned-prompt"),
+				Handler: simpleHandler("v1"),
+				Version: "1.2.0",
+			},
+			{
+				Prompt:  mcp.NewPrompt("unversioned-prompt"),
+				Handler: simpleHandler("no version"),
+			},
+		},
+	})
+
+	pd, ok := r.GetPrompt("versioned-prompt")
+	if !ok {
+		t.Fatal("versioned-prompt not found")
+	}
+	if pd.Version != "1.2.0" {
+		t.Errorf("Version = %q, want %q", pd.Version, "1.2.0")
+	}
+
+	pd2, ok := r.GetPrompt("unversioned-prompt")
+	if !ok {
+		t.Fatal("unversioned-prompt not found")
+	}
+	if pd2.Version != "" {
+		t.Errorf("Version = %q, want empty for unversioned", pd2.Version)
+	}
+}

@@ -27,6 +27,16 @@ const (
 	ComplexityComplex  ToolComplexity = "complex"
 )
 
+// CallType constants classify how a tool call is executed.
+const (
+	// CallTypeSync is the default: the tool runs synchronously and returns immediately.
+	CallTypeSync = "sync"
+	// CallTypeAsync indicates the tool starts work and returns a handle for polling.
+	CallTypeAsync = "async"
+	// CallTypeGated indicates the tool requires approval before execution (human-in-the-loop).
+	CallTypeGated = "gated"
+)
+
 // ToolDefinition represents a complete tool with metadata.
 type ToolDefinition struct {
 	Tool                Tool
@@ -47,6 +57,14 @@ type ToolDefinition struct {
 	OutputSchema        *ToolOutputSchema
 	MaxResultChars      int
 	DeferLoading        bool
+	// CallType classifies how this tool executes: sync (default), async, or gated.
+	CallType string
+	// PreFetch marks this tool for automatic pre-fetching before LLM iterations.
+	// When true, the Ralph loop's PreFetchHook may call this tool automatically.
+	PreFetch bool
+	// PreFetchKeywords are search terms that trigger automatic pre-fetching
+	// of this tool when they appear in the current task context.
+	PreFetchKeywords []string
 }
 
 // ToolModule is the interface that tool modules implement.

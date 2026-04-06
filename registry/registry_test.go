@@ -544,3 +544,47 @@ func TestRegistryHandlerError(t *testing.T) {
 		t.Fatal("expected error")
 	}
 }
+
+func TestToolDefinition_CallTypeConstants(t *testing.T) {
+	if CallTypeSync != "sync" {
+		t.Errorf("CallTypeSync = %q", CallTypeSync)
+	}
+	if CallTypeAsync != "async" {
+		t.Errorf("CallTypeAsync = %q", CallTypeAsync)
+	}
+	if CallTypeGated != "gated" {
+		t.Errorf("CallTypeGated = %q", CallTypeGated)
+	}
+}
+
+func TestToolDefinition_NewFields(t *testing.T) {
+	td := ToolDefinition{
+		Tool:             Tool{Name: "prefetch_tool"},
+		CallType:         CallTypeAsync,
+		PreFetch:         true,
+		PreFetchKeywords: []string{"status", "health"},
+	}
+
+	if td.CallType != CallTypeAsync {
+		t.Errorf("CallType = %q, want %q", td.CallType, CallTypeAsync)
+	}
+	if !td.PreFetch {
+		t.Error("PreFetch should be true")
+	}
+	if len(td.PreFetchKeywords) != 2 {
+		t.Fatalf("PreFetchKeywords len = %d, want 2", len(td.PreFetchKeywords))
+	}
+	if td.PreFetchKeywords[0] != "status" {
+		t.Errorf("PreFetchKeywords[0] = %q", td.PreFetchKeywords[0])
+	}
+}
+
+func TestToolDefinition_CallTypeDefault(t *testing.T) {
+	td := ToolDefinition{
+		Tool: Tool{Name: "default_tool"},
+	}
+	// Default CallType should be empty (sync behavior).
+	if td.CallType != "" {
+		t.Errorf("default CallType = %q, want empty", td.CallType)
+	}
+}

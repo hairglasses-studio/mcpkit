@@ -3,6 +3,7 @@
 package ralph
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -212,6 +213,20 @@ type Config struct {
 	// MaxConsecutiveSamplerFailures stops the loop after this many consecutive
 	// sampler errors (no successful LLM response). Default 5. Set 0 to disable.
 	MaxConsecutiveSamplerFailures int
+	// PreFetchHook runs deterministic tool calls before each LLM sampling
+	// iteration. Use this to gather fresh state (e.g., file contents, test
+	// results) that should be included in the prompt context. The returned
+	// events are appended to the iteration's activity log. The hook runs
+	// after stop/circuit-breaker checks but before building the LLM prompt.
+	PreFetchHook func(ctx context.Context) []PreFetchEvent
+}
+
+// PreFetchEvent represents the result of a deterministic pre-fetch call.
+type PreFetchEvent struct {
+	// ToolName is the name of the tool that was called.
+	ToolName string `json:"tool_name"`
+	// Summary is a short description of the result for inclusion in the prompt.
+	Summary string `json:"summary"`
 }
 
 // Loop is the autonomous iteration runner.

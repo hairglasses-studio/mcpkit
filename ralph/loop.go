@@ -113,12 +113,28 @@ func (l *Loop) Run(ctx context.Context) error {
 			}
 		}
 
+		// PreFetchHook: run deterministic tool calls before building the prompt.
+		var preFetchSummary string
+		if l.config.PreFetchHook != nil {
+			events := l.config.PreFetchHook(ctx)
+			if len(events) > 0 {
+				var parts []string
+				for _, ev := range events {
+					parts = append(parts, fmt.Sprintf("[%s] %s", ev.ToolName, ev.Summary))
+				}
+				preFetchSummary = strings.Join(parts, "\n")
+			}
+		}
+
 		// Build prompt and call LLM.
 		tools := l.config.ToolRegistry.GetAllToolDefinitions()
 		l.mu.Lock()
 		currentStuckHint := l.stuckHint
 		l.mu.Unlock()
 		prompt := buildIterationPrompt(spec, progressCopy, tools, currentStuckHint)
+		if preFetchSummary != "" {
+			prompt = prompt + "\n\n## Pre-Fetched Context\n" + preFetchSummary
+		}
 
 		// Determine max tokens: phase override > config default.
 		maxTokens := l.config.MaxTokens

@@ -179,3 +179,57 @@ func TestCircuitBreakerNilMetrics(t *testing.T) {
 		return nil
 	})
 }
+
+func TestCircuitBreaker_OnCircuitOpen(t *testing.T) {
+	var openCalls []string
+	cfg := CircuitBreakerConfig{
+		FailureThreshold: 2,
+		SuccessThreshold: 1,
+		Timeout:          time.Hour,
+		HalfOpenMaxCalls: 1,
+		OnCircuitOpen: func(name string) {
+			openCalls = append(openCalls, name)
+		},
+	}
+	cb := NewCircuitBreaker("escalation-test", cfg, nil)
+
+	// Two failures to trip the breaker.
+	for range 2 {
+		cb.Execute(context.Background(), func(_ context.Context) error {
+			return errors.New("fail")
+		})
+	}
+
+	if cb.State() != CircuitOpen {
+		t.Fatalf("state = %v, want open", cb.State())
+	}
+	if len(openCalls) != 1 {
+		t.Fatalf("OnCircuitOpen called %d times, want 1", len(openCalls))
+	}
+	if openCalls[0] != "escalation-test" {
+		t.Errorf("OnCircuitOpen name = %q, want %q", openCalls[0], "escalation-test")
+	}
+}
+
+func TestCircuitBreaker_OnCircuitOpenNotCalledForClose(t *testing.T) {
+	var openCalls int
+	cfg := CircuitBreakerConfig{
+		FailureThreshold: 5,
+		SuccessThreshold: 1,
+		Timeout:          time.Hour,
+		HalfOpenMaxCalls: 1,
+		OnCircuitOpen: func(_ string) {
+			openCalls++
+		},
+	}
+	cb := NewCircuitBreaker("test", cfg, nil)
+
+	// Success should not trigger OnCircuitOpen.
+	cb.Execute(context.Background(), func(_ context.Context) error {
+		return nil
+	})
+
+	if openCalls != 0 {
+		t.Errorf("OnCircuitOpen called %d times, want 0", openCalls)
+	}
+}

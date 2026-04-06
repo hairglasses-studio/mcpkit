@@ -1,6 +1,10 @@
 package handler
 
-import "github.com/hairglasses-studio/mcpkit/registry"
+import (
+	"fmt"
+
+	"github.com/hairglasses-studio/mcpkit/registry"
+)
 
 // GetStringParam extracts a string parameter from the request.
 func GetStringParam(req registry.CallToolRequest, name string) string {
@@ -101,4 +105,41 @@ func GetStringArrayParam(req registry.CallToolRequest, name string) []string {
 		}
 	}
 	return result
+}
+
+// RequireStringParam extracts a string parameter and returns an error result
+// if the parameter is missing or empty. This is a convenience for handlers
+// that need to validate required string parameters in a single call.
+//
+// Usage:
+//
+//	name, errResult := handler.RequireStringParam(req, "name")
+//	if errResult != nil {
+//	    return errResult, nil
+//	}
+func RequireStringParam(req registry.CallToolRequest, name string) (string, *registry.CallToolResult) {
+	val := GetStringParam(req, name)
+	if val == "" {
+		return "", CodedErrorResult(ErrInvalidParam, fmt.Errorf("required parameter %q is missing or empty", name))
+	}
+	return val, nil
+}
+
+// RequireIntParam extracts an integer parameter and returns an error result
+// if the parameter is missing. Unlike GetIntParam, this distinguishes between
+// "not provided" and "provided as zero".
+func RequireIntParam(req registry.CallToolRequest, name string) (int, *registry.CallToolResult) {
+	args := registry.ExtractArguments(req)
+	if args == nil {
+		return 0, CodedErrorResult(ErrInvalidParam, fmt.Errorf("required parameter %q is missing", name))
+	}
+	val, ok := args[name]
+	if !ok {
+		return 0, CodedErrorResult(ErrInvalidParam, fmt.Errorf("required parameter %q is missing", name))
+	}
+	num, ok := val.(float64)
+	if !ok {
+		return 0, CodedErrorResult(ErrInvalidParam, fmt.Errorf("parameter %q must be a number", name))
+	}
+	return int(num), nil
 }
