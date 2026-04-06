@@ -359,7 +359,6 @@ Sources:
 **mcpkit relevance:** `resilience/` package provides CircuitBreaker and RateLimiter. `dispatcher/` provides priority worker pool with concurrency groups. These are building blocks for production multi-agent resilience.
 
 Sources:
-- [Why Multi-Agent AI Systems Fail (Galileo)](https://galileo.ai/blog/multi-agent-ai-failures-prevention)
 - [Why Multi-Agent LLM Systems Fail (Augment Code)](https://www.augmentcode.com/guides/why-multi-agent-llm-systems-fail-and-how-to-fix-them)
 - [Preventing Cascading Failures in AI Agents](https://www.willvelida.com/posts/preventing-cascading-failures-ai-agents)
 - [Why Multi-Agent Orchestration Collapses](https://dev.to/onestardao/-ep-6-why-multi-agent-orchestration-collapses-deadlocks-infinite-loops-and-memory-overwrites-1e52)
