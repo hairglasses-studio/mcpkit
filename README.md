@@ -129,6 +129,18 @@ npx @modelcontextprotocol/inspector go run main.go      # interactive debugger
 
 ## Dependency Layers
 
+```
+Layer 4  orchestrator ─ handoff ─ workflow ─ bootstrap
+            │              │          │
+Layer 3  security ── gateway ── ralph ── skills ── rdcycle
+            │           │         │                  │
+Layer 2  handler ─ auth ─ resilience ─ mcptest ─ finops ─ eval
+         resources ─ prompts ─ discovery ─ sampling ─ ...
+            │           │           │
+Layer 1  registry ── health ── sanitize ── secrets ── client
+         (no internal dependencies)
+```
+
 - **Layer 1** (no internal deps): `registry`, `health`, `sanitize`, `secrets`, `client`
 - **Layer 2** (depend on Layer 1): `resources`, `prompts`, `handler`, `resilience`, `middleware/truncate`, `mcptest`, `auth`, `observability`, `logging`, `sampling`, `roots`, `research`, `discovery`, `dispatcher`, `extensions`, `memory`, `finops`, `lifecycle`, `eval`, `roadmap`, `gateway/multi`
 - **Layer 3** (depend on Layer 2): `security`, `gateway`, `ralph`, `skills`, `rdcycle`
