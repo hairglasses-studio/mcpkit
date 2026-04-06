@@ -66,7 +66,12 @@ type apiError struct {
 }
 
 // CreateMessage sends a sampling request to the Anthropic Messages API.
+// It validates the request before sending; returns an error if validation fails.
 func (c *APISamplingClient) CreateMessage(ctx context.Context, req CreateMessageRequest) (*CreateMessageResult, error) {
+	if err := ValidateRequest(req); err != nil {
+		return nil, fmt.Errorf("api sampler: invalid request: %w", err)
+	}
+
 	model := c.DefaultModel
 	if model == "" {
 		model = "claude-sonnet-4-6"

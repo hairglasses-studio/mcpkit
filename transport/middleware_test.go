@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"log/slog"
 	"strings"
 	"testing"
 	"time"
@@ -152,3 +153,74 @@ type errWriter struct{}
 
 func (e *errWriter) Write(p []byte) (int, error) { return 0, errors.New("write error") }
 func (e *errWriter) Read(p []byte) (int, error)  { return 0, errors.New("read error") }
+
+func TestLoggingMiddleware_StartError(t *testing.T) {
+	t.Parallel()
+
+	base := &failStartTransport{err: errors.New("start failed")}
+	wrapped := transport.Chain(base, transport.LoggingMiddleware(slog.Default()))
+
+	err := wrapped.Start(context.Background())
+	if err == nil {
+		t.Fatal("expected error from Start")
+	}
+	if err.Error() != "start failed" {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestLoggingMiddleware_ReceiveBeforeStart(t *testing.T) {
+	t.Parallel()
+
+	base := transport.NewReadWriteTransport(&rw{
+		r: strings.NewReader(""),
+		w: bytes.NewBuffer(nil),
+	})
+	wrapped := transport.Chain(base, transport.LoggingMiddleware(slog.Default()))
+
+	// Receive before Start should return the inner transport's channel.
+	ch := wrapped.Receive()
+	if ch == nil {
+		t.Error("expected non-nil channel even before Start")
+	}
+}
+
+func TestMetricsMiddleware_StartError(t *testing.T) {
+	t.Parallel()
+
+	base := &failStartTransport{err: errors.New("metrics start failed")}
+	wrapped := transport.Chain(base, transport.MetricsMiddleware())
+
+	err := wrapped.Start(context.Background())
+	if err == nil {
+		t.Fatal("expected error from Start")
+	}
+	if err.Error() != "metrics start failed" {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+// failStartTransport is a Transport whose Start always returns an error.
+type failStartTransport struct {
+	err  error
+	recv chan transport.Message
+}
+
+func (f *failStartTransport) Start(_ context.Context) error {
+	return f.err
+}
+
+func (f *failStartTransport) Send(_ context.Context, _ transport.Message) error {
+	return nil
+}
+
+func (f *failStartTransport) Receive() <-chan transport.Message {
+	if f.recv == nil {
+		f.recv = make(chan transport.Message)
+	}
+	return f.recv
+}
+
+func (f *failStartTransport) Close() error {
+	return nil
+}

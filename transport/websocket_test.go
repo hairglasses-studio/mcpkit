@@ -197,3 +197,254 @@ func TestWebSocketTransport_ReadError(t *testing.T) {
 		t.Fatal("timeout waiting for channel close")
 	}
 }
+
+func TestWebSocketTransport_ContextCancellation(t *testing.T) {
+	t.Parallel()
+
+	// blockingWSConn blocks on ReadMessage until context is cancelled.
+	conn := &blockingWSConn{block: make(chan struct{})}
+	ws := transport.NewWebSocketTransport("ws://localhost:8080")
+	ws.SetConn(conn)
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	if err := ws.Start(ctx); err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+
+	// Cancel the context — readLoop should exit via ctx.Done().
+	cancel()
+
+	// The receive channel should close.
+	ch := ws.Receive()
+	select {
+	case _, ok := <-ch:
+		if ok {
+			t.Error("expected channel to close on context cancellation")
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout waiting for channel close after context cancellation")
+	}
+
+	ws.Close()
+}
+
+// blockingWSConn blocks ReadMessage until Close or context cancellation.
+type blockingWSConn struct {
+	mu     sync.Mutex
+	block  chan struct{}
+	closed bool
+}
+
+func (b *blockingWSConn) ReadMessage(ctx context.Context) (int, []byte, error) {
+	select {
+	case <-ctx.Done():
+		return 0, nil, ctx.Err()
+	case <-b.block:
+		return 0, nil, errors.New("closed")
+	}
+}
+
+func (b *blockingWSConn) WriteMessage(_ context.Context, _ int, _ []byte) error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if b.closed {
+		return errors.New("closed")
+	}
+	return nil
+}
+
+func (b *blockingWSConn) Close() error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if !b.closed {
+		b.closed = true
+		close(b.block)
+	}
+	return nil
+}
+
+func TestWebSocketTransport_EmptyMessage(t *testing.T) {
+	t.Parallel()
+
+	// Queue an empty message followed by a real message.
+	conn := &mockWSConn{
+		messages: [][]byte{nil, []byte(`{"id":99}`)},
+	}
+	ws := transport.NewWebSocketTransport("ws://localhost:8080")
+	ws.SetConn(conn)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	if err := ws.Start(ctx); err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+
+	// The empty message should be skipped; we should receive the real one.
+	ch := ws.Receive()
+	select {
+	case msg := <-ch:
+		if string(msg.Body) != `{"id":99}` {
+			t.Errorf("expected {\"id\":99}, got %q", msg.Body)
+		}
+	case <-ctx.Done():
+		t.Fatal("timeout waiting for message after empty skip")
+	}
+
+	ws.Close()
+}
+
+func TestWebSocketTransport_DoneChannelDuringDelivery(t *testing.T) {
+	t.Parallel()
+
+	// Slow consumer: fill the recv channel buffer (64), then close via done.
+	msgs := make([][]byte, 70)
+	for i := range msgs {
+		msgs[i] = []byte(`{"i":1}`)
+	}
+	conn := &mockWSConn{messages: msgs}
+	ws := transport.NewWebSocketTransport("ws://localhost:8080")
+	ws.SetConn(conn)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	if err := ws.Start(ctx); err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+
+	// Let the readLoop fill the buffer, then close.
+	time.Sleep(50 * time.Millisecond)
+	ws.Close()
+
+	// Drain whatever is in the channel.
+	for range ws.Receive() {
+	}
+}
+
+func TestWebSocketTransport_DoneBeforeRead(t *testing.T) {
+	t.Parallel()
+
+	// slowWSConn reads a message then delays, giving time for Close() to
+	// fire the done channel before the next ReadMessage call.
+	conn := newSlowWSConn([][]byte{[]byte(`{"first":1}`)}, 100*time.Millisecond)
+	ws := transport.NewWebSocketTransport("ws://localhost:8080")
+	ws.SetConn(conn)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	if err := ws.Start(ctx); err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+
+	// Read the first message.
+	ch := ws.Receive()
+	select {
+	case msg := <-ch:
+		if string(msg.Body) != `{"first":1}` {
+			t.Errorf("unexpected message: %q", msg.Body)
+		}
+	case <-ctx.Done():
+		t.Fatal("timeout waiting for first message")
+	}
+
+	// Close the transport — the readLoop should hit t.done in the top select.
+	ws.Close()
+
+	// Receive channel should close.
+	select {
+	case _, ok := <-ch:
+		if ok {
+			t.Error("expected channel to close after Close()")
+		}
+	case <-ctx.Done():
+		t.Fatal("timeout waiting for channel close")
+	}
+}
+
+// slowWSConn returns messages with a delay between reads.
+type slowWSConn struct {
+	mu       sync.Mutex
+	messages [][]byte
+	readIdx  int
+	delay    time.Duration
+	done     chan struct{}
+}
+
+func newSlowWSConn(messages [][]byte, delay time.Duration) *slowWSConn {
+	return &slowWSConn{
+		messages: messages,
+		delay:    delay,
+		done:     make(chan struct{}),
+	}
+}
+
+func (s *slowWSConn) ReadMessage(ctx context.Context) (int, []byte, error) {
+	s.mu.Lock()
+	idx := s.readIdx
+	s.readIdx++
+	s.mu.Unlock()
+
+	if idx > 0 && s.delay > 0 {
+		time.Sleep(s.delay)
+	}
+
+	s.mu.Lock()
+	if idx >= len(s.messages) {
+		s.mu.Unlock()
+		// Block until closed or context done.
+		select {
+		case <-ctx.Done():
+			return 0, nil, ctx.Err()
+		case <-s.done:
+			return 0, nil, errors.New("closed")
+		}
+	}
+	data := s.messages[idx]
+	s.mu.Unlock()
+	return 1, data, nil
+}
+
+func (s *slowWSConn) WriteMessage(_ context.Context, _ int, _ []byte) error {
+	return nil
+}
+
+func (s *slowWSConn) Close() error {
+	select {
+	case <-s.done:
+	default:
+		close(s.done)
+	}
+	return nil
+}
+
+func TestWebSocketTransport_CtxDoneDuringDelivery(t *testing.T) {
+	t.Parallel()
+
+	// Produce many messages to fill recv buffer, then cancel context.
+	msgs := make([][]byte, 70)
+	for i := range msgs {
+		msgs[i] = []byte(`{"fill":true}`)
+	}
+	conn := &mockWSConn{messages: msgs}
+	ws := transport.NewWebSocketTransport("ws://localhost:8080")
+	ws.SetConn(conn)
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	if err := ws.Start(ctx); err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+
+	// Let the buffer fill, then cancel context.
+	time.Sleep(50 * time.Millisecond)
+	cancel()
+
+	// Drain.
+	for range ws.Receive() {
+	}
+
+	ws.Close()
+}

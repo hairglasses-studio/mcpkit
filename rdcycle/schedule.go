@@ -63,7 +63,13 @@ func (m *Module) handleSchedule(ctx context.Context, input ScheduleInput) (Sched
 		// Determine strategy from improvement history.
 		notesPath := filepath.Join("rdcycle", "notes", "improvement_log.json")
 		notes, _ := LoadNotes(notesPath)
-		strategy := SelectStrategy(notes, 0, 1.0) // TODO: wire consecutiveSuccess and budgetPct
+		consecutiveSuccess := ConsecutiveSuccesses(notes)
+		spent := 0.0
+		if m.costReader != nil {
+			spent = m.costReader()
+		}
+		budgetPct := BudgetPct(m.config.TotalBudget, spent)
+		strategy := SelectStrategy(notes, consecutiveSuccess, budgetPct)
 
 		spec, err := m.config.Synthesizer.Synthesize(ctx, SynthesisConfig{
 			CycleName:   input.CycleName,

@@ -615,6 +615,173 @@ func TestUnixSocketClient_ConnectionClosedDuringCall(t *testing.T) {
 	_ = client.Close()
 }
 
+func TestUnixSocketServer_HandleConn_InitThenToolsList(t *testing.T) {
+	t.Parallel()
+
+	sockPath := testSocketPath(t)
+	mcpSrv := server.NewMCPServer("test-tools", "1.0.0")
+	us := NewUnixSocketServer(mcpSrv, sockPath)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go us.Serve(ctx)
+	waitForSocket(t, sockPath)
+
+	conn, err := net.Dial("unix", sockPath)
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	defer conn.Close()
+
+	reader := bufio.NewReader(conn)
+
+	// Initialize.
+	initReq := `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}` + "\n"
+	conn.Write([]byte(initReq))
+	conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+	reader.ReadString('\n')
+
+	// Send initialized notification.
+	initNotif := `{"jsonrpc":"2.0","method":"notifications/initialized"}` + "\n"
+	conn.Write([]byte(initNotif))
+
+	// Now call tools/list — response handler should write back.
+	toolsReq := `{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}` + "\n"
+	conn.Write([]byte(toolsReq))
+
+	conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+	line, err := reader.ReadString('\n')
+	if err != nil {
+		t.Fatalf("read tools response: %v", err)
+	}
+
+	var resp map[string]any
+	if err := json.Unmarshal([]byte(line), &resp); err != nil {
+		t.Fatalf("unmarshal: %v (raw: %s)", err, line)
+	}
+	if resp["jsonrpc"] != "2.0" {
+		t.Errorf("expected jsonrpc 2.0, got %v", resp["jsonrpc"])
+	}
+
+	us.Shutdown()
+	cancel()
+}
+
+func TestUnixSocketServer_HandleConn_EmptyLine(t *testing.T) {
+	t.Parallel()
+
+	sockPath := testSocketPath(t)
+	mcpSrv := server.NewMCPServer("test-empty-line", "1.0.0")
+	us := NewUnixSocketServer(mcpSrv, sockPath)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go us.Serve(ctx)
+	waitForSocket(t, sockPath)
+
+	conn, err := net.Dial("unix", sockPath)
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	defer conn.Close()
+
+	// Send an empty newline — should be silently skipped.
+	conn.Write([]byte("\n"))
+
+	// Then send a valid request.
+	initReq := `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}` + "\n"
+	conn.Write([]byte(initReq))
+
+	conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+	reader := bufio.NewReader(conn)
+	line, err := reader.ReadString('\n')
+	if err != nil {
+		t.Fatalf("read response: %v", err)
+	}
+
+	var resp map[string]any
+	if err := json.Unmarshal([]byte(line), &resp); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if resp["jsonrpc"] != "2.0" {
+		t.Errorf("expected jsonrpc 2.0, got %v", resp["jsonrpc"])
+	}
+
+	us.Shutdown()
+	cancel()
+}
+
+func TestUnixSocketServer_HandleConn_ClientDisconnect(t *testing.T) {
+	t.Parallel()
+
+	sockPath := testSocketPath(t)
+	mcpSrv := server.NewMCPServer("test-disconnect", "1.0.0")
+	us := NewUnixSocketServer(mcpSrv, sockPath)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go us.Serve(ctx)
+	waitForSocket(t, sockPath)
+
+	conn, err := net.Dial("unix", sockPath)
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+
+	// Send initialize.
+	initReq := `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}` + "\n"
+	conn.Write([]byte(initReq))
+
+	reader := bufio.NewReader(conn)
+	conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+	reader.ReadString('\n')
+
+	// Close the client connection — handleConn should handle the EOF gracefully.
+	conn.Close()
+
+	// Give the server time to process the disconnect.
+	time.Sleep(50 * time.Millisecond)
+
+	us.Shutdown()
+	cancel()
+}
+
+func TestUnixSocketServer_HandleConn_ContextCancelled(t *testing.T) {
+	t.Parallel()
+
+	sockPath := testSocketPath(t)
+	mcpSrv := server.NewMCPServer("test-ctx-cancel", "1.0.0")
+	us := NewUnixSocketServer(mcpSrv, sockPath)
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	go us.Serve(ctx)
+	waitForSocket(t, sockPath)
+
+	conn, err := net.Dial("unix", sockPath)
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	defer conn.Close()
+
+	// Initialize.
+	initReq := `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}` + "\n"
+	conn.Write([]byte(initReq))
+
+	reader := bufio.NewReader(conn)
+	conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+	reader.ReadString('\n')
+
+	// Cancel context — handleConn should exit via ctx.Err() check.
+	cancel()
+
+	// Give time for context propagation.
+	time.Sleep(100 * time.Millisecond)
+}
+
 func TestUnixSocketClient_ReadLoopNotificationSkip(t *testing.T) {
 	t.Parallel()
 
