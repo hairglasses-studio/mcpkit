@@ -187,7 +187,13 @@ func (o *Orchestrator) RunOneCycle(ctx context.Context) (CycleResult, error) {
 
 	if o.adaptiveSynth != nil {
 		notes, _ := LoadNotes("rdcycle/notes/improvement_log.json")
-		strategy := SelectStrategy(notes, 0, 1.0)
+		consecutiveSuccess := ConsecutiveSuccesses(notes)
+		spent := 0.0
+		if o.cfg.CostReader != nil {
+			spent = o.cfg.CostReader()
+		}
+		budgetPct := BudgetPct(o.mod.config.TotalBudget, spent)
+		strategy := SelectStrategy(notes, consecutiveSuccess, budgetPct)
 		synthSpec, synthErr := o.adaptiveSynth.Synthesize(ctx, SynthesisConfig{
 			CycleName:   cycleName,
 			RoadmapPath: o.mod.config.RoadmapPath,
