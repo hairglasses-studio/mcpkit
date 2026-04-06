@@ -1,10 +1,34 @@
 version: 2
 project_name: mcpkit
 
-# mcpkit is a library — no binaries to build
+# mcpkit is a Go library -- no binaries to build.
+# GoReleaser handles changelog generation and GitHub Release creation on tag push.
 builds: []
+
+changelog:
+  sort: asc
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\(.+\))??!?:.+$'
+      order: 100
+    - title: Bug Fixes
+      regexp: '^.*?(fix|refactor)(\(.+\))??!?:.+$'
+      order: 200
+    - title: Dependencies
+      regexp: '^.*?(.+)\(deps\)!?:.+$'
+      order: 300
+    - title: Other
+      order: 9999
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
+      - "^chore:"
 
 release:
   github:
     owner: hairglasses-studio
     name: mcpkit
+  draft: false
+  prerelease: auto
