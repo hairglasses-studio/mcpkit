@@ -369,3 +369,92 @@ func TestGetters_NonMapArguments(t *testing.T) {
 		t.Errorf("GetStringArrayParam non-map = %v, want nil", got)
 	}
 }
+
+// ==================== RequireStringParam ====================
+
+func TestRequireStringParam_Present(t *testing.T) {
+	req := makeReq(map[string]any{"name": "alice"})
+	val, errResult := RequireStringParam(req, "name")
+	if errResult != nil {
+		t.Fatalf("expected no error result, got %v", errResult)
+	}
+	if val != "alice" {
+		t.Errorf("val = %q, want %q", val, "alice")
+	}
+}
+
+func TestRequireStringParam_Empty(t *testing.T) {
+	req := makeReq(map[string]any{"name": ""})
+	_, errResult := RequireStringParam(req, "name")
+	if errResult == nil {
+		t.Fatal("expected error result for empty string")
+	}
+	text := extractText(t, errResult)
+	if !strings.Contains(text, "INVALID_PARAM") {
+		t.Errorf("error should contain INVALID_PARAM, got %q", text)
+	}
+}
+
+func TestRequireStringParam_Missing(t *testing.T) {
+	req := makeReq(map[string]any{})
+	_, errResult := RequireStringParam(req, "name")
+	if errResult == nil {
+		t.Fatal("expected error result for missing param")
+	}
+}
+
+func TestRequireStringParam_NilArgs(t *testing.T) {
+	req := makeReqNilArgs()
+	_, errResult := RequireStringParam(req, "name")
+	if errResult == nil {
+		t.Fatal("expected error result for nil args")
+	}
+}
+
+// ==================== RequireIntParam ====================
+
+func TestRequireIntParam_Present(t *testing.T) {
+	req := makeReq(map[string]any{"count": float64(42)})
+	val, errResult := RequireIntParam(req, "count")
+	if errResult != nil {
+		t.Fatalf("expected no error result, got %v", errResult)
+	}
+	if val != 42 {
+		t.Errorf("val = %d, want 42", val)
+	}
+}
+
+func TestRequireIntParam_Zero(t *testing.T) {
+	req := makeReq(map[string]any{"count": float64(0)})
+	val, errResult := RequireIntParam(req, "count")
+	if errResult != nil {
+		t.Fatalf("expected no error for zero value, got %v", errResult)
+	}
+	if val != 0 {
+		t.Errorf("val = %d, want 0", val)
+	}
+}
+
+func TestRequireIntParam_Missing(t *testing.T) {
+	req := makeReq(map[string]any{})
+	_, errResult := RequireIntParam(req, "count")
+	if errResult == nil {
+		t.Fatal("expected error result for missing param")
+	}
+}
+
+func TestRequireIntParam_WrongType(t *testing.T) {
+	req := makeReq(map[string]any{"count": "not a number"})
+	_, errResult := RequireIntParam(req, "count")
+	if errResult == nil {
+		t.Fatal("expected error result for wrong type")
+	}
+}
+
+func TestRequireIntParam_NilArgs(t *testing.T) {
+	req := makeReqNilArgs()
+	_, errResult := RequireIntParam(req, "count")
+	if errResult == nil {
+		t.Fatal("expected error result for nil args")
+	}
+}
