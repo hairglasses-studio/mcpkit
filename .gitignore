@@ -48,3 +48,8 @@ cov.out
 # Handoff files (may contain vault/credential metadata)
 HANDOFF.md
 .agents/
+
+# Development artifacts
+.claude-audit-report*
+.claude-fix-report*
+.claude/
