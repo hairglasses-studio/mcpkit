@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "profiles": [],
+  "comment": "mcpkit is a library repo; .mcp.json contains example-only server definitions."
+}
