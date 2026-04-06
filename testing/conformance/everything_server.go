@@ -1,21 +1,5 @@
 //go:build !official_sdk
 
-// Package conformance provides the "everything-server" for MCP conformance testing.
-//
-// The everything-server implements all testable MCP capabilities so the official
-// MCP conformance suite (https://github.com/modelcontextprotocol/conformance)
-// can validate mcpkit against the protocol specification.
-//
-// Capabilities implemented:
-//   - Tools: echo, add, longRunningOperation, sampleLLM, getTinyImage, annotatedMessage
-//   - Official conformance tools: test_simple_text, test_image_content, test_audio_content,
-//     test_embedded_resource, test_multiple_content_types, test_tool_with_logging,
-//     test_error_handling, test_tool_with_progress, test_sampling, test_elicitation,
-//     test_elicitation_sep1034_defaults, test_elicitation_sep1330_enums
-//   - Resources: static text, static binary, dynamic template
-//   - Prompts: simple, complex (with arguments), embedded resource, with image
-//   - Logging: log emission during tool calls
-//   - Completions: argument completion for prompts and resource templates
 package conformance
 
 import (
