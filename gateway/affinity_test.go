@@ -14,36 +14,12 @@ import (
 	"github.com/hairglasses-studio/mcpkit/transport"
 )
 
-// mockRedis implements session.RedisClient for testing.
-type mockRedis struct {
-	mu   sync.Mutex
-	data map[string]string
-}
-
-func (m *mockRedis) Get(_ context.Context, key string) (string, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	v, ok := m.data[key]
-	if !ok {
-		return "", session.ErrNotFound
-	}
-	return v, nil
-}
-
-func (m *mockRedis) Set(_ context.Context, key, value string, _ time.Duration) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.data[key] = value
-	return nil
-}
-
-func (m *mockRedis) Del(_ context.Context, keys ...string) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	for _, k := range keys {
-		delete(m.data, k)
-	}
-	return nil
+// newTestMemStore creates a MemStore for use in AffinityRouter tests.
+func newTestMemStore(t *testing.T) *session.MemStore {
+	t.Helper()
+	store := session.NewMemStore(session.Options{TTL: time.Hour})
+	t.Cleanup(func() { store.Close() })
+	return store
 }
 
 func TestConsistentHash_EmptyUpstreams(t *testing.T) {
@@ -123,7 +99,7 @@ func TestConsistentHash_StableOnRemoval(t *testing.T) {
 func TestAffinityRouter_Route(t *testing.T) {
 	t.Parallel()
 	ext := transport.NewSessionExtractor()
-	store := session.NewMemStore(session.Options{TTL: time.Hour})
+	store := newTestMemStore(t)
 
 	ar := NewAffinityRouter(AffinityConfig{
 		Extractor: ext,
@@ -147,7 +123,7 @@ func TestAffinityRouter_Route(t *testing.T) {
 func TestAffinityRouter_StickyOverride(t *testing.T) {
 	t.Parallel()
 	ext := transport.NewSessionExtractor()
-	store := session.NewMemStore(session.Options{TTL: time.Hour})
+	store := newTestMemStore(t)
 
 	ar := NewAffinityRouter(AffinityConfig{
 		Extractor: ext,
@@ -167,7 +143,7 @@ func TestAffinityRouter_StickyOverride(t *testing.T) {
 func TestAffinityRouter_StickyOverrideStaleUpstream(t *testing.T) {
 	t.Parallel()
 	ext := transport.NewSessionExtractor()
-	store := session.NewMemStore(session.Options{TTL: time.Hour})
+	store := newTestMemStore(t)
 
 	ar := NewAffinityRouter(AffinityConfig{
 		Extractor: ext,
@@ -191,7 +167,7 @@ func TestAffinityRouter_StickyOverrideStaleUpstream(t *testing.T) {
 func TestAffinityRouter_SetUpstreams(t *testing.T) {
 	t.Parallel()
 	ext := transport.NewSessionExtractor()
-	store := session.NewMemStore(session.Options{TTL: time.Hour})
+	store := newTestMemStore(t)
 
 	ar := NewAffinityRouter(AffinityConfig{
 		Extractor: ext,
@@ -220,7 +196,7 @@ func TestAffinityRouter_SetUpstreams(t *testing.T) {
 func TestAffinityRouter_AddUpstream(t *testing.T) {
 	t.Parallel()
 	ext := transport.NewSessionExtractor()
-	store := session.NewMemStore(session.Options{TTL: time.Hour})
+	store := newTestMemStore(t)
 
 	ar := NewAffinityRouter(AffinityConfig{
 		Extractor: ext,
@@ -245,7 +221,7 @@ func TestAffinityRouter_AddUpstream(t *testing.T) {
 func TestAffinityRouter_RemoveUpstream(t *testing.T) {
 	t.Parallel()
 	ext := transport.NewSessionExtractor()
-	store := session.NewMemStore(session.Options{TTL: time.Hour})
+	store := newTestMemStore(t)
 
 	ar := NewAffinityRouter(AffinityConfig{
 		Extractor: ext,
@@ -264,7 +240,6 @@ func TestAffinityRouter_RemoveUpstream(t *testing.T) {
 	}
 
 	// Sticky overrides for "b" should be cleaned.
-	// Route should not return "b" anymore.
 	result := ar.Route("s1")
 	if result == "b" {
 		t.Error("sticky to removed upstream 'b' should have been cleaned")
@@ -280,7 +255,7 @@ func TestAffinityRouter_RemoveUpstream(t *testing.T) {
 func TestAffinityRouter_RemoveSticky(t *testing.T) {
 	t.Parallel()
 	ext := transport.NewSessionExtractor()
-	store := session.NewMemStore(session.Options{TTL: time.Hour})
+	store := newTestMemStore(t)
 
 	ar := NewAffinityRouter(AffinityConfig{
 		Extractor: ext,
@@ -309,7 +284,7 @@ func TestAffinityRouter_RemoveSticky(t *testing.T) {
 func TestAffinityRouter_ConcurrentAccess(t *testing.T) {
 	t.Parallel()
 	ext := transport.NewSessionExtractor()
-	store := session.NewMemStore(session.Options{TTL: time.Hour})
+	store := newTestMemStore(t)
 
 	ar := NewAffinityRouter(AffinityConfig{
 		Extractor: ext,
@@ -349,23 +324,23 @@ func TestAffinityRouter_ConcurrentAccess(t *testing.T) {
 	wg.Wait()
 }
 
-// mockExternalStore implements session.ExternalStore for testing AffinityMiddleware.
-type mockExternalStore struct {
+// mockSessionStore implements session.SessionStore for testing AffinityMiddleware.
+type mockSessionStore struct {
 	sessions map[string]session.Session
 	getErr   error
 }
 
-func newMockExternalStore() *mockExternalStore {
-	return &mockExternalStore{
+func newMockSessionStore() *mockSessionStore {
+	return &mockSessionStore{
 		sessions: make(map[string]session.Session),
 	}
 }
 
-func (m *mockExternalStore) Create(_ context.Context) (session.Session, error) {
+func (m *mockSessionStore) Create(_ context.Context) (session.Session, error) {
 	return nil, nil
 }
 
-func (m *mockExternalStore) Get(_ context.Context, id string) (session.Session, bool, error) {
+func (m *mockSessionStore) Get(_ context.Context, id string) (session.Session, bool, error) {
 	if m.getErr != nil {
 		return nil, false, m.getErr
 	}
@@ -373,21 +348,14 @@ func (m *mockExternalStore) Get(_ context.Context, id string) (session.Session, 
 	return s, ok, nil
 }
 
-func (m *mockExternalStore) Delete(_ context.Context, _ string) error { return nil }
-func (m *mockExternalStore) Refresh(_ context.Context, _ string) error {
-	return nil
-}
-func (m *mockExternalStore) Close() error                                    { return nil }
-func (m *mockExternalStore) Save(_ context.Context, _ session.Session) error { return nil }
-func (m *mockExternalStore) Load(_ context.Context, _ string) (session.Session, error) {
-	return nil, nil
-}
-func (m *mockExternalStore) Ping(_ context.Context) error { return nil }
+func (m *mockSessionStore) Delete(_ context.Context, _ string) error  { return nil }
+func (m *mockSessionStore) Refresh(_ context.Context, _ string) error { return nil }
+func (m *mockSessionStore) Close() error                              { return nil }
 
 func TestAffinityMiddleware_SessionFound(t *testing.T) {
 	t.Parallel()
 	ext := transport.NewSessionExtractor()
-	store := newMockExternalStore()
+	store := newMockSessionStore()
 
 	// Add a mock session.
 	store.sessions["test-sess-001"] = &testSession{id: "test-sess-001"}
@@ -417,7 +385,7 @@ func TestAffinityMiddleware_SessionFound(t *testing.T) {
 func TestAffinityMiddleware_NoSessionID(t *testing.T) {
 	t.Parallel()
 	ext := transport.NewSessionExtractor()
-	store := newMockExternalStore()
+	store := newMockSessionStore()
 
 	mw := AffinityMiddleware(ext, store)
 	var gotSession bool
@@ -443,7 +411,7 @@ func TestAffinityMiddleware_NoSessionID(t *testing.T) {
 func TestAffinityMiddleware_SessionNotFound(t *testing.T) {
 	t.Parallel()
 	ext := transport.NewSessionExtractor()
-	store := newMockExternalStore()
+	store := newMockSessionStore()
 
 	mw := AffinityMiddleware(ext, store)
 	var gotSession bool
@@ -470,7 +438,7 @@ func TestAffinityMiddleware_SessionNotFound(t *testing.T) {
 func TestAffinityMiddleware_StoreError(t *testing.T) {
 	t.Parallel()
 	ext := transport.NewSessionExtractor()
-	store := newMockExternalStore()
+	store := newMockSessionStore()
 	store.getErr = context.DeadlineExceeded
 
 	mw := AffinityMiddleware(ext, store)
@@ -497,7 +465,7 @@ func TestAffinityMiddleware_StoreError(t *testing.T) {
 func TestAffinityRouter_EmptyUpstreams(t *testing.T) {
 	t.Parallel()
 	ext := transport.NewSessionExtractor()
-	store := session.NewMemStore(session.Options{TTL: time.Hour})
+	store := newTestMemStore(t)
 
 	ar := NewAffinityRouter(AffinityConfig{
 		Extractor: ext,
@@ -514,7 +482,7 @@ func TestAffinityRouter_EmptyUpstreams(t *testing.T) {
 func TestAffinityRouter_RemoveNonexistentUpstream(t *testing.T) {
 	t.Parallel()
 	ext := transport.NewSessionExtractor()
-	store := session.NewMemStore(session.Options{TTL: time.Hour})
+	store := newTestMemStore(t)
 
 	ar := NewAffinityRouter(AffinityConfig{
 		Extractor: ext,

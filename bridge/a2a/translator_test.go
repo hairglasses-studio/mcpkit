@@ -771,7 +771,7 @@ func TestMarshalInputSchema_WithAdditionalProperties(t *testing.T) {
 	t.Parallel()
 
 	boolFalse := false
-	schema := registry.ToolInputSchema{
+	schema := mcp.ToolInputSchema{
 		Type: "object",
 		Properties: map[string]any{
 			"name": map[string]any{"type": "string"},
@@ -793,7 +793,7 @@ func TestMarshalInputSchema_WithAdditionalProperties(t *testing.T) {
 func TestMarshalInputSchema_EmptySchema(t *testing.T) {
 	t.Parallel()
 
-	schema := registry.ToolInputSchema{}
+	schema := mcp.ToolInputSchema{}
 	result := marshalInputSchema(schema)
 	if result == "" {
 		t.Fatal("expected non-empty schema JSON even for empty schema")
