@@ -667,3 +667,275 @@ func TestBuildCallToolRequest_NilArgs(t *testing.T) {
 		t.Errorf("name = %q, want %q", req.Params.Name, "noop")
 	}
 }
+
+// --- contentToPart edge case tests ---
+
+func TestContentToPart_NilContent(t *testing.T) {
+	t.Parallel()
+
+	part := contentToPart(nil)
+	if part != nil {
+		t.Errorf("expected nil part for nil content, got %v", part)
+	}
+}
+
+func TestContentToPart_EmbeddedResource(t *testing.T) {
+	t.Parallel()
+
+	content := mcp.EmbeddedResource{
+		Type: "resource",
+		Resource: mcp.TextResourceContents{
+			URI:      "file:///tmp/test.txt",
+			Text:     "resource content",
+			MIMEType: "text/plain",
+		},
+	}
+
+	part := contentToPart(content)
+	if part == nil {
+		t.Fatal("expected non-nil part for EmbeddedResource")
+	}
+	// EmbeddedResource maps to DataPart.
+	data := part.Data()
+	if data == nil {
+		t.Fatal("expected DataPart with non-nil data for EmbeddedResource")
+	}
+}
+
+func TestContentToPart_InvalidBase64Image(t *testing.T) {
+	t.Parallel()
+
+	content := mcp.ImageContent{
+		Type:     "image",
+		Data:     "not-valid-base64!!!",
+		MIMEType: "image/png",
+	}
+
+	part := contentToPart(content)
+	if part == nil {
+		t.Fatal("expected non-nil part even for invalid base64")
+	}
+	// Falls back to text part with the raw base64 string.
+	text := part.Text()
+	if text != "not-valid-base64!!!" {
+		t.Errorf("expected fallback text %q, got %q", "not-valid-base64!!!", text)
+	}
+}
+
+// --- toStringMap tests ---
+
+func TestToStringMap_ValidMap(t *testing.T) {
+	t.Parallel()
+
+	input := map[string]any{"key": "value"}
+	result, ok := toStringMap(input)
+	if !ok {
+		t.Error("expected ok = true for map[string]any")
+	}
+	if result["key"] != "value" {
+		t.Errorf("expected key = %q, got %v", "value", result["key"])
+	}
+}
+
+func TestToStringMap_InvalidType(t *testing.T) {
+	t.Parallel()
+
+	// String is not a map.
+	_, ok := toStringMap("not a map")
+	if ok {
+		t.Error("expected ok = false for string input")
+	}
+
+	// Slice is not a map.
+	_, ok = toStringMap([]string{"a", "b"})
+	if ok {
+		t.Error("expected ok = false for slice input")
+	}
+
+	// Int is not a map.
+	_, ok = toStringMap(42)
+	if ok {
+		t.Error("expected ok = false for int input")
+	}
+
+	// nil is not a map.
+	_, ok = toStringMap(nil)
+	if ok {
+		t.Error("expected ok = false for nil input")
+	}
+}
+
+// --- marshalInputSchema edge case tests ---
+
+func TestMarshalInputSchema_WithAdditionalProperties(t *testing.T) {
+	t.Parallel()
+
+	boolFalse := false
+	schema := registry.ToolInputSchema{
+		Type: "object",
+		Properties: map[string]any{
+			"name": map[string]any{"type": "string"},
+		},
+		Required:             []string{"name"},
+		AdditionalProperties: &boolFalse,
+	}
+
+	result := marshalInputSchema(schema)
+	if result == "" {
+		t.Fatal("expected non-empty schema JSON")
+	}
+	// Should contain additionalProperties.
+	if !containsSubstr(result, "additionalProperties") {
+		t.Errorf("expected schema to contain 'additionalProperties', got %s", result)
+	}
+}
+
+func TestMarshalInputSchema_EmptySchema(t *testing.T) {
+	t.Parallel()
+
+	schema := registry.ToolInputSchema{}
+	result := marshalInputSchema(schema)
+	if result == "" {
+		t.Fatal("expected non-empty schema JSON even for empty schema")
+	}
+}
+
+// --- MessageToCallToolRequest edge cases ---
+
+func TestMessageToCallToolRequest_DataPartWithNonMapData(t *testing.T) {
+	t.Parallel()
+
+	tr := &Translator{}
+	// DataPart with a string instead of a map — should be skipped.
+	msg := a2atypes.Message{
+		Role: a2atypes.MessageRoleUser,
+		Parts: []*a2atypes.Part{
+			a2atypes.NewDataPart("not a map"),
+			a2atypes.NewDataPart(map[string]any{
+				"skill":     "actual_tool",
+				"arguments": map[string]any{"x": 1},
+			}),
+		},
+	}
+
+	name, args, err := tr.MessageToCallToolRequest(msg, a2atypes.AgentSkill{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if name != "actual_tool" {
+		t.Errorf("name = %q, want %q", name, "actual_tool")
+	}
+	if args["x"] != 1 {
+		t.Errorf("args[x] = %v, want 1", args["x"])
+	}
+}
+
+func TestMessageToCallToolRequest_DataPartEmptySkillID(t *testing.T) {
+	t.Parallel()
+
+	tr := &Translator{}
+	// DataPart with an empty skill field — should be skipped.
+	msg := a2atypes.Message{
+		Role: a2atypes.MessageRoleUser,
+		Parts: []*a2atypes.Part{
+			a2atypes.NewDataPart(map[string]any{
+				"skill":     "",
+				"arguments": map[string]any{"x": 1},
+			}),
+		},
+	}
+
+	_, _, err := tr.MessageToCallToolRequest(msg, a2atypes.AgentSkill{})
+	if err == nil {
+		t.Error("expected error for empty skill ID without fallback")
+	}
+}
+
+func TestMessageToCallToolRequest_SkillHintWithNilParts(t *testing.T) {
+	t.Parallel()
+
+	tr := &Translator{}
+	msg := a2atypes.Message{
+		Role: a2atypes.MessageRoleUser,
+		Parts: []*a2atypes.Part{
+			nil,
+			nil,
+		},
+	}
+	skill := a2atypes.AgentSkill{ID: "fallback_tool"}
+
+	name, args, err := tr.MessageToCallToolRequest(msg, skill)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if name != "fallback_tool" {
+		t.Errorf("name = %q, want %q", name, "fallback_tool")
+	}
+	if len(args) != 0 {
+		t.Errorf("expected empty args, got %v", args)
+	}
+}
+
+// --- CallResultToEvents edge cases ---
+
+func TestCallResultToEvents_YieldAbortOnArtifact(t *testing.T) {
+	t.Parallel()
+
+	tr := &Translator{}
+	result := &mcp.CallToolResult{
+		Content: []mcp.Content{
+			mcp.TextContent{Type: "text", Text: "result"},
+		},
+	}
+
+	// Collect only the first event, then abort.
+	var events []a2atypes.Event
+	for ev, err := range tr.CallResultToEvents(taskInfo(), result, nil) {
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		events = append(events, ev)
+		break
+	}
+
+	// Should only have the artifact event, not the completed status.
+	if len(events) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(events))
+	}
+	if _, ok := events[0].(*a2atypes.TaskArtifactUpdateEvent); !ok {
+		t.Errorf("expected artifact event, got %T", events[0])
+	}
+}
+
+func TestCallResultToEvents_NilResultWithError(t *testing.T) {
+	t.Parallel()
+
+	tr := &Translator{}
+	events := collectTranslatorEvents(tr, taskInfo(), nil, errors.New("boom"))
+
+	if len(events) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(events))
+	}
+	statusEv, ok := events[0].(*a2atypes.TaskStatusUpdateEvent)
+	if !ok {
+		t.Fatalf("expected status update, got %T", events[0])
+	}
+	if statusEv.Status.State != a2atypes.TaskStateFailed {
+		t.Errorf("expected failed, got %s", statusEv.Status.State)
+	}
+}
+
+// --- helper ---
+
+func containsSubstr(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(s) > 0 && findSubstr(s, substr))
+}
+
+func findSubstr(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}

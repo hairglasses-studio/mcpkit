@@ -88,6 +88,16 @@ func (e *BridgeExecutor) Execute(
 	return func(yield func(a2atypes.Event, error) bool) {
 		taskInfo := execCtx.TaskInfo()
 
+		// 0. Fail fast if context is already canceled.
+		if ctx.Err() != nil {
+			errMsg := a2atypes.NewMessageForTask(
+				a2atypes.MessageRoleAgent, taskInfo,
+				a2atypes.NewTextPart(fmt.Sprintf("context error: %v", ctx.Err())),
+			)
+			yield(a2atypes.NewStatusUpdateEvent(taskInfo, a2atypes.TaskStateFailed, errMsg), nil)
+			return
+		}
+
 		// 1. Emit submitted task if this is a new task.
 		if execCtx.StoredTask == nil {
 			submitted := a2atypes.NewSubmittedTask(execCtx, execCtx.Message)
