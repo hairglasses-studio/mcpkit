@@ -1,8 +1,6 @@
 # Claude Code
-.claude/*
-!.claude/settings.json
-.codex/*
-!.codex/config.toml
+.claude/
+.codex/
 .gemini/*
 !.gemini/settings.json
 !.gemini/extensions/
