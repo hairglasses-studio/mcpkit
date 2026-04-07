@@ -5,6 +5,7 @@
 [![Go](https://img.shields.io/badge/Go-1.26+-00ADD8?logo=go&logoColor=white)](https://go.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![CI](https://github.com/hairglasses-studio/mcpkit/actions/workflows/ci.yml/badge.svg)](https://github.com/hairglasses-studio/mcpkit/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/badge/Coverage-85%25%2B-brightgreen.svg)](https://github.com/hairglasses-studio/mcpkit)
 [![MCP](https://img.shields.io/badge/MCP-2025--11--25-blue)](https://modelcontextprotocol.io/specification/2025-11-25)
 
 The Go toolkit for production-grade MCP servers.
