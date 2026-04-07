@@ -2,6 +2,9 @@
 .claude/
 .codex/
 .gemini/*
+!.gemini/settings.json
+!.gemini/extensions/
+!.gemini/extensions/**
 !.gemini/config.yaml
 
 # Environment secrets
