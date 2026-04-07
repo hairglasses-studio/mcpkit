@@ -1,34 +1,15 @@
 ## Summary
 
-Brief description of what this PR does and why.
+- What changed
+- Why it changed
 
-## Related Issue
+## Validation
 
-Closes #<!-- issue number -->
+- [ ] Relevant tests/builds passed
+- [ ] Docs updated when behavior, interfaces, or repo topology changed
+- [ ] Sensitive data and local artifacts were not committed
 
-## Changes
+## Risk
 
-- 
-
-## Test Plan
-
-Describe how you tested these changes:
-- 
-
-## Checklist
-
-- [ ] `go build ./...` succeeds
-- [ ] `go vet ./...` passes with no warnings
-- [ ] `go test ./... -count=1 -race` passes with zero failures
-- [ ] New tests added for new functionality
-- [ ] Existing tests updated if behavior changed
-- [ ] Code follows existing patterns (middleware signature, TypedHandler, error codes)
-- [ ] Package stays within its dependency layer
-- [ ] Documentation updated (godoc, README, CLAUDE.md if applicable)
-- [ ] Breaking changes noted below (if any)
-
-## Breaking Changes
-
-<!-- If this PR introduces breaking changes, describe them here. Otherwise delete this section. -->
-
-None.
+- Operational or rollout risk:
+- Follow-up work:
