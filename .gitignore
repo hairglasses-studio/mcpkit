@@ -1,7 +1,8 @@
 # Claude Code
 .claude/
 .codex/
-.gemini/
+.gemini/*
+!.gemini/config.yaml
 
 # Environment secrets
 .env
