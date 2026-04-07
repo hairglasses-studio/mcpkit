@@ -3,3 +3,5 @@ source "$HOME/hairglasses-studio/dotfiles/make/ralphrc-base"
 
 # ── Project overrides ────────────────────────
 PROJECT_NAME="mcpkit"
+MAX_CALLS_PER_HOUR=80
+CLAUDE_TIMEOUT_MINUTES=20

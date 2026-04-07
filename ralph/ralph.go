@@ -213,6 +213,15 @@ type Config struct {
 	// MaxConsecutiveSamplerFailures stops the loop after this many consecutive
 	// sampler errors (no successful LLM response). Default 5. Set 0 to disable.
 	MaxConsecutiveSamplerFailures int
+	// MaxConcurrentWorkers (Factor 10) allows the loop to spawn multiple parallel
+	// sub-tasks in an iteration.
+	MaxConcurrentWorkers int
+	// RetryLimit is the maximum number of times an iteration can be retried
+	// after a failure before giving up.
+	RetryLimit int
+	// AutonomyLevel (0-4) controls how much decision-making authority is delegated
+	// to the agent.
+	AutonomyLevel int
 	// PreFetchHook runs deterministic tool calls before each LLM sampling
 	// iteration. Use this to gather fresh state (e.g., file contents, test
 	// results) that should be included in the prompt context. The returned
@@ -225,6 +234,16 @@ type Config struct {
 	// error formatting (Factor 9), and pre-fetch context injection (Factor 13).
 	// All sub-fields are optional; the loop works identically when nil.
 	FactorConfig *FactorConfig
+	// Budgets defines the token or dollar budgets per phase (planner/worker/verifier).
+	Budgets BudgetConfig
+}
+
+// BudgetConfig defines spending limits for different phases of the loop.
+type BudgetConfig struct {
+	PlannerUSD  float64
+	WorkerUSD   float64
+	VerifierUSD float64
+	HardLimit   float64
 }
 
 // PreFetchEvent represents the result of a deterministic pre-fetch call.
