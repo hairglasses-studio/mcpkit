@@ -221,7 +221,7 @@ func TestManager_ListDevices(t *testing.T) {
 	if err := mgr.Start(context.Background()); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
-	defer mgr.Close()
+	defer func() { _ = mgr.Close() }()
 
 	listed := mgr.ListDevices()
 	if len(listed) != 2 {
@@ -243,8 +243,8 @@ func TestManager_GetDevice(t *testing.T) {
 	defer func() { providerRegistry = origRegistry }()
 
 	mgr := NewManager(ManagerConfig{})
-	mgr.Start(context.Background())
-	defer mgr.Close()
+	_ = mgr.Start(context.Background())
+	defer func() { _ = mgr.Close() }()
 
 	info, err := mgr.GetDevice("test-dev")
 	if err != nil {
@@ -284,8 +284,8 @@ func TestManager_ConnectAndEvents(t *testing.T) {
 	defer func() { providerRegistry = origRegistry }()
 
 	mgr := NewManager(ManagerConfig{EventBuffer: 10})
-	mgr.Start(context.Background())
-	defer mgr.Close()
+	_ = mgr.Start(context.Background())
+	defer func() { _ = mgr.Close() }()
 
 	if err := mgr.Connect(context.Background(), "dev1"); err != nil {
 		t.Fatalf("Connect: %v", err)
@@ -319,6 +319,6 @@ func TestManager_NoProviders(t *testing.T) {
 	err := mgr.Start(context.Background())
 	if err == nil {
 		t.Error("expected error with no providers")
-		mgr.Close()
+		_ = mgr.Close()
 	}
 }

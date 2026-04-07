@@ -146,7 +146,7 @@ func (p *gridSerialProviderLinux) Close() error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	for _, conn := range p.conns {
-		conn.Close()
+		_ = conn.Close()
 	}
 	p.conns = nil
 	return nil
@@ -175,7 +175,7 @@ func openGridSerialLinux(info Info) (*gridSerialConnectionLinux, error) {
 	rawFD := int(fd.Fd())
 	var termios unix.Termios
 	if _, err := unix.IoctlGetTermios(rawFD, unix.TCGETS); err != nil {
-		fd.Close()
+		_ = fd.Close()
 		return nil, fmt.Errorf("get termios: %w", err)
 	}
 
@@ -196,13 +196,13 @@ func openGridSerialLinux(info Info) (*gridSerialConnectionLinux, error) {
 	termios.Cc[unix.VTIME] = 1
 
 	if err := unix.IoctlSetTermios(rawFD, unix.TCSETS, &termios); err != nil {
-		fd.Close()
+		_ = fd.Close()
 		return nil, fmt.Errorf("set termios: %w", err)
 	}
 
 	// Clear nonblock now that termios is set.
 	if err := unix.SetNonblock(rawFD, false); err != nil {
-		fd.Close()
+		_ = fd.Close()
 		return nil, fmt.Errorf("clear nonblock: %w", err)
 	}
 

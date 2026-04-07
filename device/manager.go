@@ -109,13 +109,13 @@ func (m *Manager) Close() error {
 
 	// Close all active connections.
 	for id, conn := range m.conns {
-		conn.Close()
+		_ = conn.Close()
 		delete(m.conns, id)
 	}
 
 	// Close all providers.
 	for _, p := range m.providers {
-		p.Close()
+		_ = p.Close()
 	}
 
 	close(m.done)
@@ -167,7 +167,7 @@ func (m *Manager) Connect(ctx context.Context, id DeviceID) error {
 	}
 
 	if err := conn.Start(ctx); err != nil {
-		conn.Close()
+		_ = conn.Close()
 		return fmt.Errorf("start device %s: %w", id, err)
 	}
 
@@ -325,7 +325,7 @@ func (m *Manager) attemptReconnect(ctx context.Context, id DeviceID) {
 		}
 
 		if err := conn.Start(ctx); err != nil {
-			conn.Close()
+			_ = conn.Close()
 			continue
 		}
 
@@ -335,7 +335,7 @@ func (m *Manager) attemptReconnect(ctx context.Context, id DeviceID) {
 		if !ok || md.closedByUser {
 			// Device removed or user disconnected while we were reconnecting.
 			m.mu.Unlock()
-			conn.Close()
+			_ = conn.Close()
 			return
 		}
 		m.conns[id] = conn
