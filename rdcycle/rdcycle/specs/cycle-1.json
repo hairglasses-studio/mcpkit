@@ -1,12 +1,6 @@
 {
   "name": "R\u0026D Cycle: cycle-1",
-<<<<<<< Updated upstream
-  "description": "Autonomous R\u0026D cycle 'cycle-1' (strategy: meta_improve, since: 2026-04-07T00:31:19Z).",
-||||||| Stash base
-  "description": "Autonomous R\u0026D cycle 'cycle-1' (strategy: full, since: 2026-04-06T22:17:47Z).",
-=======
-  "description": "Autonomous R\u0026D cycle 'cycle-1' (strategy: meta_improve, since: 2026-04-06T22:24:27Z).",
->>>>>>> Stashed changes
+  "description": "Autonomous R\u0026D cycle 'cycle-1' (strategy: meta_improve, since: 2026-04-07T01:02:03Z).",
   "completion": "All planned work items are implemented, tests pass, and roadmap is updated.",
   "tasks": [
     {
