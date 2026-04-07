@@ -99,7 +99,7 @@ func TestManager_AutoReconnect(t *testing.T) {
 	}, devInfo, openFn)
 	defer func() {
 		cancel()
-		mgr.Close()
+		_ = mgr.Close()
 	}()
 
 	if err := mgr.Connect(ctx, devID); err != nil {
@@ -107,7 +107,7 @@ func TestManager_AutoReconnect(t *testing.T) {
 	}
 
 	// Simulate unexpected disconnect.
-	firstConn.Close()
+	_ = firstConn.Close()
 
 	// Wait for reconnect to succeed.
 	deadline := time.After(500 * time.Millisecond)
@@ -160,7 +160,7 @@ func TestManager_MaxReconnectsExceeded(t *testing.T) {
 	}, devInfo, openFn)
 	defer func() {
 		cancel()
-		mgr.Close()
+		_ = mgr.Close()
 	}()
 
 	if err := mgr.Connect(ctx, devID); err != nil {
@@ -168,7 +168,7 @@ func TestManager_MaxReconnectsExceeded(t *testing.T) {
 	}
 
 	// Simulate unexpected disconnect.
-	firstConn.Close()
+	_ = firstConn.Close()
 
 	// Wait for all reconnect attempts to finish.
 	time.Sleep(200 * time.Millisecond)
@@ -213,14 +213,14 @@ func TestManager_ReconnectCancelled(t *testing.T) {
 		MaxReconnects:  0, // Unlimited — would loop forever without cancel.
 		EventBuffer:    10,
 	}, devInfo, openFn)
-	defer mgr.Close()
+	defer func() { _ = mgr.Close() }()
 
 	if err := mgr.Connect(ctx, devID); err != nil {
 		t.Fatalf("Connect: %v", err)
 	}
 
 	// Simulate disconnect.
-	firstConn.Close()
+	_ = firstConn.Close()
 
 	// Let a couple of reconnect attempts happen, then cancel.
 	time.Sleep(130 * time.Millisecond)
@@ -262,7 +262,7 @@ func TestManager_DisconnectPreventsReconnect(t *testing.T) {
 	}, devInfo, openFn)
 	defer func() {
 		cancel()
-		mgr.Close()
+		_ = mgr.Close()
 	}()
 
 	if err := mgr.Connect(ctx, devID); err != nil {

@@ -216,7 +216,7 @@ func ExampleNewBridgeExecutor() {
 	}
 	defer resp.Body.Close()
 	var fetchedCard a2atypes.AgentCard
-	json.NewDecoder(resp.Body).Decode(&fetchedCard)
+	_ = json.NewDecoder(resp.Body).Decode(&fetchedCard)
 
 	fmt.Println("Agent:", fetchedCard.Name)
 	fmt.Println("Skills:", len(fetchedCard.Skills))
@@ -281,7 +281,7 @@ func ExampleNewRemoteAgent() {
 	// Serve the agent card at the well-known endpoint.
 	mockHandler.HandleFunc("/.well-known/agent-card.json", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(card)
+		_ = json.NewEncoder(w).Encode(card)
 	})
 
 	// Handle REST SendMessage requests.
@@ -308,7 +308,7 @@ func ExampleNewRemoteAgent() {
 		// Wrap in StreamResponse envelope.
 		sr := a2atypes.StreamResponse{Event: task}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(sr)
+		_ = json.NewEncoder(w).Encode(sr)
 		_ = body
 	})
 
@@ -327,7 +327,7 @@ func ExampleNewRemoteAgent() {
 		fmt.Println("error:", err)
 		return
 	}
-	defer remote.Close()
+	defer func() { _ = remote.Close() }()
 
 	fmt.Println("Remote agent:", remote.Name())
 	fmt.Println("Tools:", len(remote.Tools()))

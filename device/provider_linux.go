@@ -427,7 +427,7 @@ func (c *linuxEvdevConnection) Close() error {
 		c.cancel()
 	}
 	if c.grabbed {
-		c.ReleaseGrab()
+		_ = c.ReleaseGrab()
 	}
 	if c.fd != nil {
 		return c.fd.Close()
@@ -504,7 +504,7 @@ func (f *linuxEvdevFeedback) SetRumble(motor int, intensity float64, duration ti
 
 	// Erase any previously uploaded effect to avoid effect ID exhaustion.
 	if f.effectID >= 0 {
-		evdevIoctl(f.fd.Fd(), evIOCRMFF, uintptr(f.effectID))
+		_ = evdevIoctl(f.fd.Fd(), evIOCRMFF, uintptr(f.effectID))
 		f.effectID = -1
 	}
 
@@ -582,7 +582,7 @@ func (p *linuxMIDIProvider) Enumerate(_ context.Context) ([]Info, error) {
 	for _, m := range matches {
 		base := filepath.Base(m)
 		var card, dev int
-		fmt.Sscanf(base, "midiC%dD%d", &card, &dev)
+		_, _ = fmt.Sscanf(base, "midiC%dD%d", &card, &dev)
 
 		nameBytes, _ := os.ReadFile(fmt.Sprintf("/proc/asound/card%d/id", card))
 		name := strings.TrimSpace(string(nameBytes))
@@ -969,7 +969,7 @@ func (w *LinuxHotPlugWatcher) Start(ctx context.Context) error {
 			Groups: 1, // Multicast group 1 = kernel uevents
 		}
 		if bindErr := syscall.Bind(fd, sa); bindErr != nil {
-			syscall.Close(fd)
+			_ = syscall.Close(fd)
 			fd = -1
 			slog.Warn("hotplug: netlink bind failed, falling back to polling", "error", bindErr)
 		}
@@ -1010,7 +1010,7 @@ func (w *LinuxHotPlugWatcher) netlinkLoop(ctx context.Context) {
 
 		// Set a read deadline so we can check context cancellation periodically.
 		tv := syscall.Timeval{Sec: 1}
-		syscall.SetsockoptTimeval(w.netlinkFD, syscall.SOL_SOCKET, syscall.SO_RCVTIMEO, &tv)
+		_ = syscall.SetsockoptTimeval(w.netlinkFD, syscall.SOL_SOCKET, syscall.SO_RCVTIMEO, &tv)
 
 		n, _, err := syscall.Recvfrom(w.netlinkFD, buf, 0)
 		if err != nil {
@@ -1167,7 +1167,7 @@ func (w *LinuxHotPlugWatcher) Close() error {
 		w.cancel()
 	}
 	if w.netlinkFD >= 0 {
-		syscall.Close(w.netlinkFD)
+		_ = syscall.Close(w.netlinkFD)
 		w.netlinkFD = -1
 	}
 	return nil

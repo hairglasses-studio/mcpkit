@@ -108,7 +108,7 @@ func newMockA2AAgent(
 	// Agent card endpoint.
 	mux.HandleFunc("/.well-known/agent-card.json", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(card)
+		_ = json.NewEncoder(w).Encode(card)
 	})
 
 	// A2A REST handler.
@@ -157,7 +157,7 @@ func TestRemoteAgent_FetchCardAndCreateTools(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewRemoteAgent: %v", err)
 	}
-	defer remote.Close()
+	defer func() { _ = remote.Close() }()
 
 	// Verify ToolModule interface.
 	if remote.Name() != "test-agent" {
@@ -220,7 +220,7 @@ func TestRemoteAgent_ToolCallSendsMessageAndReturnsResult(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewRemoteAgent: %v", err)
 	}
-	defer remote.Close()
+	defer func() { _ = remote.Close() }()
 
 	tools := remote.Tools()
 	if len(tools) != 1 {
@@ -285,7 +285,7 @@ func TestRemoteAgent_TimeoutHandling(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewRemoteAgent: %v", err)
 	}
-	defer remote.Close()
+	defer func() { _ = remote.Close() }()
 
 	tools := remote.Tools()
 	if len(tools) != 1 {
@@ -318,7 +318,7 @@ func TestRemoteAgent_NoSkillsProducesEmptyTools(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewRemoteAgent: %v", err)
 	}
-	defer remote.Close()
+	defer func() { _ = remote.Close() }()
 
 	tools := remote.Tools()
 	if len(tools) != 0 {
@@ -364,7 +364,7 @@ func TestRemoteAgent_WithPrefix(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewRemoteAgent: %v", err)
 	}
-	defer remote.Close()
+	defer func() { _ = remote.Close() }()
 
 	tools := remote.Tools()
 	if len(tools) != 1 {
@@ -396,7 +396,7 @@ func TestRemoteAgent_FromCard(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewRemoteAgentFromCard: %v", err)
 	}
-	defer remote.Close()
+	defer func() { _ = remote.Close() }()
 
 	if remote.Name() != "card-agent" {
 		t.Errorf("expected name %q, got %q", "card-agent", remote.Name())
@@ -449,7 +449,7 @@ func TestRemoteAgent_FailedTask(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewRemoteAgent: %v", err)
 	}
-	defer remote.Close()
+	defer func() { _ = remote.Close() }()
 
 	tools := remote.Tools()
 	req := registry.CallToolRequest{}
@@ -510,7 +510,7 @@ func TestRemoteAgent_RegisterWithRegistry(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewRemoteAgent: %v", err)
 	}
-	defer remote.Close()
+	defer func() { _ = remote.Close() }()
 
 	// Register with a real mcpkit registry.
 	reg := registry.NewToolRegistry()
