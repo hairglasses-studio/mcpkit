@@ -48,6 +48,7 @@ cov.out
 # Handoff files (may contain vault/credential metadata)
 HANDOFF.md
 .agents/
+!.agents/skills/
 
 # Development artifacts
 .claude-audit-report*
@@ -58,5 +59,6 @@ HANDOFF.md
 a2a-bridge
 stateless-http
 .claude/skills/
+!.claude/skills/*/SKILL.md
 .ralph/ab_tests/
 .ralph/benchmarks/
