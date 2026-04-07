@@ -1,6 +1,8 @@
 # Claude Code
-.claude/
-.codex/
+.claude/*
+!.claude/settings.json
+.codex/*
+!.codex/config.toml
 .gemini/*
 !.gemini/settings.json
 !.gemini/extensions/
@@ -57,7 +59,7 @@ HANDOFF.md
 # Development artifacts
 .claude-audit-report*
 .claude-fix-report*
-.claude/
+!.claude/settings.json
 
 # Compiled binaries
 a2a-bridge
