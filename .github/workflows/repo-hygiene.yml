@@ -9,3 +9,5 @@ on:
 jobs:
   hygiene:
     uses: hairglasses-studio/.github/.github/workflows/repo-hygiene.yml@main
+    with:
+      max-root-docs: 12
