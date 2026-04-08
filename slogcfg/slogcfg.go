@@ -1,10 +1,46 @@
 package slogcfg
 
 import (
+	"context"
 	"io"
 	"log/slog"
 	"os"
+
+	"go.opentelemetry.io/contrib/bridges/otelslog"
+	"go.opentelemetry.io/otel/trace"
 )
+
+// TracingHandler is a slog.Handler that adds trace_id and span_id to log records.
+type TracingHandler struct {
+	slog.Handler
+}
+
+// Handle adds trace and span IDs to the record if an active span is present in ctx.
+func (h *TracingHandler) Handle(ctx context.Context, r slog.Record) error {
+	if span := trace.SpanFromContext(ctx); span.SpanContext().IsValid() {
+		r.AddAttrs(
+			slog.String("trace_id", span.SpanContext().TraceID().String()),
+			slog.String("span_id", span.SpanContext().SpanID().String()),
+		)
+	}
+	return h.Handler.Handle(ctx, r)
+}
+
+// WithTracing returns a slog.Handler that adds trace and span IDs to log records
+// when an active OpenTelemetry span is present in the context.
+func WithTracing(h slog.Handler) slog.Handler {
+	return &TracingHandler{Handler: h}
+}
+
+// WithOTel returns an ExtraHandler function that bridges slog to OpenTelemetry Logs.
+// The name is used as the instrumentation scope name.
+func WithOTel(name string) func(slog.Handler) slog.Handler {
+	return func(h slog.Handler) slog.Handler {
+		// Note: otelslog.NewHandler does not wrap h; it is a terminal handler.
+		// To use both, use a fan-out handler or configure OTel to export to stdout.
+		return otelslog.NewHandler(name)
+	}
+}
 
 // Config controls the structured logging setup.
 type Config struct {

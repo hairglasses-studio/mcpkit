@@ -8,12 +8,17 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hairglasses-studio/mcpkit/registry"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/prometheus"
+	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/propagation"
+	sdklog "go.opentelemetry.io/otel/sdk/log"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -52,6 +57,9 @@ type Config struct {
 
 	// EnableMetrics enables OTEL metrics and Prometheus.
 	EnableMetrics bool
+
+	// EnableLogs enables OTEL logging export.
+	EnableLogs bool
 }
 
 // Provider holds initialized observability state.
@@ -79,6 +87,12 @@ func Init(ctx context.Context, cfg Config) (*Provider, func(context.Context) err
 		return nil, nil, fmt.Errorf("failed to create resource: %w", err)
 	}
 
+	// Set global propagator for trace context injection/extraction
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
+		propagation.TraceContext{},
+		propagation.Baggage{},
+	))
+
 	// Tracing
 	if cfg.EnableTracing && cfg.OTLPEndpoint != "" {
 		traceExporter, err := otlptracegrpc.New(ctx,
@@ -95,6 +109,24 @@ func Init(ctx context.Context, cfg Config) (*Provider, func(context.Context) err
 			otel.SetTracerProvider(tp)
 			p.tracer = tp.Tracer(cfg.ServiceName)
 			shutdownFuncs = append(shutdownFuncs, tp.Shutdown)
+		}
+	}
+
+	// Logs
+	if cfg.EnableLogs && cfg.OTLPEndpoint != "" {
+		logExporter, err := otlploggrpc.New(ctx,
+			otlploggrpc.WithEndpoint(cfg.OTLPEndpoint),
+			otlploggrpc.WithInsecure(),
+		)
+		if err != nil {
+			slog.Warn("failed to create log exporter", "error", err)
+		} else {
+			lp := sdklog.NewLoggerProvider(
+				sdklog.WithProcessor(sdklog.NewBatchProcessor(logExporter)),
+				sdklog.WithResource(res),
+			)
+			global.SetLoggerProvider(lp)
+			shutdownFuncs = append(shutdownFuncs, lp.Shutdown)
 		}
 	}
 
@@ -156,6 +188,46 @@ func Init(ctx context.Context, cfg Config) (*Provider, func(context.Context) err
 	}
 
 	return p, shutdown, nil
+}
+
+// InjectTraceContext injects the trace context from ctx into the provided map.
+// This is used for cross-server trace propagation via MCP _meta or HTTP headers.
+func (p *Provider) InjectTraceContext(ctx context.Context, carrier map[string]string) {
+	otel.GetTextMapPropagator().Inject(ctx, propagation.MapCarrier(carrier))
+}
+
+// ExtractTraceContext extracts the trace context from the provided map into a new context.
+func (p *Provider) ExtractTraceContext(ctx context.Context, carrier map[string]string) context.Context {
+	return otel.GetTextMapPropagator().Extract(ctx, propagation.MapCarrier(carrier))
+}
+
+// InjectMeta injects the trace context from ctx into the provided MCP Meta object.
+func (p *Provider) InjectMeta(ctx context.Context, meta *registry.ToolMeta) {
+	if meta == nil {
+		return
+	}
+	if meta.AdditionalFields == nil {
+		meta.AdditionalFields = make(map[string]any)
+	}
+	carrier := make(map[string]string)
+	p.InjectTraceContext(ctx, carrier)
+	for k, v := range carrier {
+		meta.AdditionalFields[k] = v
+	}
+}
+
+// ExtractMeta extracts the trace context from the provided MCP Meta object into a new context.
+func (p *Provider) ExtractMeta(ctx context.Context, meta *registry.ToolMeta) context.Context {
+	if meta == nil || meta.AdditionalFields == nil {
+		return ctx
+	}
+	carrier := make(map[string]string)
+	for k, v := range meta.AdditionalFields {
+		if s, ok := v.(string); ok {
+			carrier[k] = s
+		}
+	}
+	return p.ExtractTraceContext(ctx, carrier)
 }
 
 func createMetrics(meter metric.Meter) (*Metrics, error) {

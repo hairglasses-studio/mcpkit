@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"log/slog"
 	"strings"
 	"time"
 
@@ -29,6 +28,7 @@ import (
 	"github.com/hairglasses-studio/mcpkit/resources"
 	"github.com/hairglasses-studio/mcpkit/sanitize"
 	"github.com/hairglasses-studio/mcpkit/security"
+	"github.com/hairglasses-studio/mcpkit/slogcfg"
 )
 
 // ---------------------------------------------------------------------------
@@ -215,13 +215,20 @@ func (m *WorkflowPromptModule) Prompts() []prompts.PromptDefinition {
 
 func main() {
 	ctx := context.Background()
-	logger := slog.Default()
+
+	// --- Logging with OTel correlation ---
+	logger := slogcfg.Init(slogcfg.Config{
+		ServiceName:  "full-example",
+		ExtraHandler: slogcfg.WithTracing,
+	})
 
 	// --- Observability ---
 	obs, obsShutdown, err := observability.Init(ctx, observability.Config{
 		ServiceName:    "full-example",
 		ServiceVersion: "2.0.0",
+		EnableTracing:  true,
 		EnableMetrics:  true,
+		EnableLogs:     true,
 		PrometheusPort: "9091",
 	})
 	if err != nil {

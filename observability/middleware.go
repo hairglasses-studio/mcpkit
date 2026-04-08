@@ -14,6 +14,9 @@ import (
 // Middleware returns a registry.Middleware that records OTel metrics and
 // tracing spans for every tool invocation.
 //
+// It automatically extracts trace context from the MCP _meta field if present,
+// enabling cross-server distributed tracing.
+//
 // If finops.WithTokenUsage has been called on the context by an upstream
 // middleware (e.g. the finops middleware), the span will also carry
 // gen_ai.usage.input_tokens, gen_ai.usage.output_tokens, and
@@ -25,6 +28,9 @@ func (p *Provider) Middleware() registry.Middleware {
 			category = "unknown"
 		}
 		return func(ctx context.Context, request registry.CallToolRequest) (*registry.CallToolResult, error) {
+			// Extract trace context from request _meta if available
+			ctx = p.ExtractMeta(ctx, request.Params.Meta)
+
 			ctx, span := p.StartSpan(ctx, name)
 			if span != nil {
 				defer span.End()
@@ -41,6 +47,14 @@ func (p *Provider) Middleware() registry.Middleware {
 			start := time.Now()
 			result, err := next(ctx, request)
 			p.RecordToolInvocation(ctx, name, category, time.Since(start), err)
+
+			// Inject trace context into result _meta for the caller
+			if result != nil {
+				if result.Meta == nil {
+					result.Meta = &registry.ToolMeta{}
+				}
+				p.InjectMeta(ctx, result.Meta)
+			}
 
 			// Bridge finops token usage onto the span when available.
 			// Prefer the holder (populated by inner finops middleware) over
