@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "skills": [
+    {
+      "name": "mcpkit",
+      "export_plugin": false,
+      "claude_aliases": [
+        {
+          "name": "fix-issue",
+          "description": "Compatibility alias for the mcpkit issue-fix workflow."
+        },
+        {
+          "name": "mcp-tool-scaffold",
+          "description": "Compatibility alias for the mcpkit MCP tool scaffolding workflow."
+        },
+        {
+          "name": "new-tool",
+          "description": "Compatibility alias for the mcpkit new-tool scaffolding workflow."
+        },
+        {
+          "name": "test-package",
+          "description": "Compatibility alias for the mcpkit package-test workflow."
+        }
+      ]
+    },
+    {
+      "name": "mcpkit-go",
+      "claude_include_canonical": true,
+      "export_plugin": false
+    },
+    {
+      "name": "go-conventions",
+      "claude_include_canonical": true,
+      "export_plugin": false
+    }
+  ]
+}

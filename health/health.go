@@ -14,6 +14,9 @@ type Pinger interface {
 	Ping(ctx context.Context) error
 }
 
+// CheckFunc is a function that returns component-specific health data.
+type CheckFunc func(context.Context) any
+
 // Status represents the health status.
 type Status struct {
 	Status       string            `json:"status"`
@@ -22,17 +25,19 @@ type Status struct {
 	Tasks        int               `json:"active_tasks,omitempty"`
 	Circuits     map[string]string `json:"circuit_breakers,omitempty"`
 	SessionStore string            `json:"session_store,omitempty"`
+	Custom       map[string]any    `json:"custom,omitempty"`
 }
 
 // Checker provides health check data.
 type Checker struct {
-	mu           sync.RWMutex
-	startedAt    time.Time
-	status       string
-	toolCount    func() int
-	taskCount    func() int
-	circuits     func() map[string]string
-	sessionStore Pinger
+	mu             sync.RWMutex
+	startedAt      time.Time
+	status         string
+	toolCount      func() int
+	taskCount      func() int
+	circuits       func() map[string]string
+	sessionStore   Pinger
+	customCheckers map[string]CheckFunc
 }
 
 // SetStatus sets the overall lifecycle status (e.g., "healthy", "draining", "stopped").
@@ -83,6 +88,17 @@ func WithSessionStore(p Pinger) Option {
 	return func(c *Checker) { c.sessionStore = p }
 }
 
+// WithCustomChecker registers a named custom health checker.
+// Useful for project-specific metrics like GPU status or disk space.
+func WithCustomChecker(name string, fn CheckFunc) Option {
+	return func(c *Checker) {
+		if c.customCheckers == nil {
+			c.customCheckers = make(map[string]CheckFunc)
+		}
+		c.customCheckers[name] = fn
+	}
+}
+
 // NewChecker creates a new health checker.
 func NewChecker(opts ...Option) *Checker {
 	c := &Checker{
@@ -118,6 +134,16 @@ func (c *Checker) Check() Status {
 			s.SessionStore = "healthy"
 		}
 	}
+
+	if len(c.customCheckers) > 0 {
+		s.Custom = make(map[string]any)
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		for name, fn := range c.customCheckers {
+			s.Custom[name] = fn(ctx)
+		}
+	}
+
 	return s
 }
 

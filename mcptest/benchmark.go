@@ -82,6 +82,15 @@ func BenchmarkSuite(b *testing.B, reg *registry.ToolRegistry, argsFunc func(stri
 	}
 }
 
+// BaselineBenchmark runs a standardized sequential benchmark for all tools in reg,
+// capturing both time and memory allocations. It is intended for use in CI
+// to track performance stability across code changes.
+func BaselineBenchmark(b *testing.B, reg *registry.ToolRegistry, argsFunc func(string) map[string]any) {
+	b.Helper()
+	b.ReportAllocs()
+	BenchmarkSuite(b, reg, argsFunc)
+}
+
 // buildCallToolRequest constructs a mcp.CallToolRequest for the given tool and args.
 func buildCallToolRequest(name string, args map[string]any) registry.CallToolRequest {
 	req := mcp.CallToolRequest{}
