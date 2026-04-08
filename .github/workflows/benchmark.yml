@@ -27,7 +27,7 @@ jobs:
 
       - name: Download baseline
         if: github.event_name == 'pull_request'
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: bench-baseline.txt
           key: benchmark-${{ github.base_ref }}
@@ -43,14 +43,14 @@ jobs:
 
       - name: Save baseline
         if: github.ref == 'refs/heads/main'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           path: bench-current.txt
           key: benchmark-main-${{ github.sha }}
 
       - name: Save baseline as latest
         if: github.ref == 'refs/heads/main'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           path: bench-current.txt
           key: benchmark-main
