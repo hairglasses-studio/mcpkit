@@ -5,6 +5,7 @@ package gate
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/hairglasses-studio/mcpkit/registry"
 )
@@ -126,4 +127,39 @@ func PauseWrites(_ context.Context, _ string, td registry.ToolDefinition, _ regi
 		return VerdictPause
 	}
 	return VerdictProceed
+}
+
+// ChainGates returns a GateFunc that evaluates gates left-to-right,
+// short-circuiting on the first non-Proceed verdict.
+func ChainGates(gates ...GateFunc) GateFunc {
+	return func(ctx context.Context, name string, td registry.ToolDefinition, req registry.CallToolRequest) Verdict {
+		for _, g := range gates {
+			if v := g(ctx, name, td, req); v != VerdictProceed {
+				return v
+			}
+		}
+		return VerdictProceed
+	}
+}
+
+// PriorityGate pairs a GateFunc with a numeric priority.
+// Higher priority values are evaluated first by PriorityChain.
+type PriorityGate struct {
+	Priority int
+	Gate     GateFunc
+}
+
+// PriorityChain returns a GateFunc that evaluates gates in descending
+// priority order, short-circuiting on the first non-Proceed verdict.
+func PriorityChain(gates ...PriorityGate) GateFunc {
+	sorted := make([]PriorityGate, len(gates))
+	copy(sorted, gates)
+	sort.Slice(sorted, func(i, j int) bool {
+		return sorted[i].Priority > sorted[j].Priority
+	})
+	funcs := make([]GateFunc, len(sorted))
+	for i, g := range sorted {
+		funcs[i] = g.Gate
+	}
+	return ChainGates(funcs...)
 }

@@ -173,3 +173,72 @@ func TestMiddleware_UnknownVerdict(t *testing.T) {
 		t.Error("expected error result for unknown verdict")
 	}
 }
+
+func TestChainGates_AllProceed(t *testing.T) {
+	chain := ChainGates(AlwaysProceed, AlwaysProceed, AlwaysProceed)
+	v := chain(context.Background(), "tool", registry.ToolDefinition{}, makeReq())
+	if v != VerdictProceed {
+		t.Fatalf("expected Proceed, got %v", v)
+	}
+}
+
+func TestChainGates_ShortCircuit(t *testing.T) {
+	deny := func(_ context.Context, _ string, _ registry.ToolDefinition, _ registry.CallToolRequest) Verdict {
+		return VerdictDeny
+	}
+	called := false
+	after := func(_ context.Context, _ string, _ registry.ToolDefinition, _ registry.CallToolRequest) Verdict {
+		called = true
+		return VerdictProceed
+	}
+	chain := ChainGates(AlwaysProceed, deny, after)
+	v := chain(context.Background(), "tool", registry.ToolDefinition{}, makeReq())
+	if v != VerdictDeny {
+		t.Fatalf("expected Deny, got %v", v)
+	}
+	if called {
+		t.Fatal("gate after deny should not have been called")
+	}
+}
+
+func TestChainGates_Empty(t *testing.T) {
+	chain := ChainGates()
+	v := chain(context.Background(), "tool", registry.ToolDefinition{}, makeReq())
+	if v != VerdictProceed {
+		t.Fatalf("expected Proceed for empty chain, got %v", v)
+	}
+}
+
+func TestPriorityChain_HighPriorityWins(t *testing.T) {
+	deny := func(_ context.Context, _ string, _ registry.ToolDefinition, _ registry.CallToolRequest) Verdict {
+		return VerdictDeny
+	}
+	chain := PriorityChain(
+		PriorityGate{Priority: 1, Gate: AlwaysProceed},
+		PriorityGate{Priority: 10, Gate: deny},
+	)
+	v := chain(context.Background(), "tool", registry.ToolDefinition{}, makeReq())
+	if v != VerdictDeny {
+		t.Fatalf("expected Deny from high-priority gate, got %v", v)
+	}
+}
+
+func TestPriorityChain_OrderIndependent(t *testing.T) {
+	deny := func(_ context.Context, _ string, _ registry.ToolDefinition, _ registry.CallToolRequest) Verdict {
+		return VerdictDeny
+	}
+	// Same gates, different input order — should produce same result.
+	chain1 := PriorityChain(
+		PriorityGate{Priority: 10, Gate: deny},
+		PriorityGate{Priority: 1, Gate: AlwaysProceed},
+	)
+	chain2 := PriorityChain(
+		PriorityGate{Priority: 1, Gate: AlwaysProceed},
+		PriorityGate{Priority: 10, Gate: deny},
+	)
+	v1 := chain1(context.Background(), "tool", registry.ToolDefinition{}, makeReq())
+	v2 := chain2(context.Background(), "tool", registry.ToolDefinition{}, makeReq())
+	if v1 != v2 {
+		t.Fatalf("expected same verdict regardless of input order: v1=%v, v2=%v", v1, v2)
+	}
+}
