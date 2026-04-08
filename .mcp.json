@@ -9,7 +9,10 @@
   "mcpServers": {
     "_example_stdio_server": {
       "command": "go",
-      "args": ["run", "./cmd/my-server"],
+      "args": [
+        "run",
+        "./cmd/my-server"
+      ],
       "env": {
         "LOG_LEVEL": "info"
       }
