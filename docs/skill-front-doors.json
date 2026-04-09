@@ -3,7 +3,6 @@
   "skills": [
     {
       "name": "mcpkit",
-      "export_plugin": false,
       "claude_aliases": [
         {
           "name": "fix-issue",
@@ -25,13 +24,11 @@
     },
     {
       "name": "mcpkit-go",
-      "claude_include_canonical": true,
-      "export_plugin": false
+      "claude_include_canonical": true
     },
     {
       "name": "go-conventions",
-      "claude_include_canonical": true,
-      "export_plugin": false
+      "claude_include_canonical": true
     }
   ],
   "front_doors": [

@@ -7,7 +7,6 @@ description: 'Compatibility alias for the mcpkit MCP tool scaffolding workflow.'
 
 Compatibility alias for the canonical `mcpkit` skill.
 
-
 # mcpkit Framework Workflows
 
 Codex-native entrypoint for the highest-value `mcpkit` workflows.
