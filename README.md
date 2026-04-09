@@ -34,6 +34,7 @@ Built on [github.com/mark3labs/mcp-go](https://github.com/mark3labs/mcp-go), mcp
 - **Gateway** — multi-server aggregation with namespaced tool routing and per-upstream resilience policies (`gateway`)
 - **Agent memory** — episodic/semantic/procedural memory tiers with pluggable storage backends (`memory`)
 - **Skills** — context-aware lazy tool loading with skill bundles and triggers (`skills`)
+- **Repo front doors** — generated skill priority surface for the framework workflows ([docs/SKILL-FRONT-DOORS.md](docs/SKILL-FRONT-DOORS.md))
 - **Autonomous loops** — the Ralph Loop pattern for iterative, self-directing task execution (`ralph`)
 - **MCP-A2A bridge** — bidirectional MCP/A2A protocol bridge: expose MCP tools as A2A skills and consume A2A agents as MCP tools (`bridge/a2a`) ([docs](bridge/a2a/README.md))
 - **Multi-protocol gateway** — single HTTP endpoint serving MCP, A2A, and OpenAI function calling via automatic protocol detection and canonical translation (`gateway/multi`) ([docs](gateway/multi/README.md))

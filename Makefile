@@ -1,4 +1,4 @@
-.PHONY: build test vet lint check build-official test-official check-dual rdloop-build rdloop-dry rdloop rdloop-12h rdloop-status
+.PHONY: build test vet lint check build-official test-official check-dual rdloop-build rdloop-dry rdloop rdloop-12h rdloop-status skill-surface skill-surface-check
 
 build:
 	go build ./...
@@ -13,7 +13,7 @@ lint:
 	@command -v golangci-lint >/dev/null 2>&1 && golangci-lint run ./... || \
 	(command -v staticcheck >/dev/null 2>&1 && staticcheck ./... || echo "no linter installed, skipping")
 
-check: build vet test
+check: build vet test skill-surface-check
 
 # Dual-SDK targets — verify the official_sdk build tag compiles.
 # Tests under official_sdk are limited to packages with complete implementations.
@@ -50,5 +50,11 @@ print(f'Peak/cycle: \$${s.get(\"peak_cost_per_cycle\",0):.4f}'); \
 print(f'Downgrades: {s.get(\"total_downgrades\",0)}'); \
 print(f'Last cycle: {s[\"last_cycle_at\"]}'); \
 " 2>/dev/null || echo "No state file found. Run 'make rdloop' first."
+
+skill-surface:
+	go run ./tools/genskillsurface
+
+skill-surface-check:
+	go run ./tools/genskillsurface --check
 
 -include $(HOME)/hairglasses-studio/dotfiles/make/pipeline.mk
