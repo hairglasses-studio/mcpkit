@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hairglasses-studio/mcpkit/finops"
 	"github.com/hairglasses-studio/mcpkit/registry"
 )
 
@@ -148,6 +149,22 @@ func (c *APISamplingClient) CreateMessage(ctx context.Context, req CreateMessage
 		}
 	}
 
+	ctx, span := startLLMSpan(ctx, llmSpanConfig{
+		System:    c.genAISystem(),
+		Operation: "chat",
+		Model:     model,
+		BaseURL:   c.baseURL(),
+	})
+	var (
+		usage      finops.TokenUsage
+		stopReason string
+		attempts   int
+		callErr    error
+	)
+	defer func() {
+		finishLLMSpan(ctx, span, usage, stopReason, attempts, callErr)
+	}()
+
 	var msgs []apiMessage
 	for _, m := range req.Messages {
 		text := ""
@@ -182,11 +199,13 @@ func (c *APISamplingClient) CreateMessage(ctx context.Context, req CreateMessage
 	var resp *apiResponse
 	var lastErr error
 	for attempt := range 4 {
+		attempts = attempt + 1
 		if attempt > 0 {
 			backoff := time.Duration(math.Pow(2, float64(attempt))) * time.Second
 			select {
 			case <-ctx.Done():
-				return nil, ctx.Err()
+				callErr = ctx.Err()
+				return nil, callErr
 			case <-time.After(backoff):
 			}
 		}
@@ -200,7 +219,8 @@ func (c *APISamplingClient) CreateMessage(ctx context.Context, req CreateMessage
 		}
 	}
 	if lastErr != nil {
-		return nil, fmt.Errorf("api sampler: all retries exhausted: %w", lastErr)
+		callErr = fmt.Errorf("api sampler: all retries exhausted: %w", lastErr)
+		return nil, callErr
 	}
 
 	text := ""
@@ -217,8 +237,21 @@ func (c *APISamplingClient) CreateMessage(ctx context.Context, req CreateMessage
 	}
 	result.Role = "assistant"
 	result.Content = registry.MakeTextContent(text)
+	stopReason = resp.StopReason
+	usage = finops.TokenUsage{
+		InputTokens:  resp.Usage.InputTokens,
+		OutputTokens: resp.Usage.OutputTokens,
+		Model:        resp.Model,
+	}
 
 	return result, nil
+}
+
+func (c *APISamplingClient) genAISystem() string {
+	if isLikelyOllamaBaseURL(c.baseURL()) {
+		return "ollama"
+	}
+	return "anthropic"
 }
 
 func (c *APISamplingClient) doRequest(ctx context.Context, body apiRequest) (*apiResponse, error) {

@@ -31,6 +31,7 @@ Built on [github.com/mark3labs/mcp-go](https://github.com/mark3labs/mcp-go), mcp
 - **Testing infrastructure** — test server/client, assertion helpers, session record/replay, golden file snapshots, benchmark helpers (`mcptest`)
 - **Input/output sanitization** — secret and PII redaction, injection filtering, URI validation with SSRF and path traversal protection (`sanitize`)
 - **Tool integrity** — SHA-256 fingerprinting and tamper detection for registered tools (`registry`)
+- **GenAI-aware observability** — tool spans, token usage bridging, and client-side sampling spans for Anthropic-compatible and native Ollama backends (`observability`, `sampling`)
 - **Gateway** — multi-server aggregation with namespaced tool routing and per-upstream resilience policies (`gateway`)
 - **Agent memory** — episodic/semantic/procedural memory tiers with pluggable storage backends (`memory`)
 - **Skills** — context-aware lazy tool loading with skill bundles and triggers (`skills`)
@@ -108,7 +109,7 @@ npx @modelcontextprotocol/inspector go run main.go      # interactive debugger
 | `resources` | Resource registry, middleware chain, server integration for URI-based data, URI validation middleware | `registry` |
 | `prompts` | Prompt registry, middleware chain, server integration for reusable templates | `registry` |
 | `logging` | slog.Handler bridge to MCP clients, tool invocation logging middleware | `registry` |
-| `sampling` | Sampling client interface, context injection middleware, request builders | `registry` |
+| `sampling` | Sampling client interface, context injection middleware, request builders, GenAI client spans | `registry`, `finops` |
 | `roots` | Client workspace root discovery, caching, context helpers | `registry` |
 | `research` | MCP ecosystem monitoring and viability assessment tools | `registry`, `handler`, `client` |
 | `gateway` | Multi-server aggregation with namespaced tool routing, per-upstream resilience (circuit breaker, rate limit, timeout) | `registry`, `client`, `resilience` |

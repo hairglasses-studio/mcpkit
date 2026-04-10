@@ -12,6 +12,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/hairglasses-studio/mcpkit/finops"
 )
 
 const defaultOllamaBaseURL = "http://127.0.0.1:11434"
@@ -235,9 +237,33 @@ func (c *NativeOllamaClient) ShowModel(ctx context.Context, model string) (map[s
 // Generate calls /api/generate with native Ollama options.
 func (c *NativeOllamaClient) Generate(ctx context.Context, req NativeOllamaGenerateRequest) (*NativeOllamaGenerateResponse, error) {
 	req.Stream = false
+	ctx, span := startLLMSpan(ctx, llmSpanConfig{
+		System:    "ollama",
+		Operation: "generate",
+		Model:     req.Model,
+		BaseURL:   c.baseURL(),
+	})
+	var (
+		usage      finops.TokenUsage
+		stopReason string
+		callErr    error
+	)
+	defer func() {
+		finishLLMSpan(ctx, span, usage, stopReason, 1, callErr)
+	}()
+
 	var response NativeOllamaGenerateResponse
 	if err := c.doJSON(ctx, http.MethodPost, "/api/generate", req, &response); err != nil {
+		callErr = err
 		return nil, err
+	}
+	usage = finops.TokenUsage{
+		InputTokens:  response.PromptEvalCount,
+		OutputTokens: response.EvalCount,
+		Model:        response.Model,
+	}
+	if response.Done {
+		stopReason = "stop"
 	}
 	return &response, nil
 }
@@ -245,9 +271,33 @@ func (c *NativeOllamaClient) Generate(ctx context.Context, req NativeOllamaGener
 // Chat calls /api/chat with native Ollama options.
 func (c *NativeOllamaClient) Chat(ctx context.Context, req NativeOllamaChatRequest) (*NativeOllamaChatResponse, error) {
 	req.Stream = false
+	ctx, span := startLLMSpan(ctx, llmSpanConfig{
+		System:    "ollama",
+		Operation: "chat",
+		Model:     req.Model,
+		BaseURL:   c.baseURL(),
+	})
+	var (
+		usage      finops.TokenUsage
+		stopReason string
+		callErr    error
+	)
+	defer func() {
+		finishLLMSpan(ctx, span, usage, stopReason, 1, callErr)
+	}()
+
 	var response NativeOllamaChatResponse
 	if err := c.doJSON(ctx, http.MethodPost, "/api/chat", req, &response); err != nil {
+		callErr = err
 		return nil, err
+	}
+	usage = finops.TokenUsage{
+		InputTokens:  response.PromptEvalCount,
+		OutputTokens: response.EvalCount,
+		Model:        response.Model,
+	}
+	if response.Done {
+		stopReason = "stop"
 	}
 	return &response, nil
 }
