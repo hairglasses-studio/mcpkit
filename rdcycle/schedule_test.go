@@ -24,7 +24,7 @@ func TestHandleSchedule_Success(t *testing.T) {
 	dir := t.TempDir()
 	outputPath := filepath.Join(dir, "next_cycle.json")
 
-	m := NewModule(CycleConfig{RoadmapPath: "roadmap.json"})
+	m := NewModule(CycleConfig{RoadmapPath: "ROADMAP.md"})
 	out, err := m.handleSchedule(context.Background(), ScheduleInput{
 		CycleName:  "March Week 3",
 		OutputPath: outputPath,
@@ -92,12 +92,12 @@ func TestHandleSchedule_DefaultRoadmapPath(t *testing.T) {
 	dir := t.TempDir()
 	outputPath := filepath.Join(dir, "next_cycle.json")
 
-	// No roadmap path in config — should fall back to "roadmap.json"
+	// No roadmap path in config — should fall back to "ROADMAP.md"
 	m := NewModule(CycleConfig{})
 	out, err := m.handleSchedule(context.Background(), ScheduleInput{
 		CycleName:   "Test",
 		OutputPath:  outputPath,
-		RoadmapPath: "roadmap.json", // explicitly set so test is deterministic
+		RoadmapPath: "ROADMAP.md", // explicitly set so test is deterministic
 	})
 	if err != nil {
 		t.Fatalf("handleSchedule: %v", err)
@@ -114,7 +114,7 @@ func TestHandleSchedule_DefaultRoadmapPath(t *testing.T) {
 	if err := json.Unmarshal(data, &spec); err != nil {
 		t.Fatalf("invalid JSON: %v", err)
 	}
-	// Tasks should contain a plan task that references roadmap.json
+	// Tasks should contain a plan task that references ROADMAP.md
 	tasks, ok := spec["tasks"].([]any)
 	if !ok || len(tasks) == 0 {
 		t.Fatal("expected tasks in spec")
@@ -123,13 +123,13 @@ func TestHandleSchedule_DefaultRoadmapPath(t *testing.T) {
 	for _, raw := range tasks {
 		task, _ := raw.(map[string]any)
 		desc, _ := task["description"].(string)
-		if strings.Contains(desc, "roadmap.json") {
+		if strings.Contains(desc, "ROADMAP.md") {
 			found = true
 			break
 		}
 	}
 	if !found {
-		t.Error("no task description mentions roadmap.json")
+		t.Error("no task description mentions ROADMAP.md")
 	}
 }
 

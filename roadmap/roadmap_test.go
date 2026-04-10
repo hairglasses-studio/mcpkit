@@ -148,6 +148,62 @@ func TestSaveRoadmap_AtomicWrite(t *testing.T) {
 	}
 }
 
+// TestLoadSaveRoundTrip_Markdown writes a roadmap to a temp markdown file and reads it back.
+func TestLoadSaveRoundTrip_Markdown(t *testing.T) {
+	t.Parallel()
+
+	rm := sampleRoadmap()
+	// Add some extras to test full parsing
+	rm.Phases[1].Items[1].DependsOn = []string{"2A"}
+	rm.Phases[1].Items[1].Priority = "high"
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "ROADMAP.md")
+
+	if err := SaveRoadmap(path, rm); err != nil {
+		t.Fatalf("SaveRoadmap: %v", err)
+	}
+
+	loaded, err := LoadRoadmap(path)
+	if err != nil {
+		t.Fatalf("LoadRoadmap: %v", err)
+	}
+
+	if loaded.Title != rm.Title {
+		t.Errorf("Title = %q, want %q", loaded.Title, rm.Title)
+	}
+	if loaded.UpdatedAt != rm.UpdatedAt {
+		t.Errorf("UpdatedAt = %q, want %q", loaded.UpdatedAt, rm.UpdatedAt)
+	}
+	if len(loaded.Phases) != len(rm.Phases) {
+		t.Fatalf("len(Phases) = %d, want %d", len(loaded.Phases), len(rm.Phases))
+	}
+
+	// Verify phase 2 attributes
+	p2 := loaded.Phases[1]
+	if p2.ID != "2" {
+		t.Errorf("Phases[1].ID = %q, want %q", p2.ID, "2")
+	}
+	if p2.Name != "Core Features" {
+		t.Errorf("Phases[1].Name = %q, want %q", p2.Name, "Core Features")
+	}
+	if p2.Status != PhaseStatusActive {
+		t.Errorf("Phases[1].Status = %q, want active", p2.Status)
+	}
+
+	// Verify item 2B (index 1 in phase 2)
+	item2B := p2.Items[1]
+	if item2B.ID != "2B" {
+		t.Errorf("item ID = %q, want %q", item2B.ID, "2B")
+	}
+	if item2B.Priority != "high" {
+		t.Errorf("item Priority = %q, want high", item2B.Priority)
+	}
+	if len(item2B.DependsOn) != 1 || item2B.DependsOn[0] != "2A" {
+		t.Errorf("item DependsOn = %v, want [2A]", item2B.DependsOn)
+	}
+}
+
 // TestRenderMarkdown_PhaseTag verifies phase XML tags appear in output.
 func TestRenderMarkdown_PhaseTag(t *testing.T) {
 	t.Parallel()

@@ -12,7 +12,7 @@ import (
 
 // CycleConfig configures the R&D cycle orchestrator.
 type CycleConfig struct {
-	RoadmapPath string   // Path to roadmap.json
+	RoadmapPath string   // Path to ROADMAP.md
 	GitRoot     string   // Root of the git repository
 	ScanRepos   []string // GitHub repos to monitor (owner/repo)
 	DateRange   string   // ISO 8601 since date for scans

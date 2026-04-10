@@ -56,7 +56,7 @@ func (m *Module) handleSchedule(ctx context.Context, input ScheduleInput) (Sched
 		if roadmapPath == "" {
 			roadmapPath = m.config.RoadmapPath
 			if roadmapPath == "" {
-				roadmapPath = "roadmap.json"
+				roadmapPath = "ROADMAP.md"
 			}
 		}
 
@@ -135,7 +135,7 @@ func (m *Module) handleSchedule(ctx context.Context, input ScheduleInput) (Sched
 	if roadmapPath == "" {
 		roadmapPath = m.config.RoadmapPath
 		if roadmapPath == "" {
-			roadmapPath = "roadmap.json"
+			roadmapPath = "ROADMAP.md"
 		}
 	}
 

@@ -10,17 +10,25 @@ import (
 	"io"
 	"math"
 	"net/http"
+	"net/url"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/hairglasses-studio/mcpkit/registry"
 )
 
-// APISamplingClient implements SamplingClient by calling the Anthropic Messages API directly.
-// Use this when the MCP client doesn't support sampling (e.g., Claude Code).
+const defaultAnthropicBaseURL = "https://api.anthropic.com"
+
+// APISamplingClient implements SamplingClient by calling an Anthropic-compatible
+// Messages API directly. The default target is Anthropic's hosted API, but the
+// client can also point at local-compatible backends such as Ollama.
 type APISamplingClient struct {
-	APIKey       string
-	DefaultModel string
-	HTTPClient   *http.Client
+	APIKey             string
+	DefaultModel       string
+	BaseURL            string
+	AuthHeaderStrategy string
+	HTTPClient         *http.Client
 }
 
 func (c *APISamplingClient) httpClient() *http.Client {
@@ -28,6 +36,64 @@ func (c *APISamplingClient) httpClient() *http.Client {
 		return c.HTTPClient
 	}
 	return &http.Client{Timeout: 5 * time.Minute}
+}
+
+func (c *APISamplingClient) baseURL() string {
+	baseURL := strings.TrimSpace(c.BaseURL)
+	if baseURL == "" {
+		baseURL = defaultAnthropicBaseURL
+	}
+	return strings.TrimRight(baseURL, "/")
+}
+
+func (c *APISamplingClient) messagesURL() string {
+	baseURL := c.baseURL()
+	switch {
+	case strings.HasSuffix(baseURL, "/messages"):
+		return baseURL
+	case strings.HasSuffix(baseURL, "/v1"):
+		return baseURL + "/messages"
+	default:
+		return baseURL + "/v1/messages"
+	}
+}
+
+func (c *APISamplingClient) resolvedAPIKey() string {
+	if apiKey := strings.TrimSpace(c.APIKey); apiKey != "" {
+		return apiKey
+	}
+	if isLikelyOllamaBaseURL(c.baseURL()) {
+		if apiKey := strings.TrimSpace(os.Getenv("OLLAMA_API_KEY")); apiKey != "" {
+			return apiKey
+		}
+		return "ollama"
+	}
+	return ""
+}
+
+func (c *APISamplingClient) authHeaderStrategy() string {
+	if strategy := strings.TrimSpace(c.AuthHeaderStrategy); strategy != "" {
+		return strings.ToLower(strategy)
+	}
+	if isLikelyOllamaBaseURL(c.baseURL()) {
+		return "both"
+	}
+	return "anthropic"
+}
+
+func isLikelyOllamaBaseURL(raw string) bool {
+	parsed, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil {
+		return false
+	}
+	host := strings.ToLower(parsed.Hostname())
+	if host == "127.0.0.1" || host == "localhost" || host == "::1" {
+		return true
+	}
+	if strings.Contains(host, "ollama") {
+		return true
+	}
+	return parsed.Port() == "11434"
 }
 
 type apiRequest struct {
@@ -65,7 +131,7 @@ type apiError struct {
 	Message string `json:"message"`
 }
 
-// CreateMessage sends a sampling request to the Anthropic Messages API.
+// CreateMessage sends a sampling request to the configured Messages API.
 // It validates the request before sending; returns an error if validation fails.
 func (c *APISamplingClient) CreateMessage(ctx context.Context, req CreateMessageRequest) (*CreateMessageResult, error) {
 	if err := ValidateRequest(req); err != nil {
@@ -161,11 +227,28 @@ func (c *APISamplingClient) doRequest(ctx context.Context, body apiRequest) (*ap
 		return nil, fmt.Errorf("api sampler: marshal request: %w", err)
 	}
 
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.anthropic.com/v1/messages", bytes.NewReader(payload))
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, c.messagesURL(), bytes.NewReader(payload))
 	if err != nil {
 		return nil, fmt.Errorf("api sampler: create request: %w", err)
 	}
-	httpReq.Header.Set("x-api-key", c.APIKey)
+	apiKey := c.resolvedAPIKey()
+	switch c.authHeaderStrategy() {
+	case "authorization", "bearer":
+		if apiKey != "" {
+			httpReq.Header.Set("Authorization", "Bearer "+apiKey)
+		}
+	case "both":
+		if apiKey != "" {
+			httpReq.Header.Set("x-api-key", apiKey)
+			httpReq.Header.Set("Authorization", "Bearer "+apiKey)
+		}
+	case "none":
+		// Deliberately no auth header.
+	default:
+		if apiKey != "" {
+			httpReq.Header.Set("x-api-key", apiKey)
+		}
+	}
 	httpReq.Header.Set("anthropic-version", "2023-06-01")
 	httpReq.Header.Set("content-type", "application/json")
 

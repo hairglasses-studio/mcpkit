@@ -49,7 +49,7 @@ func (m *Module) handlePlan(ctx context.Context, input PlanInput) (PlanOutput, e
 		path = input.RoadmapPath
 	}
 	if path == "" {
-		path = "roadmap.json"
+		path = "ROADMAP.md"
 	}
 
 	rm, err := roadmap.LoadRoadmap(path)

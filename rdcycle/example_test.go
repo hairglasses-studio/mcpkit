@@ -11,7 +11,7 @@ import (
 // with a ToolRegistry so all R&D cycle tools become available.
 func ExampleNewModule() {
 	cfg := rdcycle.CycleConfig{
-		RoadmapPath: "roadmap.json",
+		RoadmapPath: "ROADMAP.md",
 		GitRoot:     ".",
 		ScanRepos:   []string{"anthropics/anthropic-sdk-go"},
 		DateRange:   "2026-01-01",

@@ -499,6 +499,42 @@ func TestAPISamplingClient_DoRequest_Success(t *testing.T) {
 	}
 }
 
+func TestAPISamplingClient_OllamaCompatibleHeadersAndPath(t *testing.T) {
+	t.Setenv("OLLAMA_API_KEY", "local-key")
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/messages" {
+			t.Fatalf("path = %q, want /v1/messages", r.URL.Path)
+		}
+		if r.Header.Get("x-api-key") != "local-key" {
+			t.Fatalf("x-api-key = %q, want local-key", r.Header.Get("x-api-key"))
+		}
+		if r.Header.Get("Authorization") != "Bearer local-key" {
+			t.Fatalf("Authorization = %q, want Bearer local-key", r.Header.Get("Authorization"))
+		}
+
+		resp := apiResponse{
+			Content:    []apiContent{{Type: "text", Text: "ok"}},
+			Model:      "code-primary",
+			StopReason: "end_turn",
+		}
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(resp)
+	}))
+	defer ts.Close()
+
+	client := &APISamplingClient{
+		BaseURL:      "http://127.0.0.1:11434",
+		DefaultModel: "code-primary",
+		HTTPClient:   testHTTPClient(ts),
+	}
+
+	_, err := client.CreateMessage(context.Background(), CompletionRequest([]SamplingMessage{TextMessage("user", "hi")}))
+	if err != nil {
+		t.Fatalf("CreateMessage: %v", err)
+	}
+}
+
 func TestAPIRateLimitError_Error(t *testing.T) {
 	t.Parallel()
 

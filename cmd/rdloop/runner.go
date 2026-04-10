@@ -381,6 +381,9 @@ func (r *MultiCycleRunner) runOneCycle(ctx context.Context, cycleNum int, specFi
 // we use Opus pricing as the conservative upper bound — the actual spend
 // will be lower when haiku handles verify/reflect/report/schedule phases.
 func estimateDollarCost(us finops.UsageSummary, profile rdcycle.BudgetProfile) float64 {
+	if len(profile.ModelPricing) == 0 {
+		return 0
+	}
 	inputRate := 0.015  // opus per 1K tokens
 	outputRate := 0.075 // opus per 1K tokens
 	for _, mp := range profile.ModelPricing {
