@@ -2,9 +2,7 @@ package rdcycle
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -35,7 +33,7 @@ func TestSynthesize_Basic(t *testing.T) {
 	synth := NewSynthesizer([]TaskSource{src}, le)
 	spec, err := synth.Synthesize(context.Background(), SynthesisConfig{
 		CycleName:   "test-cycle",
-		RoadmapPath: "roadmap.json",
+		RoadmapPath: "ROADMAP.md",
 		Strategy:    StrategyFull,
 	})
 	if err != nil {
@@ -81,7 +79,7 @@ func TestSynthesize_MaxTasks(t *testing.T) {
 	synth := NewSynthesizer([]TaskSource{src}, le)
 	spec, err := synth.Synthesize(context.Background(), SynthesisConfig{
 		CycleName:   "max-test",
-		RoadmapPath: "roadmap.json",
+		RoadmapPath: "ROADMAP.md",
 		Strategy:    StrategyFull,
 		MaxTasks:    2,
 	})
@@ -108,7 +106,7 @@ func TestSynthesize_MaintenanceStrategy(t *testing.T) {
 	synth := NewSynthesizer([]TaskSource{src}, le)
 	spec, err := synth.Synthesize(context.Background(), SynthesisConfig{
 		CycleName:   "maint",
-		RoadmapPath: "roadmap.json",
+		RoadmapPath: "ROADMAP.md",
 		Strategy:    StrategyMaintenance,
 	})
 	if err != nil {
@@ -144,7 +142,7 @@ func TestSynthesize_AvoidPatterns(t *testing.T) {
 	synth := NewSynthesizer([]TaskSource{src}, le)
 	spec, err := synth.Synthesize(context.Background(), SynthesisConfig{
 		CycleName:   "avoid-test",
-		RoadmapPath: "roadmap.json",
+		RoadmapPath: "ROADMAP.md",
 		Strategy:    StrategyFull,
 	})
 	if err != nil {
@@ -172,7 +170,7 @@ func TestSynthesize_FailedSourceContinues(t *testing.T) {
 	synth := NewSynthesizer([]TaskSource{failing, working}, le)
 	spec, err := synth.Synthesize(context.Background(), SynthesisConfig{
 		CycleName:   "fail-test",
-		RoadmapPath: "roadmap.json",
+		RoadmapPath: "ROADMAP.md",
 		Strategy:    StrategyFull,
 	})
 	if err != nil {
@@ -228,7 +226,7 @@ func TestSynthesize_ValidSpec(t *testing.T) {
 	synth := NewSynthesizer([]TaskSource{src}, le)
 	spec, err := synth.Synthesize(context.Background(), SynthesisConfig{
 		CycleName:   "valid-test",
-		RoadmapPath: "roadmap.json",
+		RoadmapPath: "ROADMAP.md",
 		Strategy:    StrategyFull,
 	})
 	if err != nil {
@@ -242,7 +240,7 @@ func TestSynthesize_ValidSpec(t *testing.T) {
 
 func TestRoadmapSource_Fetch(t *testing.T) {
 	dir := t.TempDir()
-	rmPath := filepath.Join(dir, "roadmap.json")
+	rmPath := filepath.Join(dir, "ROADMAP.md")
 	rm := roadmap.Roadmap{
 		Title: "Test",
 		Phases: []roadmap.Phase{
@@ -258,8 +256,9 @@ func TestRoadmapSource_Fetch(t *testing.T) {
 			},
 		},
 	}
-	data, _ := json.Marshal(rm)
-	os.WriteFile(rmPath, data, 0644)
+	if err := roadmap.SaveRoadmap(rmPath, &rm); err != nil {
+		t.Fatalf("SaveRoadmap: %v", err)
+	}
 
 	src := NewRoadmapSource(rmPath)
 	tasks, err := src.Fetch(context.Background())

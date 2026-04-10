@@ -2,12 +2,12 @@ package rdcycle
 
 import (
 	"context"
-	"encoding/json"
-	"os"
 	"path/filepath"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/hairglasses-studio/mcpkit/roadmap"
 )
 
 func TestNewOrchestratorDefaults(t *testing.T) {
@@ -300,23 +300,21 @@ func TestOrchestratorAlreadyRunning(t *testing.T) {
 // writeTestRoadmapFile creates a minimal roadmap JSON for testing.
 func writeTestRoadmapFile(t *testing.T, dir string) string {
 	t.Helper()
-	rm := map[string]any{
-		"name":    "test",
-		"version": "1.0",
-		"phases": []map[string]any{
+	rm := &roadmap.Roadmap{
+		Title: "test",
+		Phases: []roadmap.Phase{
 			{
-				"id":     "p1",
-				"name":   "Phase 1",
-				"status": "active",
-				"items": []map[string]any{
-					{"id": "item-1", "description": "Test item", "status": "planned"},
+				ID:     "p1",
+				Name:   "Phase 1",
+				Status: roadmap.PhaseStatusActive,
+				Items: []roadmap.WorkItem{
+					{ID: "item-1", Description: "Test item", Status: roadmap.ItemStatusPlanned},
 				},
 			},
 		},
 	}
-	data, _ := json.MarshalIndent(rm, "", "  ")
-	path := filepath.Join(dir, "roadmap.json")
-	if err := os.WriteFile(path, data, 0644); err != nil {
+	path := filepath.Join(dir, "ROADMAP.md")
+	if err := roadmap.SaveRoadmap(path, rm); err != nil {
 		t.Fatal(err)
 	}
 	return path

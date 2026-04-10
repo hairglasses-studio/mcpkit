@@ -2,8 +2,6 @@ package rdcycle
 
 import (
 	"context"
-	"encoding/json"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -13,14 +11,10 @@ import (
 // writeRoadmap writes a Roadmap to a temp file and returns the path.
 func writeRoadmap(t *testing.T, rm *roadmap.Roadmap) string {
 	t.Helper()
-	data, err := json.MarshalIndent(rm, "", "  ")
-	if err != nil {
-		t.Fatalf("marshal roadmap: %v", err)
-	}
 	dir := t.TempDir()
-	path := filepath.Join(dir, "roadmap.json")
-	if err := os.WriteFile(path, data, 0o644); err != nil {
-		t.Fatalf("write roadmap: %v", err)
+	path := filepath.Join(dir, "ROADMAP.md")
+	if err := roadmap.SaveRoadmap(path, rm); err != nil {
+		t.Fatalf("SaveRoadmap: %v", err)
 	}
 	return path
 }
@@ -165,7 +159,7 @@ func TestHandlePlan_PathOverride(t *testing.T) {
 
 	path := writeRoadmap(t, rm)
 	// Configure a non-existent default path; the input override should take precedence.
-	m := NewModule(CycleConfig{RoadmapPath: "/nonexistent/roadmap.json"})
+	m := NewModule(CycleConfig{RoadmapPath: "/nonexistent/ROADMAP.md"})
 
 	out, err := m.handlePlan(context.Background(), PlanInput{RoadmapPath: path})
 	if err != nil {
@@ -178,7 +172,7 @@ func TestHandlePlan_PathOverride(t *testing.T) {
 
 func TestHandlePlan_MissingRoadmap(t *testing.T) {
 	t.Parallel()
-	m := NewModule(CycleConfig{RoadmapPath: "/nonexistent/roadmap.json"})
+	m := NewModule(CycleConfig{RoadmapPath: "/nonexistent/ROADMAP.md"})
 
 	_, err := m.handlePlan(context.Background(), PlanInput{})
 	if err == nil {

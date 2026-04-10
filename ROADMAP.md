@@ -424,3 +424,30 @@ Telemetry dashboard export — export aggregated telemetry as JSON suitable for 
 - **Layer 4** (depend on Layer 3): `orchestrator`, `handoff`, `workflow`, `bootstrap`
 
 _Note: `session` and `transport` depend only on Layer 1 packages. `feedback` has no internal deps beyond `registry`._
+
+<!-- whiteclaw-rollout:start -->
+## Whiteclaw-Derived Overhaul (2026-04-08)
+
+This tranche applies the highest-value whiteclaw findings that fit this repo's real surface: engineer briefs, bounded skills/runbooks, searchable provenance, scoped MCP packaging, and explicit verification ladders.
+
+### Strategic Focus
+- Use whiteclaw patterns here as reusable framework features, not one-off repo-local patches.
+- The best transfer is a productized explorer/front-door starter that downstream repos can adopt without rewriting transport and contract code.
+- Keep public docs and verification aligned with the framework's role as shared infrastructure.
+
+### Recommended Work
+- [ ] [Starter surface] Ship an opinionated explorer/front-door starter that covers catalog/search/schema/health for downstream repos.
+- [ ] [Docs] Publish a migration guide showing when to use `.mcp.json`, a discovery-first contract layer, or a standalone sidecar package.
+- [ ] [Verification] Add a transport and launcher smoke matrix for the public examples and starter surfaces.
+- [ ] [Typed boundaries] Keep new tool/command/workflow surfaces on typed contracts rather than handwritten JSON-RPC or loose maps.
+- [ ] [Public examples] Expand example coverage around self-explorer, server metadata, and publishable MCP packaging patterns.
+
+### Rationale Snapshot
+- Tier / lifecycle: `tier-1` / `active`
+- Language profile: `Go`
+- Visibility / sensitivity: `PUBLIC` / `public`
+- Surface baseline: AGENTS=yes, skills=yes, codex=yes, mcp_manifest=configured, ralph=yes, roadmap=yes
+- Whiteclaw transfers in scope: explorer/front-door starter, migration guide, transport smoke matrix, typed contracts
+- Live repo notes: AGENTS, skills, Codex config, configured .mcp.json, .ralph, 1 workflow(s), multi-module/workspace, nested roadmaps
+
+<!-- whiteclaw-rollout:end -->

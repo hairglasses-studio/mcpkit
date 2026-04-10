@@ -2,8 +2,6 @@ package rdcycle
 
 import (
 	"context"
-	"encoding/json"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -83,9 +81,10 @@ func TestRDCycleGraph_EmptyPlanShortCircuit(t *testing.T) {
 		},
 	}
 	dir := t.TempDir()
-	rmPath := filepath.Join(dir, "roadmap.json")
-	data, _ := json.MarshalIndent(rm, "", "  ")
-	os.WriteFile(rmPath, data, 0644)
+	rmPath := filepath.Join(dir, "ROADMAP.md")
+	if err := roadmap.SaveRoadmap(rmPath, rm); err != nil {
+		t.Fatalf("SaveRoadmap: %v", err)
+	}
 
 	g, err := NewRDCycleGraph(CycleConfig{
 		RoadmapPath: rmPath,
@@ -180,13 +179,9 @@ func writeTestRoadmap(t *testing.T) string {
 		},
 	}
 	dir := t.TempDir()
-	rmPath := filepath.Join(dir, "roadmap.json")
-	data, err := json.MarshalIndent(rm, "", "  ")
-	if err != nil {
-		t.Fatalf("marshal roadmap: %v", err)
-	}
-	if err := os.WriteFile(rmPath, data, 0644); err != nil {
-		t.Fatalf("write roadmap: %v", err)
+	rmPath := filepath.Join(dir, "ROADMAP.md")
+	if err := roadmap.SaveRoadmap(rmPath, rm); err != nil {
+		t.Fatalf("SaveRoadmap: %v", err)
 	}
 	return rmPath
 }
