@@ -186,7 +186,7 @@ export interface ToolDefinition<TInput = Record<string, unknown>> {
 export interface AgentConfig {
   readonly name: string
   readonly model: string
-  readonly provider?: 'anthropic' | 'openai'
+  readonly provider?: 'openai'
   readonly systemPrompt?: string
   /** Names of tools (from the tool registry) available to this agent. */
   readonly tools?: readonly string[]
@@ -285,7 +285,7 @@ export interface OrchestratorEvent {
 export interface OrchestratorConfig {
   readonly maxConcurrency?: number
   readonly defaultModel?: string
-  readonly defaultProvider?: 'anthropic' | 'openai'
+  readonly defaultProvider?: 'openai'
   onProgress?: (event: OrchestratorEvent) => void
 }
 
@@ -339,12 +339,12 @@ export interface LLMStreamOptions extends LLMChatOptions {}
  *
  * @example
  * ```ts
- * const adapter: LLMAdapter = createAdapter('anthropic')
- * const response = await adapter.chat(messages, { model: 'claude-opus-4-6' })
+ * const adapter: LLMAdapter = createAdapter('openai')
+ * const response = await adapter.chat(messages, { model: 'gpt-5.4' })
  * ```
  */
 export interface LLMAdapter {
-  /** Human-readable provider name, e.g. `'anthropic'` or `'openai'`. */
+  /** Human-readable provider name, e.g. `'openai'`. */
   readonly name: string
 
   /**

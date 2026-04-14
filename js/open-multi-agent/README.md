@@ -19,18 +19,18 @@ Build AI agent teams that work together. One agent plans, another implements, a 
 npm install @jackchen_me/open-multi-agent
 ```
 
-Set `ANTHROPIC_API_KEY` (and optionally `OPENAI_API_KEY`) in your environment.
+Set `OPENAI_API_KEY` in your environment.
 
 ```typescript
 import { OpenMultiAgent } from '@jackchen_me/open-multi-agent'
 
-const orchestrator = new OpenMultiAgent({ defaultModel: 'claude-sonnet-4-6' })
+const orchestrator = new OpenMultiAgent({ defaultModel: 'gpt-5.4' })
 
 // One agent, one task
 const result = await orchestrator.runAgent(
   {
     name: 'coder',
-    model: 'claude-sonnet-4-6',
+    model: 'gpt-5.4',
     tools: ['bash', 'file_write'],
   },
   'Write a TypeScript function that reverses a string, save it to /tmp/reverse.ts, and run it.',
@@ -49,27 +49,27 @@ import type { AgentConfig } from '@jackchen_me/open-multi-agent'
 
 const architect: AgentConfig = {
   name: 'architect',
-  model: 'claude-sonnet-4-6',
+  model: 'gpt-5.4',
   systemPrompt: 'You design clean API contracts and file structures.',
   tools: ['file_write'],
 }
 
 const developer: AgentConfig = {
   name: 'developer',
-  model: 'claude-sonnet-4-6',
+  model: 'gpt-5.4',
   systemPrompt: 'You implement what the architect designs.',
   tools: ['bash', 'file_read', 'file_write', 'file_edit'],
 }
 
 const reviewer: AgentConfig = {
   name: 'reviewer',
-  model: 'claude-sonnet-4-6',
+  model: 'gpt-5.4',
   systemPrompt: 'You review code for correctness and clarity.',
   tools: ['file_read', 'grep'],
 }
 
 const orchestrator = new OpenMultiAgent({
-  defaultModel: 'claude-sonnet-4-6',
+  defaultModel: 'gpt-5.4',
   onProgress: (event) => console.log(event.type, event.agent ?? event.task ?? ''),
 })
 
@@ -147,7 +147,7 @@ registry.register(searchTool)
 
 const executor = new ToolExecutor(registry)
 const agent = new Agent(
-  { name: 'researcher', model: 'claude-sonnet-4-6', tools: ['web_search'] },
+  { name: 'researcher', model: 'gpt-5.4', tools: ['web_search'] },
   registry,
   executor,
 )
@@ -161,15 +161,15 @@ const result = await agent.run('Find the three most recent TypeScript releases.'
 <summary><b>Multi-Model Teams</b> — mix Claude and GPT in one workflow</summary>
 
 ```typescript
-const claudeAgent: AgentConfig = {
+const strategist: AgentConfig = {
   name: 'strategist',
-  model: 'claude-opus-4-6',
-  provider: 'anthropic',
+  model: 'gpt-5.4',
+  provider: 'openai',
   systemPrompt: 'You plan high-level approaches.',
   tools: ['file_write'],
 }
 
-const gptAgent: AgentConfig = {
+const implementer: AgentConfig = {
   name: 'implementer',
   model: 'gpt-5.4',
   provider: 'openai',
@@ -177,9 +177,9 @@ const gptAgent: AgentConfig = {
   tools: ['bash', 'file_read', 'file_write'],
 }
 
-const team = orchestrator.createTeam('mixed-team', {
+const team = orchestrator.createTeam('team', {
   name: 'mixed-team',
-  agents: [claudeAgent, gptAgent],
+  agents: [strategist, implementer],
   sharedMemory: true,
 })
 
@@ -199,7 +199,7 @@ registerBuiltInTools(registry)
 const executor = new ToolExecutor(registry)
 
 const agent = new Agent(
-  { name: 'writer', model: 'claude-sonnet-4-6', maxTurns: 3 },
+  { name: 'writer', model: 'gpt-5.4', maxTurns: 3 },
   registry,
   executor,
 )

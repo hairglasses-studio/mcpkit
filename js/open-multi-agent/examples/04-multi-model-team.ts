@@ -2,7 +2,7 @@
  * Example 04 — Multi-Model Team with Custom Tools
  *
  * Demonstrates:
- * - Mixing Anthropic and OpenAI models in the same team
+ * - Running an OpenAI-backed team with custom tools
  * - Defining custom tools with defineTool() and Zod schemas
  * - Building agents with a custom ToolRegistry so they can use custom tools
  * - Running a team goal that uses the custom tools
@@ -11,8 +11,7 @@
  *   npx tsx examples/04-multi-model-team.ts
  *
  * Prerequisites:
- *   ANTHROPIC_API_KEY and OPENAI_API_KEY env vars must be set.
- *   (If you only have one key, set useOpenAI = false below.)
+ *   OPENAI_API_KEY env var must be set.
  */
 
 import { z } from 'zod'
@@ -132,15 +131,13 @@ function buildCustomAgent(
 }
 
 // ---------------------------------------------------------------------------
-// Agent definitions — mixed providers
+// Agent definitions — OpenAI-only
 // ---------------------------------------------------------------------------
-
-const useOpenAI = Boolean(process.env.OPENAI_API_KEY)
 
 const researcherConfig: AgentConfig = {
   name: 'researcher',
-  model: 'claude-sonnet-4-6',
-  provider: 'anthropic',
+  model: 'gpt-5.4',
+  provider: 'openai',
   systemPrompt: `You are a financial data researcher.
 Use the get_exchange_rate tool to fetch current rates between the currency pairs you are given.
 Return the raw rates as a JSON object keyed by pair, e.g. { "USD/EUR": 0.91, "USD/GBP": 0.79 }.`,
@@ -151,8 +148,8 @@ Return the raw rates as a JSON object keyed by pair, e.g. { "USD/EUR": 0.91, "US
 
 const analystConfig: AgentConfig = {
   name: 'analyst',
-  model: useOpenAI ? 'gpt-5.4' : 'claude-sonnet-4-6',
-  provider: useOpenAI ? 'openai' : 'anthropic',
+  model: 'gpt-5.4',
+  provider: 'openai',
   systemPrompt: `You are a foreign exchange analyst.
 You receive exchange rate data and produce a short briefing.
 Use format_currency to show example conversions.
@@ -174,7 +171,7 @@ const analyst = buildCustomAgent(analystConfig, [formatCurrencyTool])
 // ---------------------------------------------------------------------------
 
 console.log('Multi-model team with custom tools')
-console.log(`Providers: researcher=anthropic, analyst=${useOpenAI ? 'openai (gpt-5.4)' : 'anthropic (fallback)'}`)
+console.log('Providers: researcher=openai, analyst=openai')
 console.log('Custom tools:', [exchangeRateTool.name, formatCurrencyTool.name].join(', '))
 console.log()
 
