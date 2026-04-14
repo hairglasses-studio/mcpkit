@@ -7,12 +7,11 @@
 //
 // Optional env vars:
 //
-//	RDLOOP_PROVIDER  — backend family (default: anthropic; also supports ollama)
-//	RDLOOP_BASE_URL  — Anthropic-compatible API base URL (default: https://api.anthropic.com or OLLAMA_BASE_URL)
+//	RDLOOP_BASE_URL  — Anthropic-compatible API base URL (default: https://api.anthropic.com)
 //	RDLOOP_API_KEY   — explicit API key override
 //	RDLOOP_DURATION  — max runtime (default: 24h)
 //	RDLOOP_BUDGET    — total $ budget across all cycles (default: 200.0)
-//	RDLOOP_MODEL     — default model (default: claude-sonnet-4-6 or OLLAMA_CODE_MODEL)
+//	RDLOOP_MODEL     — default model (default: claude-sonnet-4-6)
 //	RDLOOP_SPEC      — initial spec file (default: rdcycle/specs/rd_cycle.json)
 //	RDLOOP_ROADMAP   — roadmap JSON path (default: roadmap.json)
 //	RDLOOP_STATE     — state file path (default: .rdloop_state.json)
@@ -39,15 +38,14 @@ func main() {
 	log.SetFlags(log.Ldate | log.Ltime | log.Lmsgprefix)
 	log.SetPrefix("[rdloop] ")
 
-	provider := strings.ToLower(envOr("RDLOOP_PROVIDER", "anthropic"))
-	baseURL := resolveRDLoopBaseURL(provider)
-	apiKey := resolveRDLoopAPIKey(provider, baseURL)
-	if apiKey == "" && !isLikelyOllamaTarget(provider, baseURL) {
+	baseURL := resolveRDLoopBaseURL()
+	apiKey := resolveRDLoopAPIKey()
+	if apiKey == "" {
 		fmt.Fprintln(os.Stderr, "RDLOOP_API_KEY or ANTHROPIC_API_KEY is required for hosted Anthropic backends")
 		os.Exit(1)
 	}
 
-	model := envOr("RDLOOP_MODEL", defaultRDLoopModel(provider, baseURL))
+	model := envOr("RDLOOP_MODEL", defaultRDLoopModel())
 	duration := envDuration("RDLOOP_DURATION", 24*time.Hour)
 	budget := envFloat("RDLOOP_BUDGET", 200.0)
 	specFile := envOr("RDLOOP_SPEC", "rdcycle/specs/rd_cycle.json")
@@ -61,7 +59,7 @@ func main() {
 		BaseURL:      baseURL,
 	}
 
-	modelTier := defaultModelTier(provider, baseURL, model)
+	modelTier := defaultModelTier(model)
 
 	runner := NewMultiCycleRunner(RunnerConfig{
 		InitialSpec: specFile,
@@ -74,7 +72,7 @@ func main() {
 		Duration:     duration,
 		Sampler:      sampler,
 		ModelTier:    modelTier,
-		Profile:      marathonProfile(provider, baseURL),
+		Profile:      marathonProfile(),
 		RoadmapPath:  roadmapPath,
 		StatePath:    statePath,
 		GitHubToken:  githubToken,
@@ -85,8 +83,8 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
-	log.Printf("starting (provider=%s, base_url=%s, model=%s, budget=$%.0f, duration=%s, spec=%s)",
-		provider, baseURL, model, budget, duration, specFile)
+	log.Printf("starting (provider=anthropic-compatible, base_url=%s, model=%s, budget=$%.0f, duration=%s, spec=%s)",
+		baseURL, model, budget, duration, specFile)
 
 	go func() {
 		<-ctx.Done()
@@ -107,16 +105,15 @@ func main() {
 }
 
 // marathonProfile returns a budget profile tuned for 24hr fully-autonomous
-// operation. Hosted Anthropic keeps the Opus/Sonnet/Haiku blend, while local
-// compatible backends default to zero-dollar accounting and local model lanes.
+// operation against hosted Anthropic-compatible backends.
 //
 // Per-cycle dollar budget: $8 (generous for Opus-heavy 7-task R&D cycles).
 // Token budget: 4M per cycle (Opus generates longer output).
 // Max iterations: 120 per cycle (scan through schedule with retries + longer phases).
 // Daily cap: $200 (matches the global budget — single-session use).
 // MaxTokensPerReq: 16384 (Opus generates longer, more detailed output).
-func marathonProfile(provider, baseURL string) rdcycle.BudgetProfile {
-	profile := rdcycle.BudgetProfile{
+func marathonProfile() rdcycle.BudgetProfile {
+	return rdcycle.BudgetProfile{
 		Name:            "marathon-24h",
 		MaxIterations:   120,
 		DollarBudget:    8.0,
@@ -129,45 +126,9 @@ func marathonProfile(provider, baseURL string) rdcycle.BudgetProfile {
 			{Model: "claude-haiku-4-5", InputPer1KTokens: 0.0008, OutputPer1KTokens: 0.004},
 		},
 	}
-	if isLikelyOllamaTarget(provider, baseURL) {
-		profile.ModelPricing = nil
-	}
-	return profile
 }
 
-func defaultModelTier(provider, baseURL, model string) rdcycle.ModelTierConfig {
-	if isLikelyOllamaTarget(provider, baseURL) {
-		codeModel := model
-		if candidate := strings.TrimSpace(os.Getenv("OLLAMA_CODE_MODEL")); candidate != "" {
-			codeModel = candidate
-		}
-
-		fastModel := codeModel
-		if candidate := strings.TrimSpace(os.Getenv("OLLAMA_FAST_MODEL")); candidate != "" {
-			fastModel = candidate
-		} else if candidate := strings.TrimSpace(os.Getenv("OLLAMA_CHAT_MODEL")); candidate != "" {
-			fastModel = candidate
-		}
-
-		highContextModel := codeModel
-		if candidate := strings.TrimSpace(os.Getenv("OLLAMA_HIGH_CONTEXT_CODE_MODEL")); candidate != "" {
-			highContextModel = candidate
-		}
-
-		return rdcycle.ModelTierConfig{
-			Default: codeModel,
-			TaskOverrides: map[string]string{
-				"scan":      highContextModel,
-				"plan":      codeModel,
-				"implement": codeModel,
-				"verify":    fastModel,
-				"reflect":   fastModel,
-				"report":    fastModel,
-				"schedule":  fastModel,
-			},
-		}
-	}
-
+func defaultModelTier(model string) rdcycle.ModelTierConfig {
 	return rdcycle.ModelTierConfig{
 		Default: model,
 		TaskOverrides: map[string]string{
@@ -215,28 +176,16 @@ func envFloat(key string, fallback float64) float64 {
 	return f
 }
 
-func resolveRDLoopBaseURL(provider string) string {
+func resolveRDLoopBaseURL() string {
 	if baseURL := strings.TrimSpace(os.Getenv("RDLOOP_BASE_URL")); baseURL != "" {
 		return baseURL
-	}
-	if strings.EqualFold(provider, "ollama") {
-		if baseURL := strings.TrimSpace(os.Getenv("OLLAMA_BASE_URL")); baseURL != "" {
-			return baseURL
-		}
-		return "http://127.0.0.1:11434"
 	}
 	return "https://api.anthropic.com"
 }
 
-func resolveRDLoopAPIKey(provider, baseURL string) string {
+func resolveRDLoopAPIKey() string {
 	if apiKey := strings.TrimSpace(os.Getenv("RDLOOP_API_KEY")); apiKey != "" {
 		return apiKey
-	}
-	if isLikelyOllamaTarget(provider, baseURL) {
-		if apiKey := strings.TrimSpace(os.Getenv("OLLAMA_API_KEY")); apiKey != "" {
-			return apiKey
-		}
-		return "ollama"
 	}
 	if apiKey := strings.TrimSpace(os.Getenv("ANTHROPIC_API_KEY")); apiKey != "" {
 		return apiKey
@@ -244,19 +193,6 @@ func resolveRDLoopAPIKey(provider, baseURL string) string {
 	return ""
 }
 
-func defaultRDLoopModel(provider, baseURL string) string {
-	if isLikelyOllamaTarget(provider, baseURL) {
-		if model := strings.TrimSpace(os.Getenv("OLLAMA_CODE_MODEL")); model != "" {
-			return model
-		}
-		return "code-primary"
-	}
+func defaultRDLoopModel() string {
 	return "claude-sonnet-4-6"
-}
-
-func isLikelyOllamaTarget(provider, baseURL string) bool {
-	if strings.EqualFold(strings.TrimSpace(provider), "ollama") {
-		return true
-	}
-	return strings.Contains(baseURL, "11434") || strings.Contains(strings.ToLower(baseURL), "ollama")
 }
