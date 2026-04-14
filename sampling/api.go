@@ -10,8 +10,6 @@ import (
 	"io"
 	"math"
 	"net/http"
-	"net/url"
-	"os"
 	"strings"
 	"time"
 
@@ -22,8 +20,7 @@ import (
 const defaultAnthropicBaseURL = "https://api.anthropic.com"
 
 // APISamplingClient implements SamplingClient by calling an Anthropic-compatible
-// Messages API directly. The default target is Anthropic's hosted API, but the
-// client can also point at local-compatible backends such as Ollama.
+// Messages API directly. The default target is Anthropic's hosted API.
 type APISamplingClient struct {
 	APIKey             string
 	DefaultModel       string
@@ -60,41 +57,14 @@ func (c *APISamplingClient) messagesURL() string {
 }
 
 func (c *APISamplingClient) resolvedAPIKey() string {
-	if apiKey := strings.TrimSpace(c.APIKey); apiKey != "" {
-		return apiKey
-	}
-	if isLikelyOllamaBaseURL(c.baseURL()) {
-		if apiKey := strings.TrimSpace(os.Getenv("OLLAMA_API_KEY")); apiKey != "" {
-			return apiKey
-		}
-		return "ollama"
-	}
-	return ""
+	return strings.TrimSpace(c.APIKey)
 }
 
 func (c *APISamplingClient) authHeaderStrategy() string {
 	if strategy := strings.TrimSpace(c.AuthHeaderStrategy); strategy != "" {
 		return strings.ToLower(strategy)
 	}
-	if isLikelyOllamaBaseURL(c.baseURL()) {
-		return "both"
-	}
 	return "anthropic"
-}
-
-func isLikelyOllamaBaseURL(raw string) bool {
-	parsed, err := url.Parse(strings.TrimSpace(raw))
-	if err != nil {
-		return false
-	}
-	host := strings.ToLower(parsed.Hostname())
-	if host == "127.0.0.1" || host == "localhost" || host == "::1" {
-		return true
-	}
-	if strings.Contains(host, "ollama") {
-		return true
-	}
-	return parsed.Port() == "11434"
 }
 
 type apiRequest struct {
@@ -248,9 +218,6 @@ func (c *APISamplingClient) CreateMessage(ctx context.Context, req CreateMessage
 }
 
 func (c *APISamplingClient) genAISystem() string {
-	if isLikelyOllamaBaseURL(c.baseURL()) {
-		return "ollama"
-	}
 	return "anthropic"
 }
 
