@@ -9,7 +9,7 @@
  *   npx tsx examples/02-team-collaboration.ts
  *
  * Prerequisites:
- *   ANTHROPIC_API_KEY env var must be set.
+ *   OPENAI_API_KEY env var must be set.
  */
 
 import { OpenMultiAgent } from '../src/index.js'
@@ -21,8 +21,8 @@ import type { AgentConfig, OrchestratorEvent } from '../src/types.js'
 
 const architect: AgentConfig = {
   name: 'architect',
-  model: 'claude-sonnet-4-6',
-  provider: 'anthropic',
+  model: 'gpt-5.4',
+  provider: 'openai',
   systemPrompt: `You are a software architect with deep experience in Node.js and REST API design.
 Your job is to design clear, production-quality API contracts and file/directory structures.
 Output concise plans in markdown — no unnecessary prose.`,
@@ -33,8 +33,8 @@ Output concise plans in markdown — no unnecessary prose.`,
 
 const developer: AgentConfig = {
   name: 'developer',
-  model: 'claude-sonnet-4-6',
-  provider: 'anthropic',
+  model: 'gpt-5.4',
+  provider: 'openai',
   systemPrompt: `You are a TypeScript/Node.js developer. You implement what the architect specifies.
 Write clean, runnable code with proper error handling. Use the tools to write files and run tests.`,
   tools: ['bash', 'file_read', 'file_write', 'file_edit'],
@@ -44,8 +44,8 @@ Write clean, runnable code with proper error handling. Use the tools to write fi
 
 const reviewer: AgentConfig = {
   name: 'reviewer',
-  model: 'claude-sonnet-4-6',
-  provider: 'anthropic',
+  model: 'gpt-5.4',
+  provider: 'openai',
   systemPrompt: `You are a senior code reviewer. Review code for correctness, security, and clarity.
 Provide a structured review with: LGTM items, suggestions, and any blocking issues.
 Read files using the tools before reviewing.`,
@@ -101,7 +101,7 @@ function handleProgress(event: OrchestratorEvent): void {
 // ---------------------------------------------------------------------------
 
 const orchestrator = new OpenMultiAgent({
-  defaultModel: 'claude-sonnet-4-6',
+  defaultModel: 'gpt-5.4',
   maxConcurrency: 1, // run agents sequentially so output is readable
   onProgress: handleProgress,
 })

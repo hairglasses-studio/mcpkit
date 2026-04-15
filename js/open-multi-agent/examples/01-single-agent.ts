@@ -8,7 +8,7 @@
  *   npx tsx examples/01-single-agent.ts
  *
  * Prerequisites:
- *   ANTHROPIC_API_KEY env var must be set.
+ *   OPENAI_API_KEY env var must be set.
  */
 
 import { OpenMultiAgent, Agent, ToolRegistry, ToolExecutor, registerBuiltInTools } from '../src/index.js'
@@ -19,7 +19,7 @@ import type { OrchestratorEvent } from '../src/types.js'
 // ---------------------------------------------------------------------------
 
 const orchestrator = new OpenMultiAgent({
-  defaultModel: 'claude-sonnet-4-6',
+  defaultModel: 'gpt-5.4',
   onProgress: (event: OrchestratorEvent) => {
     if (event.type === 'agent_start') {
       console.log(`[start]    agent=${event.agent}`)
@@ -34,7 +34,7 @@ console.log('Part 1: runAgent() — single one-shot task\n')
 const result = await orchestrator.runAgent(
   {
     name: 'coder',
-    model: 'claude-sonnet-4-6',
+    model: 'gpt-5.4',
     systemPrompt: `You are a focused TypeScript developer.
 When asked to implement something, write clean, minimal code with no extra commentary.
 Use the bash tool to run commands and the file tools to read/write files.`,
@@ -80,7 +80,7 @@ const executor = new ToolExecutor(registry)
 const streamingAgent = new Agent(
   {
     name: 'explainer',
-    model: 'claude-sonnet-4-6',
+    model: 'gpt-5.4',
     systemPrompt: 'You are a concise technical writer. Keep explanations brief.',
     maxTurns: 3,
   },
@@ -111,7 +111,7 @@ console.log('\nPart 3: Agent.prompt() — multi-turn conversation\n')
 const conversationAgent = new Agent(
   {
     name: 'tutor',
-    model: 'claude-sonnet-4-6',
+    model: 'gpt-5.4',
     systemPrompt: 'You are a TypeScript tutor. Give short, direct answers.',
     maxTurns: 2,
   },

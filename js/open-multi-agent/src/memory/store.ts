@@ -24,7 +24,7 @@ import type { MemoryEntry, MemoryStore } from '../types.js'
  * @example
  * ```ts
  * const store = new InMemoryStore()
- * await store.set('config', JSON.stringify({ model: 'claude-opus-4-6' }))
+ * await store.set('config', JSON.stringify({ model: 'gpt-5.4' }))
  * const entry = await store.get('config')
  * ```
  */
