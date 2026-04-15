@@ -13,13 +13,13 @@
  * ## Quick start
  *
  * ```ts
- * const orchestrator = new OpenMultiAgent({ defaultModel: 'claude-opus-4-6' })
+ * const orchestrator = new OpenMultiAgent({ defaultModel: 'gpt-5.4' })
  *
  * const team = orchestrator.createTeam('research', {
  *   name: 'research',
  *   agents: [
- *     { name: 'researcher', model: 'claude-opus-4-6', systemPrompt: 'You are a researcher.' },
- *     { name: 'writer',     model: 'claude-opus-4-6', systemPrompt: 'You are a technical writer.' },
+ *     { name: 'researcher', model: 'gpt-5.4', systemPrompt: 'You are a researcher.' },
+ *     { name: 'writer',     model: 'gpt-5.4', systemPrompt: 'You are a technical writer.' },
  *   ],
  *   sharedMemory: true,
  * })
@@ -68,7 +68,7 @@ import { Scheduler } from './scheduler.js'
 
 const ZERO_USAGE: TokenUsage = { input_tokens: 0, output_tokens: 0 }
 const DEFAULT_MAX_CONCURRENCY = 5
-const DEFAULT_MODEL = 'claude-opus-4-6'
+const DEFAULT_MODEL = 'gpt-5.4'
 
 // ---------------------------------------------------------------------------
 // Internal helpers
@@ -352,14 +352,14 @@ export class OpenMultiAgent {
    *
    * Sensible defaults:
    *   - `maxConcurrency`: 5
-   *   - `defaultModel`:   `'claude-opus-4-6'`
-   *   - `defaultProvider`: `'anthropic'`
+   *   - `defaultModel`:   `'gpt-5.4'`
+   *   - `defaultProvider`: `'openai'`
    */
   constructor(config: OrchestratorConfig = {}) {
     this.config = {
       maxConcurrency: config.maxConcurrency ?? DEFAULT_MAX_CONCURRENCY,
       defaultModel: config.defaultModel ?? DEFAULT_MODEL,
-      defaultProvider: config.defaultProvider ?? 'anthropic',
+      defaultProvider: config.defaultProvider ?? 'openai',
       onProgress: config.onProgress,
     }
   }

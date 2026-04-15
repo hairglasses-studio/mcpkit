@@ -13,7 +13,7 @@
  * ```ts
  * const agent = new Agent({
  *   name: 'researcher',
- *   model: 'claude-opus-4-6',
+ *   model: 'gpt-5.4',
  *   systemPrompt: 'You are a rigorous research assistant.',
  *   tools: ['web_search', 'read_file'],
  * })
@@ -108,7 +108,7 @@ export class Agent {
       return this.runner
     }
 
-    const provider = this.config.provider ?? 'anthropic'
+    const provider = this.config.provider ?? 'openai'
     const adapter = await createAdapter(provider)
 
     const runnerOptions: RunnerOptions = {

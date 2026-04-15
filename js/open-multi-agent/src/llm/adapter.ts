@@ -9,8 +9,7 @@
  * ```ts
  * import { createAdapter } from './adapter.js'
  *
- * const anthropic = createAdapter('anthropic')
- * const openai    = createAdapter('openai', process.env.OPENAI_API_KEY)
+ * const openai = createAdapter('openai', process.env.OPENAI_API_KEY)
  * ```
  */
 
@@ -37,13 +36,13 @@ import type { LLMAdapter } from '../types.js'
  * Additional providers can be integrated by implementing {@link LLMAdapter}
  * directly and bypassing this factory.
  */
-export type SupportedProvider = 'anthropic' | 'openai'
+export type SupportedProvider = 'openai'
 
 /**
  * Instantiate the appropriate {@link LLMAdapter} for the given provider.
  *
- * API keys fall back to the standard environment variables
- * (`ANTHROPIC_API_KEY` / `OPENAI_API_KEY`) when not supplied explicitly.
+ * API keys fall back to the standard OpenAI environment variable
+ * (`OPENAI_API_KEY`) when not supplied explicitly.
  *
  * Adapters are imported lazily so that projects using only one provider
  * are not forced to install the SDK for the other.
@@ -53,14 +52,10 @@ export type SupportedProvider = 'anthropic' | 'openai'
  * @throws {Error} When the provider string is not recognised.
  */
 export async function createAdapter(
-  provider: SupportedProvider,
-  apiKey?: string,
+ provider: SupportedProvider,
+ apiKey?: string,
 ): Promise<LLMAdapter> {
   switch (provider) {
-    case 'anthropic': {
-      const { AnthropicAdapter } = await import('./anthropic.js')
-      return new AnthropicAdapter(apiKey)
-    }
     case 'openai': {
       const { OpenAIAdapter } = await import('./openai.js')
       return new OpenAIAdapter(apiKey)

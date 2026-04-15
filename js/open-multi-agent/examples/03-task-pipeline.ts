@@ -9,7 +9,7 @@
  *   npx tsx examples/03-task-pipeline.ts
  *
  * Prerequisites:
- *   ANTHROPIC_API_KEY env var must be set.
+ *   OPENAI_API_KEY env var must be set.
  */
 
 import { OpenMultiAgent } from '../src/index.js'
@@ -21,7 +21,7 @@ import type { AgentConfig, OrchestratorEvent, Task } from '../src/types.js'
 
 const designer: AgentConfig = {
   name: 'designer',
-  model: 'claude-sonnet-4-6',
+  model: 'gpt-5.4',
   systemPrompt: `You are a software designer. Your output is always a concise technical spec
 in markdown. Focus on interfaces, data shapes, and file structure. Be brief.`,
   tools: ['file_write'],
@@ -30,7 +30,7 @@ in markdown. Focus on interfaces, data shapes, and file structure. Be brief.`,
 
 const implementer: AgentConfig = {
   name: 'implementer',
-  model: 'claude-sonnet-4-6',
+  model: 'gpt-5.4',
   systemPrompt: `You are a TypeScript developer. Read the design spec written by the designer,
 then implement it. Write all files to /tmp/pipeline-output/. Use the tools.`,
   tools: ['bash', 'file_read', 'file_write'],
@@ -39,7 +39,7 @@ then implement it. Write all files to /tmp/pipeline-output/. Use the tools.`,
 
 const tester: AgentConfig = {
   name: 'tester',
-  model: 'claude-sonnet-4-6',
+  model: 'gpt-5.4',
   systemPrompt: `You are a QA engineer. Read the implemented files and run them to verify correctness.
 Report: what passed, what failed, and any bugs found.`,
   tools: ['bash', 'file_read', 'grep'],
@@ -48,7 +48,7 @@ Report: what passed, what failed, and any bugs found.`,
 
 const reviewer: AgentConfig = {
   name: 'reviewer',
-  model: 'claude-sonnet-4-6',
+  model: 'gpt-5.4',
   systemPrompt: `You are a code reviewer. Read all files and produce a brief structured review.
 Sections: Summary, Strengths, Issues (if any), Verdict (SHIP / NEEDS WORK).`,
   tools: ['file_read', 'grep'],
@@ -96,7 +96,7 @@ function handleProgress(event: OrchestratorEvent): void {
 // ---------------------------------------------------------------------------
 
 const orchestrator = new OpenMultiAgent({
-  defaultModel: 'claude-sonnet-4-6',
+  defaultModel: 'gpt-5.4',
   maxConcurrency: 2, // allow test + review to potentially run in parallel later
   onProgress: handleProgress,
 })
