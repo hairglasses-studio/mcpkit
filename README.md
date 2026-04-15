@@ -15,7 +15,7 @@ Built on [github.com/mark3labs/mcp-go](https://github.com/mark3labs/mcp-go), mcp
 ## Features
 
 - **100% MCP 2025-11-25 spec coverage** — tools, resources, prompts, sampling, logging, elicitation, structured output, async tasks
-- **36 packages across 4 dependency layers** — use only what you need; all packages are independently importable
+- **72 packages across 4 dependency layers** — use only what you need; all packages are independently importable
 - **85%+ test coverage across all packages** — comprehensive coverage with `-race` detection
 - **Dual-SDK support** — works with mcp-go today; `//go:build official_sdk` tags enable migration to the official Go SDK without rewriting tool code
 - **Typed handlers** — `TypedHandler[In, Out]` generates schemas from Go structs, populates `structuredContent`, and eliminates manual JSON wiring
