@@ -5,6 +5,8 @@
 //   - Tool registration via TypedHandler with auto-generated schemas
 //   - StreamableHTTP transport served on port 8080 at /mcp
 //   - Health check endpoints (/health, /ready, /live) on the same mux
+//   - Server card endpoint (/.well-known/mcp.json) for MCP directory discovery
+//   - --contract-write flag for CI-driven server card generation
 //   - Logging middleware for tool invocation observability
 //   - Lifecycle manager for signal-driven graceful shutdown
 //
@@ -14,18 +16,27 @@
 //
 // Then send MCP requests to http://localhost:8080/mcp.
 // Health status is available at http://localhost:8080/health.
+// Server card is available at http://localhost:8080/.well-known/mcp.json.
+//
+// Generate .well-known/mcp.json without starting the server:
+//
+//	go run ./examples/http/ --contract-write .well-known/mcp.json
 package main
 
 import (
 	"context"
+	"errors"
+	"flag"
 	"fmt"
 	"log"
 	"log/slog"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/mark3labs/mcp-go/server"
 
+	"github.com/hairglasses-studio/mcpkit/discovery"
 	"github.com/hairglasses-studio/mcpkit/handler"
 	"github.com/hairglasses-studio/mcpkit/health"
 	"github.com/hairglasses-studio/mcpkit/lifecycle"
@@ -122,6 +133,11 @@ func (m *UtilModule) Tools() []registry.ToolDefinition {
 // ---------------------------------------------------------------------------
 
 func main() {
+	// --- CLI flags ---
+	contractWrite := flag.String(discovery.ContractWriteFlag, "",
+		"Write .well-known/mcp.json to this path and exit (for CI/generation scripts)")
+	flag.Parse()
+
 	ctx := context.Background()
 	logger := slog.Default()
 
@@ -133,6 +149,33 @@ func main() {
 		},
 	})
 	reg.RegisterModule(&UtilModule{})
+
+	// --- Server card configuration ---
+	// MetadataConfig feeds both the live /.well-known/mcp.json endpoint
+	// and the --contract-write static generation path.
+	cardCfg := discovery.MetadataConfig{
+		Name:         "io.github.hairglasses-studio.http-example",
+		Description:  "Example StreamableHTTP MCP server demonstrating mcpkit patterns",
+		Version:      "1.0.0",
+		Organization: "hairglasses-studio",
+		Repository:   "https://github.com/hairglasses-studio/mcpkit",
+		Homepage:     "https://github.com/hairglasses-studio/mcpkit/tree/main/examples/http",
+		License:      "MIT",
+		Categories:   []string{"developer-tools", "examples"},
+		Tags:         []string{"mcpkit", "example", "http", "streamable"},
+		Transports:   []discovery.TransportInfo{{Type: "streamable-http", URL: "http://localhost:8080/mcp"}},
+		Install:      &discovery.InstallInfo{Go: "go run github.com/hairglasses-studio/mcpkit/examples/http@latest"},
+		Tools:        reg,
+	}
+
+	// --- Handle --contract-write: generate server card and exit ---
+	if err := discovery.HandleContractWrite(*contractWrite, cardCfg); err != nil {
+		if errors.Is(err, discovery.ErrContractWritten) {
+			log.Printf("http-example: wrote server card to %s", *contractWrite)
+			os.Exit(0)
+		}
+		log.Fatal(err)
+	}
 
 	// --- Health checker ---
 	// Wired into the lifecycle so it reflects drain/stop transitions.
@@ -158,7 +201,7 @@ func main() {
 		server.WithStateLess(true),
 	)
 
-	// --- HTTP mux: mount MCP transport + health endpoints together ---
+	// --- HTTP mux: mount MCP transport + health + server card endpoints ---
 	mux := http.NewServeMux()
 	mux.Handle("/mcp", httpTransport)
 
@@ -167,6 +210,9 @@ func main() {
 	mux.Handle("/health", healthHandler)
 	mux.Handle("/ready", healthHandler)
 	mux.Handle("/live", healthHandler)
+
+	// Server card: dynamic /.well-known/mcp.json reflecting live registry state.
+	mux.Handle("/.well-known/mcp.json", discovery.ServerCardHandler(cardCfg))
 
 	httpServer := &http.Server{
 		Addr:         ":8080",
