@@ -1,27 +1,3 @@
 {
-  "_readme": [
-    "MCP server configuration for Claude Code.",
-    "Add your MCP servers under 'mcpServers'.",
-    "Supports stdio (command + args) and HTTP (url + headers) transports.",
-    "Environment variables use ${VAR_NAME} syntax.",
-    "Copy _example entries, remove the _example_ prefix, and fill in your values."
-  ],
-  "mcpServers": {
-    "_example_stdio_server": {
-      "command": "go",
-      "args": [
-        "run",
-        "./cmd/my-server"
-      ],
-      "env": {
-        "LOG_LEVEL": "info"
-      }
-    },
-    "_example_http_server": {
-      "url": "http://localhost:8080/mcp",
-      "headers": {
-        "Authorization": "Bearer ${API_KEY}"
-      }
-    }
-  }
+  "mcpServers": {}
 }
