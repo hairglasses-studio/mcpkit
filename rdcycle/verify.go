@@ -25,6 +25,10 @@ type VerifyOutput struct {
 	Output     string `json:"output"`
 	Duration   string `json:"duration"`
 	ArtifactID string `json:"artifact_id"`
+	// NoChanges is true when the command passed and git diff reports no uncommitted
+	// changes. When both Passed and NoChanges are true, the verify task is done —
+	// call mark_done immediately without re-entering the verify loop.
+	NoChanges bool `json:"no_changes"`
 }
 
 func (m *Module) verifyTool() registry.ToolDefinition {
@@ -32,7 +36,9 @@ func (m *Module) verifyTool() registry.ToolDefinition {
 		"Defaults to 'make check' which runs build, vet, and all tests. " +
 		"Use command to specify an alternative command (e.g. 'go test ./...'). " +
 		"Use packages to append specific package paths to the command. " +
-		"The tool enforces a 5-minute execution timeout."
+		"The tool enforces a 5-minute execution timeout. " +
+		"When the result has passed=true and no_changes=true, the check succeeded with no " +
+		"uncommitted code changes — call mark_done immediately instead of looping."
 
 	td := handler.TypedHandler[VerifyInput, VerifyOutput](
 		"rdcycle_verify",
@@ -84,16 +90,24 @@ func (m *Module) handleVerify(ctx context.Context, input VerifyInput) (VerifyOut
 	passed := runErr == nil
 	output := buf.String()
 
+	// When the command passed, check whether there are uncommitted changes.
+	// A clean diff means no code was written, so the verify task is already done.
+	noChanges := false
+	if passed {
+		noChanges = gitDiffQuiet(ctx, workDir)
+	}
+
 	artifactID := fmt.Sprintf("verify-%d", time.Now().UnixNano())
 	_ = m.store.Save(Artifact{
 		ID:        artifactID,
 		Type:      "verify",
 		CreatedAt: time.Now().UTC().Format(time.RFC3339),
 		Content: map[string]any{
-			"command":  cmdStr,
-			"passed":   passed,
-			"duration": duration.String(),
-			"output":   output,
+			"command":    cmdStr,
+			"passed":     passed,
+			"no_changes": noChanges,
+			"duration":   duration.String(),
+			"output":     output,
 		},
 	})
 
@@ -103,5 +117,19 @@ func (m *Module) handleVerify(ctx context.Context, input VerifyInput) (VerifyOut
 		Output:     output,
 		Duration:   duration.String(),
 		ArtifactID: artifactID,
+		NoChanges:  noChanges,
 	}, nil
+}
+
+// gitDiffQuiet runs "git diff --quiet" in the given directory and returns true
+// when the working tree has no uncommitted changes (exit status 0).
+// Returns false on any error or when there are changes (exit status 1).
+func gitDiffQuiet(ctx context.Context, dir string) bool {
+	diffCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(diffCtx, "git", "diff", "--quiet")
+	if dir != "" {
+		cmd.Dir = dir
+	}
+	return cmd.Run() == nil
 }
