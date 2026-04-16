@@ -11,8 +11,9 @@ import (
 )
 
 // MetadataConfig holds all inputs needed to build a ServerMetadata entry for
-// publication to the MCP Registry. All registry fields are optional — pass nil
-// to omit the corresponding section.
+// publication to the MCP Registry or for serving as a .well-known/mcp.json
+// server card. All registry fields are optional — pass nil to omit the
+// corresponding section.
 type MetadataConfig struct {
 	// Required server identity fields.
 	Name         string
@@ -20,6 +21,21 @@ type MetadataConfig struct {
 	Version      string
 	Organization string
 	Repository   string
+
+	// Homepage is the canonical human-readable URL for the server project.
+	// Included in .well-known/mcp.json for directory crawlers.
+	Homepage string
+
+	// License is the SPDX license identifier (e.g. "MIT", "Apache-2.0").
+	// Included in .well-known/mcp.json for directory crawlers.
+	License string
+
+	// Categories are high-level classification labels for directory listings
+	// (e.g. "developer-tools", "desktop-automation", "linux").
+	Categories []string
+
+	// Install holds per-runtime install commands surfaced in .well-known/mcp.json.
+	Install *InstallInfo
 
 	// Tags are arbitrary labels attached to the server entry.
 	Tags []string
@@ -47,6 +63,10 @@ func MetadataFromConfig(cfg MetadataConfig) ServerMetadata {
 		Version:      cfg.Version,
 		Organization: cfg.Organization,
 		Repository:   cfg.Repository,
+		Homepage:     cfg.Homepage,
+		License:      cfg.License,
+		Categories:   cfg.Categories,
+		Install:      cfg.Install,
 		Tags:         cfg.Tags,
 		Auth:         cfg.Auth,
 		Transports:   cfg.Transports,

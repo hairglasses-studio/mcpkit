@@ -21,6 +21,13 @@ var (
 )
 
 // ServerMetadata represents a server's entry in the MCP Registry.
+//
+// The fields here cover both the MCP Registry API schema and the
+// .well-known/mcp.json crawl schema used by directory listings.
+// Registry-only fields (ID, CreatedAt, UpdatedAt) are omitted from
+// file output when they are zero values; directory-focused fields
+// (License, Homepage, Categories, Install) are omitted from API
+// payloads when empty.
 type ServerMetadata struct {
 	ID           string            `json:"id"`
 	Name         string            `json:"name"`
@@ -28,6 +35,10 @@ type ServerMetadata struct {
 	Version      string            `json:"version"`
 	Organization string            `json:"organization"`
 	Repository   string            `json:"repository"`
+	Homepage     string            `json:"homepage,omitempty"`
+	License      string            `json:"license,omitempty"`
+	Categories   []string          `json:"categories,omitempty"`
+	Install      *InstallInfo      `json:"install,omitempty"`
 	Tools        []ToolSummary     `json:"tools,omitempty"`
 	Resources    []ResourceSummary `json:"resources,omitempty"`
 	Prompts      []PromptSummary   `json:"prompts,omitempty"`
@@ -36,6 +47,29 @@ type ServerMetadata struct {
 	Tags         []string          `json:"tags,omitempty"`
 	CreatedAt    time.Time         `json:"created_at"`
 	UpdatedAt    time.Time         `json:"updated_at"`
+}
+
+// InstallInfo holds per-runtime install commands for the server,
+// suitable for inclusion in .well-known/mcp.json so that directory
+// crawlers can surface "how to install" metadata without visiting
+// the repository README.
+//
+// Each field maps a runtime or package manager name to the install
+// command string. Only non-empty fields are marshalled.
+//
+// Example:
+//
+//	install := &discovery.InstallInfo{
+//	    Go:  "go install github.com/example/my-mcp-server@latest",
+//	    NPM: "npm install -g @example/my-mcp-server",
+//	}
+type InstallInfo struct {
+	Go     string `json:"go,omitempty"`
+	NPM    string `json:"npm,omitempty"`
+	PyPI   string `json:"pypi,omitempty"`
+	Brew   string `json:"brew,omitempty"`
+	Docker string `json:"docker,omitempty"`
+	Binary string `json:"binary,omitempty"`
 }
 
 // ToolSummary is a brief description of a tool offered by a server.
