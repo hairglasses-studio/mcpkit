@@ -91,6 +91,16 @@ npx @modelcontextprotocol/inspector go run main.go      # interactive debugger
 
 **[QUICKSTART.md](QUICKSTART.md)** has the full 5-stage progressive tutorial: hello world, typed parameters, middleware, resources and prompts, and testing with `mcptest`.
 
+## Migration & Patterns
+
+Not sure which deployment model to use? The [migration guide](docs/migration-guide.md) covers three patterns with decision criteria, production-ready code, and a migration path between them:
+
+- **Pattern A: `.mcp.json` inline** — register a binary directly in the MCP host config; best for personal tools with under 20 tools, no build infrastructure required.
+- **Pattern B: Discovery-first contract layer** — expose only catalog/search tools eagerly; domain tools are deferred and loaded on demand. Best for 20–500+ tools where context budget matters.
+- **Pattern C: Standalone sidecar package** — dedicated binary with auth, rate-limiting, health probes, and StreamableHTTP transport. Best for shared team infrastructure, SaaS, or any server requiring auth.
+
+See **[docs/migration-guide.md](docs/migration-guide.md)** for the full guide including a decision matrix and step-by-step migration instructions.
+
 ## Package Map
 
 | Package | Purpose | Internal Deps |
