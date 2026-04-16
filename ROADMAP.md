@@ -461,7 +461,7 @@ Identified from GitHub MCP ecosystem research (30+ repos, 150K+ combined stars).
 ### Tier 1 — High Priority
 
 - [x] [P1][M] server.json for all public MCP servers — blocks registry visibility and MCP directory discovery. Generate `.well-known/mcp.json` with tool categories, version, and discovery metadata for mcpkit, systemd-mcp, tmux-mcp, process-mcp (spec gap analysis). Implemented in `discovery` package: `WriteFile`, `HandleContractWrite`, `ContractWriteFlag`, `ErrContractWritten`, `InstallInfo` struct, and `Categories`/`License`/`Homepage` fields on `ServerMetadata` and `MetadataConfig`.
-- [ ] [P1][M] Go module security scanning example — wrap govulncheck + OSV-scanner as mcpkit example server: scan go.sum/go.mod, report vulns with severity, suggest upgrades. No Go MCP for this exists. Ref: google/osv-scanner (8.7K stars)
+- [x] [P1][M] Go module security scanning example — wrap govulncheck + OSV API as mcpkit example server: scan go.sum/go.mod, report vulns with severity, suggest upgrades. Implemented in `vuln` package: `Scanner` (govulncheck -format json wrapper), `OSVClient` (OSV API v1/query), `Module` (vuln_scan + vuln_osv_query MCP tools), and `examples/vuln-scanner` runnable server. Severity classification from CVE aliases + keyword heuristics. 30 tests.
 
 ### Tier 2 — Medium Priority
 
