@@ -451,3 +451,24 @@ This tranche applies the highest-value whiteclaw findings that fit this repo's r
 - Live repo notes: AGENTS, skills, Codex config, configured .mcp.json, .ralph, 1 workflow(s), multi-module/workspace, nested roadmaps
 
 <!-- whiteclaw-rollout:end -->
+
+---
+
+## Gap Research: Framework Enhancements (2026-04-16)
+
+Identified from GitHub MCP ecosystem research (30+ repos, 150K+ combined stars). See `docs/research/mcp/github-mcp-gap-research-2026-04-16.md`.
+
+### Tier 1 — High Priority
+
+- [x] [P1][M] server.json for all public MCP servers — blocks registry visibility and MCP directory discovery. Generate `.well-known/mcp.json` with tool categories, version, and discovery metadata for mcpkit, systemd-mcp, tmux-mcp, process-mcp (spec gap analysis). Implemented in `discovery` package: `WriteFile`, `HandleContractWrite`, `ContractWriteFlag`, `ErrContractWritten`, `InstallInfo` struct, and `Categories`/`License`/`Homepage` fields on `ServerMetadata` and `MetadataConfig`.
+- [ ] [P1][M] Go module security scanning example — wrap govulncheck + OSV-scanner as mcpkit example server: scan go.sum/go.mod, report vulns with severity, suggest upgrades. No Go MCP for this exists. Ref: google/osv-scanner (8.7K stars)
+
+### Tier 2 — Medium Priority
+
+- [x] [P2][S] Wire server card + --contract-write into HTTP example — examples/http now mounts `/.well-known/mcp.json` via `ServerCardHandler` and supports `--contract-write` for CI. Canonical reference for downstream adoption.
+- [ ] [P2][M] Bounded-write safety middleware — Stripe-style confirmation pattern for MCP tools with financial/destructive side effects. Tool declares `confirm_required: true`, middleware intercepts and requires explicit `confirm` param. Ref: stripe/ai agent-toolkit (1.5K stars)
+- [ ] [P2][L] Performance benchmarks — mcpkit middleware chain overhead vs raw mcp-go, p99 latency per middleware layer, throughput under load. Reference threshold: no single middleware layer may add >5% p99 latency
+- [ ] [P2][M] Token-efficient schema-first patterns — document and add helpers for dbhub-style schema-before-data, response truncation, pagination for large result sets. Ref: bytebase/dbhub (2.6K stars)
+- [ ] [P2][M] Explorer/front-door starter — opinionated catalog/search/schema/health surface for downstream repos to adopt without rewriting transport. Include discovery-first guidance as the documented happy path
+
+<!-- whiteclaw-rollout:end -->
