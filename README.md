@@ -12,6 +12,8 @@ The Go toolkit for production-grade MCP servers.
 
 Built on [github.com/mark3labs/mcp-go](https://github.com/mark3labs/mcp-go), mcpkit provides the middleware, type safety, and operational patterns needed to run MCP servers in production. It targets the [MCP 2025-11-25 spec](https://modelcontextprotocol.io/specification/2025-11-25) with 100% feature coverage.
 
+> **Engineering context:** mcpkit extracts patterns from 10+ production MCP servers totaling 1,790+ tools. The middleware architecture mirrors enterprise patterns for durable execution, RBAC at scale, and multi-tenant isolation — the same concerns that arise when running AI agent platforms in production.
+
 ## Features
 
 - **100% MCP 2025-11-25 spec coverage** — tools, resources, prompts, sampling, logging, elicitation, structured output, async tasks
@@ -150,6 +152,15 @@ Layer 1  registry ── health ── sanitize ── secrets ── client
 - **Layer 4** (depend on Layer 3): `orchestrator`, `handoff`, `workflow`, `bootstrap`
 
 Lower layers never import upper layers. All packages in a layer can be used independently.
+
+```mermaid
+graph TD
+    L4["<b>Layer 4</b><br/>orchestrator · handoff · workflow · bootstrap"]
+    L3["<b>Layer 3</b><br/>security · gateway · ralph · skills · rdcycle"]
+    L2["<b>Layer 2</b><br/>handler · auth · resilience · mcptest · finops · eval<br/>resources · prompts · discovery · sampling · memory"]
+    L1["<b>Layer 1</b><br/>registry · health · sanitize · secrets · client"]
+    L4 --> L3 --> L2 --> L1
+```
 
 ## Commands
 
