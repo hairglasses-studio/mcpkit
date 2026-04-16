@@ -437,7 +437,7 @@ This tranche applies the highest-value whiteclaw findings that fit this repo's r
 
 ### Recommended Work
 - [ ] [Starter surface] Ship an opinionated explorer/front-door starter that covers catalog/search/schema/health for downstream repos.
-- [ ] [Docs] Publish a migration guide showing when to use `.mcp.json`, a discovery-first contract layer, or a standalone sidecar package.
+- [x] [Docs] Publish a migration guide showing when to use `.mcp.json`, a discovery-first contract layer, or a standalone sidecar package.
 - [ ] [Verification] Add a transport and launcher smoke matrix for the public examples and starter surfaces.
 - [ ] [Typed boundaries] Keep new tool/command/workflow surfaces on typed contracts rather than handwritten JSON-RPC or loose maps.
 - [ ] [Public examples] Expand example coverage around self-explorer, server metadata, and publishable MCP packaging patterns.
