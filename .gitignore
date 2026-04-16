@@ -66,3 +66,6 @@ stateless-http
 !.claude/skills/*/SKILL.md
 .ralph/ab_tests/
 .ralph/benchmarks/
+
+# Build artifacts
+.codex/bin/
