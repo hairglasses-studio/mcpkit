@@ -468,7 +468,7 @@ Identified from GitHub MCP ecosystem research (30+ repos, 150K+ combined stars).
 - [x] [P2][S] Wire server card + --contract-write into HTTP example — examples/http now mounts `/.well-known/mcp.json` via `ServerCardHandler` and supports `--contract-write` for CI. Canonical reference for downstream adoption.
 - [x] [P2][M] Bounded-write safety middleware — Stripe-style confirmation pattern for MCP tools with financial/destructive side effects. Tool declares `confirm_required: true`, middleware intercepts and requires explicit `confirm` param. Ref: stripe/ai agent-toolkit (1.5K stars). Implemented in `middleware/boundedwrite`: `Middleware()`, `RequireConfirmation()`, `ConfirmTag` constant, 10 unit tests, and `examples/bounded-write` runnable server.
 - [ ] [P2][L] Performance benchmarks — mcpkit middleware chain overhead vs raw mcp-go, p99 latency per middleware layer, throughput under load. Reference threshold: no single middleware layer may add >5% p99 latency
-- [ ] [P2][M] Token-efficient schema-first patterns — document and add helpers for dbhub-style schema-before-data, response truncation, pagination for large result sets. Ref: bytebase/dbhub (2.6K stars)
+- [x] [P2][M] Token-efficient schema-first patterns — `handler/pagination.go` provides `Paginate[T]` (generic cursor-based paging), `TruncateResult` (byte-budget enforcement), `SchemaFirstResult` (deferred-data closure pattern). 16 unit tests. Ref: bytebase/dbhub (2.6K stars)
 - [ ] [P2][M] Explorer/front-door starter — opinionated catalog/search/schema/health surface for downstream repos to adopt without rewriting transport. Include discovery-first guidance as the documented happy path
 
 <!-- whiteclaw-rollout:end -->
