@@ -65,7 +65,7 @@ func CompactError(err error) string {
 
 	// Classify the error for the LLM.
 	errType := classifyError(err)
-	b.WriteString(fmt.Sprintf("[%s] %s", errType, err.Error()))
+	fmt.Fprintf(&b, "[%s] %s", errType, err.Error())
 
 	// Add recovery hint based on classification.
 	if hint := recoveryHint(errType); hint != "" {
@@ -179,7 +179,7 @@ func ErrorRecoveryMiddleware(cfg ErrorRecoveryConfig) registry.Middleware {
 			}
 
 			// Retry loop.
-			var lastErr error = toolErr
+			lastErr := toolErr
 			for attempt := 1; attempt <= cfg.MaxRetries; attempt++ {
 				// Respect context cancellation between retries.
 				if ctx.Err() != nil {
@@ -191,8 +191,7 @@ func ErrorRecoveryMiddleware(cfg ErrorRecoveryConfig) registry.Middleware {
 				if cfg.RetryDelay > 0 {
 					select {
 					case <-ctx.Done():
-						lastErr = ctx.Err()
-						break
+						// ctx.Err() will be re-captured by the check below.
 					case <-time.After(cfg.RetryDelay):
 					}
 					// Re-check after wait.
