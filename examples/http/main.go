@@ -141,6 +141,16 @@ func main() {
 	ctx := context.Background()
 	logger := slog.Default()
 
+	// --- Port configuration ---
+	// Reads PORT from the environment so the server can be started on any port.
+	// Falls back to 8080 for backwards-compatible local development.
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	addr := ":" + port
+	baseURL := "http://localhost:" + port
+
 	// --- Tool registry with logging middleware ---
 	reg := registry.NewToolRegistry(registry.Config{
 		DefaultTimeout: 30 * time.Second,
@@ -163,7 +173,7 @@ func main() {
 		License:      "MIT",
 		Categories:   []string{"developer-tools", "examples"},
 		Tags:         []string{"mcpkit", "example", "http", "streamable"},
-		Transports:   []discovery.TransportInfo{{Type: "streamable-http", URL: "http://localhost:8080/mcp"}},
+		Transports:   []discovery.TransportInfo{{Type: "streamable-http", URL: baseURL + "/mcp"}},
 		Install:      &discovery.InstallInfo{Go: "go run github.com/hairglasses-studio/mcpkit/examples/http@latest"},
 		Tools:        reg,
 	}
@@ -215,7 +225,7 @@ func main() {
 	mux.Handle("/.well-known/mcp.json", discovery.ServerCardHandler(cardCfg))
 
 	httpServer := &http.Server{
-		Addr:         ":8080",
+		Addr:         addr,
 		Handler:      mux,
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 60 * time.Second,
@@ -229,7 +239,7 @@ func main() {
 		DrainTimeout: 15 * time.Second,
 		OnHealthy: func() {
 			checker.SetStatus("healthy")
-			log.Printf("http-example: listening on http://localhost:8080/mcp")
+			log.Printf("http-example: listening on %s/mcp", baseURL)
 		},
 		OnDraining: func() {
 			checker.SetStatus("draining")

@@ -1,4 +1,4 @@
-.PHONY: build test vet lint check build-official test-official check-dual rdloop-build rdloop-dry rdloop rdloop-12h rdloop-status skill-surface skill-surface-check
+.PHONY: build test vet lint check build-official test-official check-dual rdloop-build rdloop-dry rdloop rdloop-12h rdloop-status skill-surface skill-surface-check smoke-matrix
 
 build:
 	go build ./...
@@ -56,6 +56,15 @@ skill-surface:
 
 skill-surface-check:
 	go run ./tools/genskillsurface --check
+
+# smoke-matrix — verify each public example works on stdio and HTTP transports.
+# Spawns each example binary, issues initialize + tools/list, validates the
+# response. Examples that do not support a given transport are skipped with
+# a logged reason rather than a failure.
+# CI note: included in the optional extended check; not part of the default
+# 'check' target because it requires building all example binaries (~30s).
+smoke-matrix:
+	go run ./tools/smoke-matrix
 
 HG_PIPELINE_MK ?= $(or $(wildcard $(abspath $(CURDIR)/../dotfiles/make/pipeline.mk)),$(wildcard $(HOME)/hairglasses-studio/dotfiles/make/pipeline.mk))
 -include $(HG_PIPELINE_MK)
