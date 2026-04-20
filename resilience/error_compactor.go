@@ -125,8 +125,8 @@ func NewErrorCompactorTracker() *ErrorCompactorTracker {
 }
 
 // ConsecutiveErrors returns the current consecutive error count for a tool.
-func (ect *ErrorCompactorTracker) ConsecutiveErrors(tool string) int {
-	return ect.tracker.count(tool)
+func (etc *ErrorCompactorTracker) ConsecutiveErrors(tool string) int {
+	return etc.tracker.count(tool)
 }
 
 // ErrorCompactorMiddlewareWithTracker is like ErrorCompactorMiddleware but
