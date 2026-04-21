@@ -139,6 +139,7 @@ See **[docs/migration-guide.md](docs/migration-guide.md)** for the full guide in
 | `eval` | Evaluation framework: cases, scorers, JSON suite loading, runner | `registry` |
 | `roadmap` | Machine-readable roadmap management, gap analysis, query functions | `registry`, `handler` |
 | `rdcycle` | R&D cycle orchestration tools: scan, plan, verify, commit, report | `registry`, `handler`, `research`, `roadmap`, `workflow`, `finops` |
+| `frontdoor` | Discovery-first starter: mount `tool_catalog`, `tool_search`, `tool_schema`, `server_health` on any registry via `frontdoor.New(reg, opts...)` | `registry`, `handler`, `health` |
 | `bridge/a2a` | Bidirectional MCP/A2A bridge: tool-to-skill translation, agent card generation, bridge executor, remote agent consumer | `registry`, `handler` |
 | `gateway/multi` | Multi-protocol HTTP gateway: MCP, A2A, and OpenAI adapters with auto-detection and canonical translation | `registry` |
 
