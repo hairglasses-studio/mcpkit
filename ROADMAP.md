@@ -350,8 +350,8 @@ Multi-agent workflow templates — pre-built workflow graphs for common multi-ag
 
 <roadmap-phase id="P41" status="planned" name="Example Gallery + Migration Guides">
 
-<roadmap-item id="P41-1" status="planned">
-Example gallery index — `examples/README.md` linking every `examples/*/main.go` with a one-line summary.
+<roadmap-item id="P41-1" status="shipped">
+Example gallery index — `examples/README.md` lists all 13 runnable examples grouped by theme (basics / discovery+catalog / safety+lifecycle / transport / agent protocols) with one-line summaries plus run+authoring guidance.
 </roadmap-item>
 
 <roadmap-item id="P41-2" status="planned">
