@@ -1,3 +1,8 @@
+// Package worktree manages a pool of pre-created git worktrees per
+// repository so concurrent sessions can acquire and release isolated
+// checkouts without paying the cost of `git worktree add` /
+// `git worktree remove` on every turn. Pool worktrees never merge into
+// main/master and get recycled after a configurable staleness window.
 package worktree
 
 import (
