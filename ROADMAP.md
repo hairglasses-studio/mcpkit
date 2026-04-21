@@ -274,8 +274,8 @@ Baseline benchmark suite — BenchmarkTool baselines for registry, handler, and 
 Middleware overhead measurement — per-middleware latency measurement using BenchmarkSuite with named layers.
 </roadmap-item>
 
-<roadmap-item id="P38-3" package="mcptest" status="planned">
-Memory profiling helpers — allocs-per-op assertions in benchmark helpers to catch allocation regressions.
+<roadmap-item id="P38-3" package="mcptest" status="shipped">
+Memory profiling helpers — `mcptest/allocs.go`: `AssertMaxAllocs(tb, maxAllocs, runs, fn)` wraps `testing.AllocsPerRun` with a readable failure message; `ReportAllocDelta(fn)` measures a single invocation via `runtime.MemStats`; `BenchmarkAllocLimit(b, maxAllocs, fn)` runs a benchmark and fails if the mean allocs-per-op exceeds a threshold. Accepts `testing.TB` so it works from tests and benchmarks. 6 unit tests.
 </roadmap-item>
 
 <roadmap-item id="P38-4" status="planned">
