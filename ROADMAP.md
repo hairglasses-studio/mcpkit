@@ -436,7 +436,7 @@ This tranche applies the highest-value whiteclaw findings that fit this repo's r
 - Keep public docs and verification aligned with the framework's role as shared infrastructure.
 
 ### Recommended Work
-- [ ] [Starter surface] Ship an opinionated explorer/front-door starter that covers catalog/search/schema/health for downstream repos.
+- [x] [Starter surface] Ship an opinionated explorer/front-door starter that covers catalog/search/schema/health for downstream repos. Implemented in `frontdoor/` package: `Module` with `New(reg, opts...)`, `WithPrefix`/`WithHealthChecker` options, and four TypedHandler tools (`tool_catalog`, `tool_search`, `tool_schema`, `server_health`). 15 unit tests, race-clean.
 - [x] [Docs] Publish a migration guide showing when to use `.mcp.json`, a discovery-first contract layer, or a standalone sidecar package.
 - [x] [Verification] Add a transport and launcher smoke matrix for the public examples and starter surfaces.
 - [ ] [Typed boundaries] Keep new tool/command/workflow surfaces on typed contracts rather than handwritten JSON-RPC or loose maps.
@@ -469,6 +469,6 @@ Identified from GitHub MCP ecosystem research (30+ repos, 150K+ combined stars).
 - [x] [P2][M] Bounded-write safety middleware — Stripe-style confirmation pattern for MCP tools with financial/destructive side effects. Tool declares `confirm_required: true`, middleware intercepts and requires explicit `confirm` param. Ref: stripe/ai agent-toolkit (1.5K stars). Implemented in `middleware/boundedwrite`: `Middleware()`, `RequireConfirmation()`, `ConfirmTag` constant, 10 unit tests, and `examples/bounded-write` runnable server.
 - [ ] [P2][L] Performance benchmarks — mcpkit middleware chain overhead vs raw mcp-go, p99 latency per middleware layer, throughput under load. Reference threshold: no single middleware layer may add >5% p99 latency
 - [x] [P2][M] Token-efficient schema-first patterns — `handler/pagination.go` provides `Paginate[T]` (generic cursor-based paging), `TruncateResult` (byte-budget enforcement), `SchemaFirstResult` (deferred-data closure pattern). 16 unit tests. Ref: bytebase/dbhub (2.6K stars)
-- [ ] [P2][M] Explorer/front-door starter — opinionated catalog/search/schema/health surface for downstream repos to adopt without rewriting transport. Include discovery-first guidance as the documented happy path
+- [x] [P2][M] Explorer/front-door starter — `frontdoor` package wraps an existing `registry.ToolRegistry` with four discovery tools (`tool_catalog`, `tool_search`, `tool_schema`, `server_health`), with optional name prefix and health.Checker wiring. Downstream servers register it with one line and get a consistent explorer UX without rewriting catalog/search plumbing. 15 unit tests.
 
 <!-- whiteclaw-rollout:end -->
