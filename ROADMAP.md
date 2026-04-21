@@ -440,7 +440,7 @@ This tranche applies the highest-value whiteclaw findings that fit this repo's r
 - [x] [Docs] Publish a migration guide showing when to use `.mcp.json`, a discovery-first contract layer, or a standalone sidecar package.
 - [x] [Verification] Add a transport and launcher smoke matrix for the public examples and starter surfaces.
 - [ ] [Typed boundaries] Keep new tool/command/workflow surfaces on typed contracts rather than handwritten JSON-RPC or loose maps.
-- [x] [Public examples] Expand example coverage — examples/pagination/ demonstrates Paginate + TruncateResult + SchemaFirstResult composition on a 500-row synthetic catalog.
+- [x] [Public examples] Expand example coverage — examples/pagination/ demonstrates Paginate + TruncateResult + SchemaFirstResult composition on a 500-row synthetic catalog. examples/frontdoor/ demonstrates `frontdoor.New(reg, WithPrefix("fd_"), WithHealthChecker(chk))` on a tiny inventory demo, giving downstream repos a copy-paste-ready integration reference.
 
 ### Rationale Snapshot
 - Tier / lifecycle: `tier-1` / `active`
