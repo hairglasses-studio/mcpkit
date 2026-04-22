@@ -163,11 +163,7 @@ func fetchIssues(ctx context.Context, repo, since string) ([]IssueSummary, error
 
 	var issues []IssueSummary
 	for _, i := range raw {
-		issues = append(issues, IssueSummary{
-			Number: i.Number,
-			Title:  i.Title,
-			State:  i.State,
-		})
+		issues = append(issues, IssueSummary(i))
 	}
 	return issues, nil
 }

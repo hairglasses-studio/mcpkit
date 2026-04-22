@@ -1,4 +1,3 @@
-
 package research
 
 import (
@@ -22,9 +21,9 @@ type SummaryInput struct {
 
 // SummaryOutput is the combined research summary.
 type SummaryOutput struct {
-	Report              string         `json:"report"`
-	Sections            []Section      `json:"sections"`
-	ActionItems         []string       `json:"action_items"`
+	Report               string         `json:"report"`
+	Sections             []Section      `json:"sections"`
+	ActionItems          []string       `json:"action_items"`
 	UpdatedFeatureMatrix []FeatureEntry `json:"updated_feature_matrix"`
 }
 
@@ -69,23 +68,23 @@ func (m *Module) handleSummary(_ context.Context, input SummaryInput) (SummaryOu
 	if input.SpecFindings != nil {
 		sf := input.SpecFindings
 		var content strings.Builder
-		content.WriteString(fmt.Sprintf("Coverage: %s (%d/%d implemented, %d partial, %d missing)\n",
+		fmt.Fprintf(&content, "Coverage: %s (%d/%d implemented, %d partial, %d missing)\n",
 			sf.CoverageSummary.Percentage,
 			sf.CoverageSummary.Implemented,
 			sf.CoverageSummary.Total,
 			sf.CoverageSummary.Partial,
-			sf.CoverageSummary.Missing))
+			sf.CoverageSummary.Missing)
 
 		if len(sf.NewFeatures) > 0 {
 			content.WriteString("\nNew features detected:\n")
 			for _, f := range sf.NewFeatures {
-				content.WriteString(fmt.Sprintf("- %s\n", f))
+				fmt.Fprintf(&content, "- %s\n", f)
 			}
 		}
 		if len(sf.ChangedFeatures) > 0 {
 			content.WriteString("\nChanged features:\n")
 			for _, f := range sf.ChangedFeatures {
-				content.WriteString(fmt.Sprintf("- %s\n", f))
+				fmt.Fprintf(&content, "- %s\n", f)
 				actions = append(actions, fmt.Sprintf("Investigate spec change: %s", f))
 			}
 		}
@@ -97,22 +96,20 @@ func (m *Module) handleSummary(_ context.Context, input SummaryInput) (SummaryOu
 	if input.SDKFindings != nil {
 		sf := input.SDKFindings
 		var content strings.Builder
-		content.WriteString(fmt.Sprintf("Current mcp-go: %s\n", sf.GoModVersion))
+		fmt.Fprintf(&content, "Current mcp-go: %s\n", sf.GoModVersion)
 		if sf.LatestUpstream != "" {
-			content.WriteString(fmt.Sprintf("Latest upstream: %s\n", sf.LatestUpstream))
+			fmt.Fprintf(&content, "Latest upstream: %s\n", sf.LatestUpstream)
 		}
 
 		for _, repo := range sf.Repos {
 			if repo.Error != "" {
-				content.WriteString(fmt.Sprintf("\n%s/%s: ERROR - %s\n", repo.Owner, repo.Repo, repo.Error))
+				fmt.Fprintf(&content, "\n%s/%s: ERROR - %s\n", repo.Owner, repo.Repo, repo.Error)
 			} else {
-				content.WriteString(fmt.Sprintf("\n%s/%s: latest=%s\n", repo.Owner, repo.Repo, repo.LatestTag))
+				fmt.Fprintf(&content, "\n%s/%s: latest=%s\n", repo.Owner, repo.Repo, repo.LatestTag)
 			}
 		}
 
-		for _, advice := range sf.UpgradeAdvice {
-			actions = append(actions, advice)
-		}
+		actions = append(actions, sf.UpgradeAdvice...)
 
 		sections = append(sections, Section{Title: "SDK Releases", Content: content.String()})
 	}
@@ -124,17 +121,17 @@ func (m *Module) handleSummary(_ context.Context, input SummaryInput) (SummaryOu
 
 		for _, src := range ef.Sources {
 			if src.Error != "" {
-				content.WriteString(fmt.Sprintf("- %s: ERROR - %s\n", src.Name, src.Error))
+				fmt.Fprintf(&content, "- %s: ERROR - %s\n", src.Name, src.Error)
 			} else {
-				content.WriteString(fmt.Sprintf("- %s: relevance=%.0f%% (%d keyword hits)\n",
-					src.Name, src.Relevance*100, len(src.KeywordHits)))
+				fmt.Fprintf(&content, "- %s: relevance=%.0f%% (%d keyword hits)\n",
+					src.Name, src.Relevance*100, len(src.KeywordHits))
 			}
 		}
 
 		if len(ef.Highlights) > 0 {
 			content.WriteString("\nHighlights:\n")
 			for _, h := range ef.Highlights {
-				content.WriteString(fmt.Sprintf("- [%s] %s\n", h.Source, h.Text))
+				fmt.Fprintf(&content, "- [%s] %s\n", h.Source, h.Text)
 			}
 		}
 
@@ -147,14 +144,12 @@ func (m *Module) handleSummary(_ context.Context, input SummaryInput) (SummaryOu
 		var content strings.Builder
 
 		for _, a := range af.Assessments {
-			content.WriteString(fmt.Sprintf("- %s: priority=%.2f (%s)\n", a.Name, a.Priority, a.Rationale))
+			fmt.Fprintf(&content, "- %s: priority=%.2f (%s)\n", a.Name, a.Priority, a.Rationale)
 		}
 
-		for _, rec := range af.Recommendations {
-			actions = append(actions, rec)
-		}
+		actions = append(actions, af.Recommendations...)
 		for _, risk := range af.RiskFactors {
-			content.WriteString(fmt.Sprintf("\nRisk: %s\n", risk))
+			fmt.Fprintf(&content, "\nRisk: %s\n", risk)
 		}
 
 		sections = append(sections, Section{Title: "Assessment", Content: content.String()})
@@ -180,13 +175,13 @@ func buildMarkdownReport(sections []Section, actions []string) string {
 	b.WriteString("# MCP Ecosystem Research Summary\n\n")
 
 	for _, s := range sections {
-		b.WriteString(fmt.Sprintf("## %s\n\n%s\n\n", s.Title, s.Content))
+		fmt.Fprintf(&b, "## %s\n\n%s\n\n", s.Title, s.Content)
 	}
 
 	if len(actions) > 0 {
 		b.WriteString("## Action Items\n\n")
 		for i, a := range actions {
-			b.WriteString(fmt.Sprintf("%d. %s\n", i+1, a))
+			fmt.Fprintf(&b, "%d. %s\n", i+1, a)
 		}
 		b.WriteString("\n")
 	}

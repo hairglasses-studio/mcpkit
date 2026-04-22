@@ -77,13 +77,11 @@ func requiresConfirmation(td registry.ToolDefinition) bool {
 func rejectionMessage(name string, td registry.ToolDefinition) string {
 	var b strings.Builder
 
-	b.WriteString(fmt.Sprintf(
-		"[CONFIRM_REQUIRED] Tool %q requires explicit confirmation before execution.\n\n",
-		name,
-	))
+	fmt.Fprintf(&b, "[CONFIRM_REQUIRED] Tool %q requires explicit confirmation before execution.\n\n",
+		name)
 
 	if td.Tool.Description != "" {
-		b.WriteString(fmt.Sprintf("This tool will: %s\n\n", td.Tool.Description))
+		fmt.Fprintf(&b, "This tool will: %s\n\n", td.Tool.Description)
 	}
 
 	b.WriteString(

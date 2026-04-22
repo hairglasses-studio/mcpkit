@@ -64,8 +64,8 @@ func (m *Module) handleReport(_ context.Context, input ReportInput) (ReportOutpu
 
 	// Build markdown content
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("# Research: %s\n\n", input.Title))
-	b.WriteString(fmt.Sprintf("Generated: %s\n\n", time.Now().UTC().Format(time.RFC3339)))
+	fmt.Fprintf(&b, "# Research: %s\n\n", input.Title)
+	fmt.Fprintf(&b, "Generated: %s\n\n", time.Now().UTC().Format(time.RFC3339))
 	b.WriteString("## Summary\n\n")
 	b.WriteString(input.Summary)
 	b.WriteString("\n")
@@ -73,7 +73,7 @@ func (m *Module) handleReport(_ context.Context, input ReportInput) (ReportOutpu
 	if len(input.ActionItems) > 0 {
 		b.WriteString("\n## Action Items\n\n")
 		for _, item := range input.ActionItems {
-			b.WriteString(fmt.Sprintf("- %s\n", item))
+			fmt.Fprintf(&b, "- %s\n", item)
 		}
 	}
 

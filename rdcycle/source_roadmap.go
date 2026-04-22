@@ -32,9 +32,10 @@ func (rs *RoadmapSource) Fetch(_ context.Context) ([]CandidateTask, error) {
 	var candidates []CandidateTask
 	for i, item := range ready {
 		complexity := "moderate"
-		if item.Priority == "high" {
+		switch item.Priority {
+		case "high":
 			complexity = "complex"
-		} else if item.Priority == "low" {
+		case "low":
 			complexity = "simple"
 		}
 		candidates = append(candidates, CandidateTask{

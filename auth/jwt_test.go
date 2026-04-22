@@ -249,7 +249,7 @@ func TestJWKSValidator_CachesKeys(t *testing.T) {
 		"keys": []map[string]any{
 			{
 				"kty": "RSA", "use": "sig", "kid": kid, "alg": "RS256",
-				"n": base64.RawURLEncoding.EncodeToString(key.PublicKey.N.Bytes()),
+				"n": base64.RawURLEncoding.EncodeToString(key.N.Bytes()),
 				"e": base64.RawURLEncoding.EncodeToString(big.NewInt(int64(key.PublicKey.E)).Bytes()),
 			},
 		},

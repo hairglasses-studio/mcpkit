@@ -145,12 +145,12 @@ func TestOpenAPIAdapter_CallTool_GET(t *testing.T) {
 
 	// Backend that serves the spec and the API
 	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case r.URL.Path == "/openapi.json" || r.URL.Path == "/":
+		switch r.URL.Path {
+		case "/openapi.json", "/":
 			data, _ := json.Marshal(minimalSpec())
 			w.Header().Set("Content-Type", "application/json")
 			w.Write(data)
-		case r.URL.Path == "/items":
+		case "/items":
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode([]map[string]string{{"id": "1", "name": "test"}})
 		default:

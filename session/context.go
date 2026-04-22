@@ -170,19 +170,19 @@ func renderXML(events []Event) (string, error) {
 	b.WriteString("<context>\n")
 	for _, e := range events {
 		tag := xmlSafeTag(string(e.Type))
-		b.WriteString(fmt.Sprintf("  <%s timestamp=%q>\n", tag, e.Timestamp.Format(time.RFC3339)))
+		fmt.Fprintf(&b, "  <%s timestamp=%q>\n", tag, e.Timestamp.Format(time.RFC3339))
 		if e.Data != nil {
-			b.WriteString(fmt.Sprintf("    <data>%s</data>\n", xmlEscape(fmt.Sprint(e.Data))))
+			fmt.Fprintf(&b, "    <data>%s</data>\n", xmlEscape(fmt.Sprint(e.Data)))
 		}
 		if len(e.Metadata) > 0 {
 			b.WriteString("    <metadata>\n")
 			for k, v := range e.Metadata {
-				b.WriteString(fmt.Sprintf("      <%s>%s</%s>\n",
-					xmlSafeTag(k), xmlEscape(v), xmlSafeTag(k)))
+				fmt.Fprintf(&b, "      <%s>%s</%s>\n",
+					xmlSafeTag(k), xmlEscape(v), xmlSafeTag(k))
 			}
 			b.WriteString("    </metadata>\n")
 		}
-		b.WriteString(fmt.Sprintf("  </%s>\n", tag))
+		fmt.Fprintf(&b, "  </%s>\n", tag)
 	}
 	b.WriteString("</context>")
 	return b.String(), nil
@@ -195,15 +195,15 @@ func renderYAML(events []Event) (string, error) {
 		if i > 0 {
 			b.WriteString("\n")
 		}
-		b.WriteString(fmt.Sprintf("- type: %s\n", e.Type))
-		b.WriteString(fmt.Sprintf("  timestamp: %s\n", e.Timestamp.Format(time.RFC3339)))
+		fmt.Fprintf(&b, "- type: %s\n", e.Type)
+		fmt.Fprintf(&b, "  timestamp: %s\n", e.Timestamp.Format(time.RFC3339))
 		if e.Data != nil {
-			b.WriteString(fmt.Sprintf("  data: %s\n", yamlEscape(fmt.Sprint(e.Data))))
+			fmt.Fprintf(&b, "  data: %s\n", yamlEscape(fmt.Sprint(e.Data)))
 		}
 		if len(e.Metadata) > 0 {
 			b.WriteString("  metadata:\n")
 			for k, v := range e.Metadata {
-				b.WriteString(fmt.Sprintf("    %s: %s\n", k, yamlEscape(v)))
+				fmt.Fprintf(&b, "    %s: %s\n", k, yamlEscape(v))
 			}
 		}
 	}
@@ -219,9 +219,9 @@ func renderCompact(events []Event) (string, error) {
 			b.WriteString("\n")
 		}
 		ts := e.Timestamp.Format("15:04:05")
-		b.WriteString(fmt.Sprintf("[%s@%s]", e.Type, ts))
+		fmt.Fprintf(&b, "[%s@%s]", e.Type, ts)
 		if e.Data != nil {
-			b.WriteString(fmt.Sprintf(" %s", fmt.Sprint(e.Data)))
+			fmt.Fprintf(&b, " %s", fmt.Sprint(e.Data))
 		}
 		if len(e.Metadata) > 0 {
 			b.WriteString(" {")
@@ -230,7 +230,7 @@ func renderCompact(events []Event) (string, error) {
 				if !first {
 					b.WriteString(",")
 				}
-				b.WriteString(fmt.Sprintf("%s=%s", k, v))
+				fmt.Fprintf(&b, "%s=%s", k, v)
 				first = false
 			}
 			b.WriteString("}")

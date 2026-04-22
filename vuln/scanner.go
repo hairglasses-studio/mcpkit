@@ -100,9 +100,9 @@ type govulncheckConfig struct {
 }
 
 type govulncheckFinding struct {
-	OSV          string                   `json:"osv,omitempty"`
-	FixedVersion string                   `json:"fixed_version,omitempty"`
-	Trace        []govulncheckFrame       `json:"trace,omitempty"`
+	OSV          string             `json:"osv,omitempty"`
+	FixedVersion string             `json:"fixed_version,omitempty"`
+	Trace        []govulncheckFrame `json:"trace,omitempty"`
 }
 
 type govulncheckFrame struct {
@@ -210,7 +210,7 @@ func (s *Scanner) parseOutput(_ context.Context, data []byte, _ error) (ScanResu
 			vuln.Published = entry.Published
 			vuln.Modified = entry.Modified
 			for _, ref := range entry.References {
-				vuln.References = append(vuln.References, Reference{Type: ref.Type, URL: ref.URL})
+				vuln.References = append(vuln.References, Reference(ref))
 			}
 			if entry.DatabaseSpecific != nil {
 				vuln.AdvisoryURL = entry.DatabaseSpecific.URL

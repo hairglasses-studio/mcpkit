@@ -216,8 +216,8 @@ func applyMutations(candidates []CandidateTask, mutations []TaskMutation) []Cand
 func buildSynthesizedSpec(cfg SynthesisConfig, candidates []CandidateTask, learning *LearningEngine) ralph.Spec {
 	sinceDate := time.Now().UTC().Format(time.RFC3339)
 	var description strings.Builder
-	description.WriteString(fmt.Sprintf("Autonomous R&D cycle '%s' (strategy: %s, since: %s).",
-		cfg.CycleName, cfg.Strategy, sinceDate))
+	fmt.Fprintf(&description, "Autonomous R&D cycle '%s' (strategy: %s, since: %s).",
+		cfg.CycleName, cfg.Strategy, sinceDate)
 
 	// Inject lessons summary.
 	costTrend := learning.CostTrend()
@@ -225,10 +225,10 @@ func buildSynthesizedSpec(cfg SynthesisConfig, candidates []CandidateTask, learn
 	if costTrend != "stable" || len(avoidPatterns) > 0 {
 		description.WriteString("\n\nLearning signals:")
 		if costTrend != "stable" {
-			description.WriteString(fmt.Sprintf("\n- Cost trend: %s", costTrend))
+			fmt.Fprintf(&description, "\n- Cost trend: %s", costTrend)
 		}
 		for _, p := range avoidPatterns {
-			description.WriteString(fmt.Sprintf("\n- Avoid: %s", p))
+			fmt.Fprintf(&description, "\n- Avoid: %s", p)
 		}
 	}
 

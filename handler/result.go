@@ -57,7 +57,7 @@ func CodedErrorResult(code string, err error) *registry.CallToolResult {
 // ActionableErrorResult creates an error result with suggestions for resolution.
 func ActionableErrorResult(code string, err error, suggestions ...string) *registry.CallToolResult {
 	var msg strings.Builder
-	msg.WriteString(fmt.Sprintf("[%s] %s", code, err.Error()))
+	fmt.Fprintf(&msg, "[%s] %s", code, err.Error())
 	if len(suggestions) > 0 {
 		msg.WriteString("\n\nSuggested actions:")
 		for _, s := range suggestions {

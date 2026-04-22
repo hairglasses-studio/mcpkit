@@ -193,9 +193,7 @@ func (m *Module) handleSchedule(ctx context.Context, input ScheduleInput) (Sched
 		}
 		var lessons []string
 		for _, n := range lastN {
-			for _, s := range n.Suggestions {
-				lessons = append(lessons, s)
-			}
+			lessons = append(lessons, n.Suggestions...)
 			for _, f := range n.WhatFailed {
 				lessons = append(lessons, "Avoid: "+f)
 			}

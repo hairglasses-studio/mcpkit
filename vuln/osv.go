@@ -109,18 +109,18 @@ func (c *OSVClient) Query(ctx context.Context, modulePath, version string) (OSVQ
 	for _, entry := range apiResp.Vulns {
 		e := entry // copy for pointer use
 		vuln := Vulnerability{
-			ID:       entry.ID,
-			Aliases:  entry.Aliases,
-			Summary:  entry.Summary,
-			Details:  entry.Details,
-			Module:   modulePath,
-			Version:  version,
-			Severity: classifySeverity(&e),
+			ID:        entry.ID,
+			Aliases:   entry.Aliases,
+			Summary:   entry.Summary,
+			Details:   entry.Details,
+			Module:    modulePath,
+			Version:   version,
+			Severity:  classifySeverity(&e),
 			Published: entry.Published,
 			Modified:  entry.Modified,
 		}
 		for _, ref := range entry.References {
-			vuln.References = append(vuln.References, Reference{Type: ref.Type, URL: ref.URL})
+			vuln.References = append(vuln.References, Reference(ref))
 		}
 		if entry.DatabaseSpecific != nil {
 			vuln.AdvisoryURL = entry.DatabaseSpecific.URL

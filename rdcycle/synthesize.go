@@ -24,9 +24,9 @@ func (ts *TaskSynthesizer) SynthesizeSpec(plan PlanOutput, cycleName string, les
 	}
 
 	var desc strings.Builder
-	desc.WriteString(fmt.Sprintf("Autonomous R&D cycle: %s.", cycleName))
+	fmt.Fprintf(&desc, "Autonomous R&D cycle: %s.", cycleName)
 	if plan.NextPhase != nil {
-		desc.WriteString(fmt.Sprintf(" Focus: phase %q.", plan.NextPhase.Name))
+		fmt.Fprintf(&desc, " Focus: phase %q.", plan.NextPhase.Name)
 	}
 	if len(lessons) > 0 {
 		desc.WriteString("\n\nLessons from previous cycles:\n")
