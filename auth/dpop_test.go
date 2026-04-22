@@ -735,7 +735,7 @@ func TestDPoPValidator_ES256SignatureMismatch(t *testing.T) {
 // Ensure the big.Int conversion for RSA e value works for the common exponent 65537.
 func TestRSAExponent65537(t *testing.T) {
 	key := generateRSATestKey(t)
-	if key.PublicKey.E != 65537 {
+	if key.E != 65537 {
 		t.Skip("key does not use e=65537, skip exponent test")
 	}
 	v := newTestDPoPValidator()

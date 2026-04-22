@@ -21,7 +21,7 @@ func AgentCardFromRegistry(reg *registry.ToolRegistry, opts ...CardOption) Agent
 		URL:         cfg.url,
 		Version:     cfg.version,
 		Capabilities: &Capabilities{
-			Streaming:        cfg.streaming,
+			Streaming:         cfg.streaming,
 			PushNotifications: cfg.pushNotifications,
 		},
 	}
@@ -50,9 +50,7 @@ func AgentCardFromRegistry(reg *registry.ToolRegistry, opts ...CardOption) Agent
 				if category != "" {
 					skill.Tags = append(skill.Tags, category)
 				}
-				for _, tag := range td.Tags {
-					skill.Tags = append(skill.Tags, tag)
-				}
+				skill.Tags = append(skill.Tags, td.Tags...)
 				card.Skills = append(card.Skills, skill)
 			}
 		}

@@ -78,18 +78,18 @@ type ToolInfo struct {
 
 // TransportResult records the outcome of one (example, transport) probe.
 type TransportResult struct {
-	Transport string     `json:"transport"`
-	Status    string     `json:"status"` // pass | fail | skip
-	Reason    string     `json:"reason,omitempty"`
-	Tools     []ToolInfo `json:"tools,omitempty"`
-	Error     string     `json:"error,omitempty"`
-	DurationMs int64     `json:"duration_ms,omitempty"`
+	Transport  string     `json:"transport"`
+	Status     string     `json:"status"` // pass | fail | skip
+	Reason     string     `json:"reason,omitempty"`
+	Tools      []ToolInfo `json:"tools,omitempty"`
+	Error      string     `json:"error,omitempty"`
+	DurationMs int64      `json:"duration_ms,omitempty"`
 }
 
 // ExampleResult collects results for one example across all transports.
 type ExampleResult struct {
-	Example    string            `json:"example"`
-	Results    []TransportResult `json:"results"`
+	Example string            `json:"example"`
+	Results []TransportResult `json:"results"`
 }
 
 // SmokeReport is the top-level JSON output.
@@ -109,32 +109,32 @@ type SmokeReport struct {
 // transport configuration. Edit this list when adding new examples.
 var examples = []ExampleConfig{
 	{
-		Name:            "minimal",
-		HTTPSkipReason:  "stdio-only example (no HTTP transport)",
+		Name:           "minimal",
+		HTTPSkipReason: "stdio-only example (no HTTP transport)",
 	},
 	{
-		Name:            "bounded-write",
-		HTTPSkipReason:  "stdio-only example (no HTTP transport)",
+		Name:           "bounded-write",
+		HTTPSkipReason: "stdio-only example (no HTTP transport)",
 	},
 	{
-		Name:            "elicitation",
-		HTTPSkipReason:  "stdio-only example (no HTTP transport)",
+		Name:           "elicitation",
+		HTTPSkipReason: "stdio-only example (no HTTP transport)",
 	},
 	{
-		Name:            "full",
-		HTTPSkipReason:  "stdio-only example (no HTTP transport)",
+		Name:           "full",
+		HTTPSkipReason: "stdio-only example (no HTTP transport)",
 	},
 	{
-		Name:            "pagination",
-		HTTPSkipReason:  "stdio-only example (no HTTP transport)",
+		Name:           "pagination",
+		HTTPSkipReason: "stdio-only example (no HTTP transport)",
 	},
 	{
-		Name:            "truncate-demo",
-		HTTPSkipReason:  "stdio-only example (no HTTP transport)",
+		Name:           "truncate-demo",
+		HTTPSkipReason: "stdio-only example (no HTTP transport)",
 	},
 	{
-		Name:            "vuln-scanner",
-		HTTPSkipReason:  "stdio-only example (no HTTP transport)",
+		Name:           "vuln-scanner",
+		HTTPSkipReason: "stdio-only example (no HTTP transport)",
 	},
 	{
 		Name: "http",
@@ -625,11 +625,12 @@ func printTable(w io.Writer, report SmokeReport) {
 			switch tr.Transport {
 			case TransportStdio:
 				stdioCell = cell
-				if tr.Status == StatusPass {
+				switch tr.Status {
+				case StatusPass:
 					detailCell = fmt.Sprintf("%d tools", len(tr.Tools))
-				} else if tr.Status == StatusFail {
+				case StatusFail:
 					detailCell = "FAIL: " + tr.Error
-				} else if tr.Status == StatusSkip {
+				case StatusSkip:
 					detailCell = tr.Reason
 				}
 			case TransportHTTP:

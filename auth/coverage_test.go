@@ -336,7 +336,7 @@ func TestJWKSValidator_KeysWithNonRSA(t *testing.T) {
 	key := generateTestKey(t)
 	kid := "rsa-key"
 
-	eBytes := coverBigIntBytes(key.PublicKey.E)
+	eBytes := coverBigIntBytes(key.E)
 	jwks := map[string]any{
 		"keys": []map[string]any{
 			{
@@ -350,7 +350,7 @@ func TestJWKSValidator_KeysWithNonRSA(t *testing.T) {
 				"use": "sig",
 				"kid": kid,
 				"alg": "RS256",
-				"n":   base64.RawURLEncoding.EncodeToString(key.PublicKey.N.Bytes()),
+				"n":   base64.RawURLEncoding.EncodeToString(key.N.Bytes()),
 				"e":   base64.RawURLEncoding.EncodeToString(eBytes),
 			},
 		},

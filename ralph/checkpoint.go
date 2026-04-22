@@ -21,11 +21,7 @@ type checkpointEntry struct {
 func SaveCheckpoint(path string, turns []ConversationTurn) error {
 	entries := make([]checkpointEntry, len(turns))
 	for i, t := range turns {
-		entries[i] = checkpointEntry{
-			UserPrompt:    t.UserPrompt,
-			AssistantText: t.AssistantText,
-			ToolResults:   t.ToolResults,
-		}
+		entries[i] = checkpointEntry(t)
 	}
 	data, err := json.MarshalIndent(entries, "", "  ")
 	if err != nil {
@@ -69,11 +65,7 @@ func LoadCheckpoint(path string) ([]ConversationTurn, error) {
 	}
 	turns := make([]ConversationTurn, len(entries))
 	for i, e := range entries {
-		turns[i] = ConversationTurn{
-			UserPrompt:    e.UserPrompt,
-			AssistantText: e.AssistantText,
-			ToolResults:   e.ToolResults,
-		}
+		turns[i] = ConversationTurn(e)
 	}
 	return turns, nil
 }
