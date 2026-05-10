@@ -51,6 +51,7 @@ go vet ./...
 
 ```bash
 make check      # build + vet + test
+make check-dual # default checks plus official_sdk build/test gates
 ```
 
 mcpkit uses a shared `pipeline.mk` Makefile include that provides standardized
@@ -73,6 +74,18 @@ targets across all hairglasses-studio repos: `build`, `vet`, `test`, `lint`,
 
 Keep PRs focused. One logical change per PR is easier to review than a combined
 refactor-plus-feature.
+
+### Review Checklist
+
+Before requesting review, confirm:
+
+- The change is scoped to one behavior, package, or documentation topic.
+- Public APIs have package docs, examples, or tests that show intended use.
+- New code follows the dependency layers and does not import upward.
+- Tool handlers return MCP error results instead of raw Go errors when callers need to see the failure.
+- Default tests pass for affected packages with `go test ./<package> -count=1`.
+- SDK compatibility is preserved with `make build-official` and `make test-official` when touching `registry`, `handler`, `mcptest`, transport, session, resources, prompts, or sampling surfaces.
+- Roadmap changes include evidence and do not mark future upstream-dependent work complete.
 
 ### Branch Naming
 
@@ -113,7 +126,7 @@ chore: update go.mod dependencies
 
 ## Architecture Overview
 
-mcpkit is organized into 35+ packages across four dependency layers. The core
+mcpkit is organized into 70+ packages across four dependency layers. The core
 packages that most contributors will interact with are:
 
 ### `handler`

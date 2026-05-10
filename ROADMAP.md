@@ -349,9 +349,9 @@ Multi-agent workflow templates — pre-built workflow graphs for common multi-ag
 
 <roadmap-tier id="T10" name="Community">
 
-<roadmap-phase id="P41" status="planned" name="Example Gallery + Migration Guides">
+<roadmap-phase id="P41" status="in_progress" name="Example Gallery + Migration Guides">
 
-<roadmap-item id="P41-1" status="shipped">
+<roadmap-item id="P41-1" status="complete">
 Example gallery index — `examples/README.md` lists all 13 runnable examples grouped by theme (basics / discovery+catalog / safety+lifecycle / transport / agent protocols) with one-line summaries plus run+authoring guidance.
 </roadmap-item>
 
@@ -363,8 +363,8 @@ FastMCP migration guide — side-by-side FastMCP Python → mcpkit Go translatio
 Docker-compose example — `examples/docker/` with compose file, health checks, and lifecycle integration.
 </roadmap-item>
 
-<roadmap-item id="P41-4" status="planned">
-CONTRIBUTING.md — contributor guide: branch naming, test requirements, middleware conventions, review checklist.
+<roadmap-item id="P41-4" status="complete">
+CONTRIBUTING.md — contributor guide covers branch naming, test requirements, middleware conventions, dual-SDK gates, and reviewer checklist.
 </roadmap-item>
 
 <roadmap-item id="P41-5" status="planned">

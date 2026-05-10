@@ -609,12 +609,12 @@
     {
       "id": "P41",
       "name": "Example Gallery + Migration Guides",
-      "status": "planned",
+      "status": "in_progress",
       "items": [
         {
           "id": "P41-1",
-          "description": "Example gallery index with categorization",
-          "status": "planned",
+          "description": "Example gallery index in examples/README.md",
+          "status": "complete",
           "priority": "high"
         },
         {
@@ -631,8 +631,8 @@
         },
         {
           "id": "P41-4",
-          "description": "CONTRIBUTING.md with development workflow",
-          "status": "planned",
+          "description": "CONTRIBUTING.md with branch naming, tests, middleware conventions, dual-SDK gates, and review checklist",
+          "status": "complete",
           "priority": "high"
         },
         {
@@ -1291,8 +1291,8 @@
       "items": [
         {
           "id": "P41-1",
-          "description": "Example gallery index with categorization",
-          "status": "planned",
+          "description": "Example gallery index in examples/README.md",
+          "status": "complete",
           "priority": "high"
         },
         {
@@ -1309,8 +1309,8 @@
         },
         {
           "id": "P41-4",
-          "description": "CONTRIBUTING.md with development workflow",
-          "status": "planned",
+          "description": "CONTRIBUTING.md with branch naming, tests, middleware conventions, dual-SDK gates, and review checklist",
+          "status": "complete",
           "priority": "high"
         },
         {
