@@ -440,20 +440,20 @@
     {
       "id": "P38",
       "name": "Performance Benchmarking",
-      "status": "planned",
+      "status": "in_progress",
       "items": [
         {
           "id": "P38-1",
-          "description": "Baseline benchmark suite for core packages",
+          "description": "Baseline benchmark suite for tool dispatch and cross-protocol gateway/bridge paths",
           "package": "mcptest",
-          "status": "planned",
+          "status": "complete",
           "priority": "high"
         },
         {
           "id": "P38-2",
-          "description": "Middleware overhead measurement",
+          "description": "Middleware overhead benchmarks for named no-op, context, and parallel layers",
           "package": "mcptest",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P38-1"
           ],
@@ -461,9 +461,9 @@
         },
         {
           "id": "P38-3",
-          "description": "Memory profiling helpers",
+          "description": "Memory profiling helpers and allocation limit benchmarks",
           "package": "mcptest",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P38-1"
           ],
@@ -1131,16 +1131,16 @@
         },
         {
           "id": "P38-1",
-          "description": "Baseline benchmark suite for core packages",
+          "description": "Baseline benchmark suite for tool dispatch and cross-protocol gateway/bridge paths",
           "package": "mcptest",
-          "status": "planned",
+          "status": "complete",
           "priority": "high"
         },
         {
           "id": "P38-2",
-          "description": "Middleware overhead measurement",
+          "description": "Middleware overhead benchmarks for named no-op, context, and parallel layers",
           "package": "mcptest",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P38-1"
           ],
@@ -1148,9 +1148,9 @@
         },
         {
           "id": "P38-3",
-          "description": "Memory profiling helpers",
+          "description": "Memory profiling helpers and allocation limit benchmarks",
           "package": "mcptest",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P38-1"
           ],
