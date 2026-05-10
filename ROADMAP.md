@@ -349,7 +349,7 @@ Multi-agent workflow templates — pre-built workflow graphs for common multi-ag
 
 <roadmap-tier id="T10" name="Community">
 
-<roadmap-phase id="P41" status="in_progress" name="Example Gallery + Migration Guides">
+<roadmap-phase id="P41" status="complete" name="Example Gallery + Migration Guides">
 
 <roadmap-item id="P41-1" status="complete">
 Example gallery index — `examples/README.md` lists all 13 runnable examples grouped by theme (basics / discovery+catalog / safety+lifecycle / transport / agent protocols) with one-line summaries plus run+authoring guidance.
@@ -367,8 +367,8 @@ Docker-compose example — `examples/docker/` provides two StreamableHTTP MCP se
 CONTRIBUTING.md — contributor guide covers branch naming, test requirements, middleware conventions, dual-SDK gates, and reviewer checklist.
 </roadmap-item>
 
-<roadmap-item id="P41-5" status="planned">
-Tutorial content outline — structured outline for a multi-part "Build your first MCP server" tutorial series.
+<roadmap-item id="P41-5" status="complete">
+Tutorial content outline — `docs/tutorial-outline.md` lays out an eight-part "Build your first MCP server" series with outcomes, code milestones, validation gates, and asset requirements.
 </roadmap-item>
 
 </roadmap-phase>

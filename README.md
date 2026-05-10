@@ -91,6 +91,8 @@ npx @modelcontextprotocol/inspector go run main.go      # interactive debugger
 
 **[QUICKSTART.md](QUICKSTART.md)** has the full 5-stage progressive tutorial: hello world, typed parameters, middleware, resources and prompts, and testing with `mcptest`.
 
+Planning long-form docs or videos? **[docs/tutorial-outline.md](docs/tutorial-outline.md)** breaks the learning path into eight publishable parts with code milestones and validation gates.
+
 ## Migration & Patterns
 
 Not sure which deployment model to use? The [migration guide](docs/migration-guide.md) covers three patterns with decision criteria, production-ready code, and a migration path between them:

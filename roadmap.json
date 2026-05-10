@@ -609,7 +609,7 @@
     {
       "id": "P41",
       "name": "Example Gallery + Migration Guides",
-      "status": "in_progress",
+      "status": "complete",
       "items": [
         {
           "id": "P41-1",
@@ -637,8 +637,8 @@
         },
         {
           "id": "P41-5",
-          "description": "Video/tutorial content outline",
-          "status": "planned",
+          "description": "Eight-part tutorial outline in docs/tutorial-outline.md with code milestones and validation gates",
+          "status": "complete",
           "priority": "low"
         }
       ]
@@ -1315,8 +1315,8 @@
         },
         {
           "id": "P41-5",
-          "description": "Video/tutorial content outline",
-          "status": "planned",
+          "description": "Eight-part tutorial outline in docs/tutorial-outline.md with code milestones and validation gates",
+          "status": "complete",
           "priority": "low"
         },
         {
