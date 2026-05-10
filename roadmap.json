@@ -385,20 +385,20 @@
     {
       "id": "P37",
       "name": "Server Registry Publishing",
-      "status": "planned",
+      "status": "in_progress",
       "items": [
         {
           "id": "P37-1",
-          "description": "PublishWorkflow with validation pipeline",
+          "description": "Validation-first publish workflow with validate-only, register, and update modes",
           "package": "discovery",
-          "status": "planned",
+          "status": "complete",
           "priority": "high"
         },
         {
           "id": "P37-2",
-          "description": "Server card schema compliance checker",
+          "description": "Structured server metadata compliance checker for required fields, URLs, transports, auth, tags, tools, resources, and prompts",
           "package": "discovery",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P37-1"
           ],
@@ -1083,16 +1083,16 @@
       "items": [
         {
           "id": "P37-1",
-          "description": "PublishWorkflow with validation pipeline",
+          "description": "Validation-first publish workflow with validate-only, register, and update modes",
           "package": "discovery",
-          "status": "planned",
+          "status": "complete",
           "priority": "high"
         },
         {
           "id": "P37-2",
-          "description": "Server card schema compliance checker",
+          "description": "Structured server metadata compliance checker for required fields, URLs, transports, auth, tags, tools, resources, and prompts",
           "package": "discovery",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P37-1"
           ],
