@@ -248,13 +248,13 @@
         },
         {
           "id": "P34-5",
-          "description": "Bump mcp-go to latest",
-          "status": "planned",
+          "description": "Bump mcp-go to v0.52.0 and go-sdk to v1.6.0",
+          "status": "complete",
           "priority": "medium"
         },
         {
           "id": "P34-6",
-          "description": "go-sdk v2.0 compatibility assessment",
+          "description": "go-sdk v2.0 compatibility assessment pending upstream v2.0; latest verified stable is v1.6.0",
           "package": "registry",
           "status": "planned",
           "depends_on": [
@@ -951,13 +951,13 @@
         },
         {
           "id": "P34-5",
-          "description": "Bump mcp-go to latest",
-          "status": "planned",
+          "description": "Bump mcp-go to v0.52.0 and go-sdk to v1.6.0",
+          "status": "complete",
           "priority": "medium"
         },
         {
           "id": "P34-6",
-          "description": "go-sdk v2.0 compatibility assessment",
+          "description": "go-sdk v2.0 compatibility assessment pending upstream v2.0; latest verified stable is v1.6.0",
           "package": "registry",
           "status": "planned",
           "depends_on": [

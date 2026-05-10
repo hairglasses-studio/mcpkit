@@ -171,12 +171,12 @@ Dual-SDK CI gate — `.github/workflows/ci.yml` now runs the default reusable Go
 Migration guide document — `docs/sdk-migration-guide.md` now documents the mcp-go to official Go SDK path, compatibility-layer rules, package gates, CI commands, and remaining unsupported fixtures.
 </roadmap-item>
 
-<roadmap-item id="P34-5" status="planned">
-Bump mcp-go to latest — update to latest mcp-go minor; validate no compat regressions.
+<roadmap-item id="P34-5" status="complete">
+Bump mcp-go to latest — updated `github.com/mark3labs/mcp-go` from v0.47.0 to v0.52.0 and validated default core tests plus official-SDK build/test gates. Official `github.com/modelcontextprotocol/go-sdk` was also updated from v1.5.0 to v1.6.0.
 </roadmap-item>
 
 <roadmap-item id="P34-6" package="registry" status="planned">
-go-sdk v2.0 compat assessment — evaluate breaking changes once v2.0 is announced; plan compat.go updates.
+go-sdk v2.0 compat assessment — still pending upstream v2.0; live module version check on 2026-05-09 showed latest stable `github.com/modelcontextprotocol/go-sdk` is v1.6.0.
 </roadmap-item>
 
 </roadmap-phase>
