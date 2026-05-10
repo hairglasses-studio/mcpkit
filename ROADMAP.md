@@ -508,3 +508,24 @@ Key recommendations relevant to this repo:
 - **Discovery surfaces are MCP resources**, not tools (`<server>:///catalog/server`).
 
 See the pattern doc for the full `# Adoption checklist` and `# Anti-patterns` sections.
+
+---
+
+## Crosspollinate Suggestion: Adopt yagni-audit + fossil-mcp pattern
+
+> **Source:** `~/hairglasses-studio/crosspollinate/patterns/yagni-audit-fossil-mcp.md`
+> **Proposed:** 2026-05-10 (synthesized from jobb session — PRs #167-#185, 16 prune+wire PRs merged in one day).
+> **How to dismiss:** delete this section.
+
+The crosspollinate loop synthesized a two-layer YAGNI audit pattern for fleet code-quality automation: a per-repo `yagni-audit` skill (Go-specific, 5 phases, modeled on jobb's `.agents/skills/yagni-audit/SKILL.md`) layered with `fossil-mcp` (Rust binary, MCP-native, 18-language coverage) wired into the workspace `.mcp.json`. They compose; neither replaces the other.
+
+Key recommendations:
+
+- **Install `fossil-mcp`** locally via `cargo install fossil-mcp` (Rust 1.75+) or `curl -fsSL fossil-mcp.com/install.sh | sh`. Single 6.1 MB binary, no deps, all-local analysis, MIT license, v0.1.8 calibrated 2026-04-09.
+- **Add to workspace `.mcp.json`** with `FOSSIL_NO_UPDATE_CHECK=1` to suppress the daily phone-home check. One entry covers all fleet repos.
+- **Verify on this repo first**: `time fossil-mcp scan . --format json > /tmp/scan.json` — target <30s for repos <150K LOC.
+- **Cross-language reach**: fossil-mcp covers Go + TS + Rust + Python + Bash with tree-sitter AST analysis, clones detection (Type 1/2/3), scaffolding markers (TODO/FIXME/placeholder bodies), call-graph tracing, blast-radius queries.
+- **Load-bearing guardrail**: today's jobb PR-E1 hit an **80% false-positive rate** from `golang.org/x/tools/cmd/deadcode` alone. ALWAYS verify each "unused" candidate with `grep -rcE "\b<SYMBOL>\b" --include='*.go' .` before deleting. Same lesson applies to fossil-mcp's tree-sitter output — reflective dispatch and JSON unmarshal targets look dead but aren't.
+- **Compose with `yagni-audit` skill** (Go-specific, 5 phases A-E): adopt the skill body's phase ordering and guardrails; fossil-mcp becomes an opt-in Phase A2 when the repo has multi-language surfaces or you want call-graph reach.
+
+See the pattern doc for the full `# Adoption checklist`, `# Anti-patterns`, and `# Sources` sections.
