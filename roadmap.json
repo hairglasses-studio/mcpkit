@@ -575,9 +575,9 @@
         },
         {
           "id": "P40-3",
-          "description": "Dynamic pattern selector",
+          "description": "Metadata-driven dynamic selector for fan-out, pipeline, and select patterns",
           "package": "orchestrator",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P40-1",
             "P40-2"
@@ -1254,9 +1254,9 @@
         },
         {
           "id": "P40-3",
-          "description": "Dynamic pattern selector",
+          "description": "Metadata-driven dynamic selector for fan-out, pipeline, and select patterns",
           "package": "orchestrator",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P40-1",
             "P40-2"

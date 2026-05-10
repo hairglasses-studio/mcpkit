@@ -27,7 +27,7 @@ Built on [github.com/mark3labs/mcp-go](https://github.com/mark3labs/mcp-go), mcp
 - **Auth** — JWT/JWKS validation, OAuth 2.1 discovery and client flow, Bearer middleware, DPoP proof validation, workload identity (GCP/AWS)
 - **RBAC and audit logging** — role-based tool access control and structured audit trails via the `security` package
 - **Tenant isolation** — tenant context propagation middleware for multi-tenant servers
-- **Multi-agent orchestration** — fan-out, pipeline, select, swarm mesh, and hierarchical delegation patterns (`orchestrator`); manager/agent-as-tool delegation (`handoff`)
+- **Multi-agent orchestration** — fan-out, pipeline, select, swarm mesh, hierarchical delegation, and dynamic pattern selection (`orchestrator`); manager/agent-as-tool delegation (`handoff`)
 - **Workflow engine** — cyclical graph execution with conditional branching, checkpoints, and state machines (`workflow`)
 - **Cost management** — token accounting, budget policies, dollar-cost estimation, scoped per-tenant/user/session budgets, time-windowed tracking (`finops`)
 - **Testing infrastructure** — test server/client, assertion helpers, session record/replay, golden file snapshots, benchmark helpers (`mcptest`)
@@ -138,7 +138,7 @@ Migrating from Python FastMCP? Use **[docs/fastmcp-migration-guide.md](docs/fast
 | `memory` | Agent memory registry with pluggable storage backends | `registry` |
 | `skills` | Context-aware lazy tool loading with skill bundles and triggers | `registry` |
 | `handoff` | Agent delegation protocol with manager/agent-as-tool patterns, delegate middleware | `registry`, `sampling`, `finops` |
-| `orchestrator` | Multi-agent execution patterns: fan-out, pipeline, select, swarm mesh, hierarchical delegation, stage middleware | none |
+| `orchestrator` | Multi-agent execution patterns: fan-out, pipeline, select, swarm mesh, hierarchical delegation, dynamic pattern selection, stage middleware | none |
 | `workflow` | Cyclical graph engine with conditional branching, checkpoints, state machines, node middleware | `orchestrator`, `registry`, `sampling` |
 | `extensions` | MCP Extensions negotiation and capability handshake | none |
 | `lifecycle` | Production server lifecycle: signal handling, graceful drain, shutdown hooks | none |

@@ -331,8 +331,8 @@ Swarm mesh — `orchestrator.NewSwarm` provides peer-to-peer broadcast and unica
 Hierarchical delegation — `HierarchicalDelegation` executes nested manager/worker trees, passes parent outputs to children, enforces depth/concurrency controls, and supports per-node result aggregation.
 </roadmap-item>
 
-<roadmap-item id="P40-3" package="orchestrator" status="planned">
-Dynamic pattern selector — choose fan-out, pipeline, or select pattern based on runtime task metadata.
+<roadmap-item id="P40-3" package="orchestrator" status="complete">
+Dynamic pattern selector — `SelectDynamicPattern` and `RunDynamicPattern` choose fan-out, pipeline, or select from runtime metadata with explicit overrides and conservative defaults.
 </roadmap-item>
 
 <roadmap-item id="P40-4" package="orchestrator" status="planned">
