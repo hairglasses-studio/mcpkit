@@ -568,9 +568,9 @@
         },
         {
           "id": "P40-2",
-          "description": "Hierarchical delegation patterns",
+          "description": "Hierarchical delegation trees with parent-to-child context and per-node aggregation",
           "package": "orchestrator",
-          "status": "planned",
+          "status": "complete",
           "priority": "medium"
         },
         {
@@ -1247,9 +1247,9 @@
         },
         {
           "id": "P40-2",
-          "description": "Hierarchical delegation patterns",
+          "description": "Hierarchical delegation trees with parent-to-child context and per-node aggregation",
           "package": "orchestrator",
-          "status": "planned",
+          "status": "complete",
           "priority": "medium"
         },
         {
