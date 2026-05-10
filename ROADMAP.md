@@ -92,30 +92,30 @@ Session integration tests — mcptest helpers for asserting session lifecycle ac
 
 </roadmap-phase>
 
-<roadmap-phase id="P32" status="planned" name="Stateless HTTP">
+<roadmap-phase id="P32" status="complete" name="Stateless HTTP">
 
-<roadmap-item id="P32-1" package="session" status="planned">
-External session store / Redis adapter — pluggable SessionStore backed by Redis for stateless deployments.
+<roadmap-item id="P32-1" package="session" status="complete">
+External session store / Redis adapter — shipped as `session.ExternalStore`, `RedisAdapter`, `RedisStore`, and `RedisStringStore`.
 </roadmap-item>
 
-<roadmap-item id="P32-2" package="session" status="planned">
-Session token extraction middleware — extract session tokens from headers, cookies, or query params.
+<roadmap-item id="P32-2" package="session" status="complete">
+Session token extraction middleware — shipped as `session.TokenMiddleware` plus transport-level `SessionExtractor` for Authorization, header, cookie, and query sources.
 </roadmap-item>
 
-<roadmap-item id="P32-3" package="gateway" status="planned">
-Stateless gateway routing — gateway mode that reads session affinity from token without local state.
+<roadmap-item id="P32-3" package="gateway" status="complete">
+Stateless gateway routing — shipped as `gateway.AffinityRouter` and `AffinityMiddleware`, using extracted session IDs for consistent-hash upstream routing.
 </roadmap-item>
 
-<roadmap-item id="P32-4" package="session" status="planned">
-Session serialization (JSON + gob) — encode/decode session values for external store round-trips.
+<roadmap-item id="P32-4" package="session" status="complete">
+Session serialization (JSON + gob) — shipped as `MarshalSession`/`UnmarshalSession` and gob variants for external-store round-trips.
 </roadmap-item>
 
-<roadmap-item id="P32-5" package="session" status="planned">
-Load balancer compat tests — verify session consistency under simulated round-robin routing.
+<roadmap-item id="P32-5" package="session" status="complete">
+Load balancer compatibility tests — covered by `gateway/affinity_test.go`, `transport/session_extract_test.go`, and session token middleware tests.
 </roadmap-item>
 
-<roadmap-item id="P32-6" package="health" status="planned">
-Session store health checks — health.Checker integration for external session store liveness.
+<roadmap-item id="P32-6" package="health" status="complete">
+Session store health checks — shipped as `health.WithSessionStore` over any `Ping(ctx)` external store.
 </roadmap-item>
 
 </roadmap-phase>
@@ -425,9 +425,9 @@ Roadmap consolidation adapters — document migration paths for ralphglasses sem
 
 ## Ralph Loop Execution Strategy
 
-- **Parallel streams**: P31 (session) is complete; P32 (stateless HTTP) and P33 (transport) can run concurrently — the packages are independent.
+- **Parallel streams**: P31 (session) and P32 (stateless HTTP) are complete; P33 (transport) can proceed independently.
 - **P34** (dual-SDK hardening) is independent of P31–P33 and can run in a separate stream.
-- **Budget profiles**: Use `PersonalProfile` for P35–P36 (research-heavy, lower token budget); use `WorkAPIProfile` for remaining P32–P34 implementation-heavy work.
+- **Budget profiles**: Use `PersonalProfile` for P35–P36 (research-heavy, lower token budget); use `WorkAPIProfile` for remaining P33–P34 implementation-heavy work.
 - **Self-improvement**: `rdcycle_improve` runs every 10 cycles and may inject lessons into the next `rdcycle_schedule` spec.
 
 ---
