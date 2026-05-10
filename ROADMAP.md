@@ -283,8 +283,8 @@ Memory profiling helpers — `mcptest/allocs.go`: `AssertMaxAllocs(tb, maxAllocs
 CI regression thresholds — fail CI if any benchmark regresses beyond a configured latency or alloc budget.
 </roadmap-item>
 
-<roadmap-item id="P38-5" package="mcptest" status="planned">
-Benchmark comparison tool — compare two BenchmarkSuite runs and report per-tool delta percentages.
+<roadmap-item id="P38-5" package="mcptest" status="complete">
+Benchmark comparison tool — shipped as `mcptest.ParseBenchmarkOutput`, `CompareBenchmarkResults`, and `BenchmarkDelta.Regressed`, parsing `go test -bench -benchmem` output and reporting per-benchmark percentage deltas.
 </roadmap-item>
 
 </roadmap-phase>
