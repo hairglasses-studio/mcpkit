@@ -53,7 +53,7 @@ Keep direct SDK imports in one of these places only:
 | Stdio serving | `server.ServeStdio(s)` | `server.Run(ctx, &mcp.StdioTransport{})` or `Connect` | `registry.ServeStdio(s)` |
 | Tool registration | `s.AddTool(tool, handler)` | `s.AddTool(&tool, handler)` or generic `mcp.AddTool` | `registry.AddToolToServer(s, td.Tool, td.Handler)` |
 | Tool schema | concrete `mcp.ToolInputSchema` | `any` holding a JSON schema value | use `handler.TypedHandler` or build-tagged schema helpers |
-| Tool request args | `req.Params.Arguments` is map-like `any` | `req.Params.Arguments` is raw JSON on server handlers | `registry.ExtractArguments(req)` |
+| Tool request args | `req.Params.Arguments` is map-like `any` | `req.Params.Arguments` is raw JSON on server handlers | `registry.ExtractArguments(req)`, `registry.NewCallToolRequest(...)` |
 | Text content | value `mcp.TextContent` | pointer `*mcp.TextContent` | `registry.MakeTextContent`, `registry.ExtractTextContent` |
 | Resource contents | slice of content interface values | slice of `*mcp.ResourceContents` | `registry.ExtractResourceText` and compatibility helpers |
 | Prompts | value message/content types | pointer content/message shapes | keep prompt handlers behind package compatibility wrappers |
@@ -154,7 +154,7 @@ Keep direct SDK imports in one of these places only:
 
 - Tool modules import `registry` and `handler`, not SDK packages.
 - Schema construction is typed-handler generated or hidden behind build-tagged helpers.
-- Argument reads use `registry.ExtractArguments` or `handler.Get*Param`.
+- Argument reads use `registry.ExtractArguments` or `handler.Get*Param`; test fixtures and adapters use `registry.NewCallToolRequest` or `registry.SetCallToolArguments`.
 - Content creation uses `registry.MakeTextContent`, `registry.MakeTextResult`, or `handler.TextResult`.
 - Server registration uses `registry.NewMCPServer`, `registry.AddToolToServer`, and `registry.ServeStdio`.
 - CI runs the default SDK path and the official-SDK package set.

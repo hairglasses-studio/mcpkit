@@ -9,7 +9,11 @@
 // instead of this file. Tool modules that import types through mcpkit need zero changes.
 package registry
 
-import "github.com/mark3labs/mcp-go/mcp"
+import (
+	"errors"
+
+	"github.com/mark3labs/mcp-go/mcp"
+)
 
 type (
 	Tool             = mcp.Tool
@@ -133,6 +137,25 @@ func ExtractArguments(req CallToolRequest) map[string]any {
 		return nil
 	}
 	return args
+}
+
+// NewCallToolRequest constructs a CallToolRequest with SDK-compatible arguments.
+func NewCallToolRequest(name string, args map[string]any) (CallToolRequest, error) {
+	req := CallToolRequest{}
+	req.Params.Name = name
+	if err := SetCallToolArguments(&req, args); err != nil {
+		return CallToolRequest{}, err
+	}
+	return req, nil
+}
+
+// SetCallToolArguments stores arguments on a CallToolRequest.
+func SetCallToolArguments(req *CallToolRequest, args map[string]any) error {
+	if req == nil {
+		return errors.New("registry: nil CallToolRequest")
+	}
+	req.Params.Arguments = args
+	return nil
 }
 
 // GetToolTaskSupport returns the TaskSupport setting from a Tool, or TaskSupportForbidden if not set.
