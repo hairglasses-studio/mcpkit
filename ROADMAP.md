@@ -321,10 +321,10 @@ Push notifications — still pending as a dedicated endpoint; `bridge/a2a` alrea
 
 </roadmap-phase>
 
-<roadmap-phase id="P40" status="planned" name="Enhanced Orchestration">
+<roadmap-phase id="P40" status="in_progress" name="Enhanced Orchestration">
 
-<roadmap-item id="P40-1" package="orchestrator" status="planned">
-Swarm mesh — peer-to-peer agent communication pattern with broadcast and unicast routing.
+<roadmap-item id="P40-1" package="orchestrator" status="complete">
+Swarm mesh — `orchestrator.NewSwarm` provides peer-to-peer broadcast and unicast message routing with concurrency limits, timeouts, fail-fast cancellation, deterministic responses, and error aggregation.
 </roadmap-item>
 
 <roadmap-item id="P40-2" package="orchestrator" status="planned">

@@ -557,13 +557,13 @@
     {
       "id": "P40",
       "name": "Enhanced Orchestration",
-      "status": "planned",
+      "status": "in_progress",
       "items": [
         {
           "id": "P40-1",
-          "description": "Swarm mesh topology",
+          "description": "Swarm mesh broadcast and unicast routing with deterministic responses and error aggregation",
           "package": "orchestrator",
-          "status": "planned",
+          "status": "complete",
           "priority": "medium"
         },
         {
@@ -1240,9 +1240,9 @@
         },
         {
           "id": "P40-1",
-          "description": "Swarm mesh topology",
+          "description": "Swarm mesh broadcast and unicast routing with deterministic responses and error aggregation",
           "package": "orchestrator",
-          "status": "planned",
+          "status": "complete",
           "priority": "medium"
         },
         {
