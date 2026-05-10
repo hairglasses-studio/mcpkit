@@ -440,7 +440,7 @@
     {
       "id": "P38",
       "name": "Performance Benchmarking",
-      "status": "in_progress",
+      "status": "complete",
       "items": [
         {
           "id": "P38-1",
@@ -471,8 +471,8 @@
         },
         {
           "id": "P38-4",
-          "description": "CI regression threshold checks",
-          "status": "planned",
+          "description": "CI benchmark regression thresholds with tools/benchguard and make bench-guard",
+          "status": "complete",
           "depends_on": [
             "P38-1"
           ],
@@ -1158,8 +1158,8 @@
         },
         {
           "id": "P38-4",
-          "description": "CI regression threshold checks",
-          "status": "planned",
+          "description": "CI benchmark regression thresholds with tools/benchguard and make bench-guard",
+          "status": "complete",
           "depends_on": [
             "P38-1"
           ],

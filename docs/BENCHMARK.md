@@ -33,6 +33,18 @@ for _, delta := range deltas {
 }
 ```
 
+For CI or shell automation, use `tools/benchguard`:
+
+```bash
+go test -bench=. -benchmem -run '^$' ./mcptest ./testing/benchmark | tee bench-current.txt
+go run ./tools/benchguard \
+  -baseline bench-baseline.txt \
+  -current bench-current.txt \
+  -latency-threshold 15 \
+  -memory-threshold 20 \
+  -alloc-threshold 10
+```
+
 ## Benchmark Suites
 
 ### mcptest — Tool Benchmarks
@@ -74,7 +86,23 @@ func BenchmarkMyTool(b *testing.B) {
 
 ## CI Integration
 
-CI regression thresholds are not enabled by default yet. Capture benchmark output in CI with `go test -bench=. -benchmem`, then compare with either `benchstat` or `mcptest.CompareBenchmarkResults`.
+The PR workflow runs benchmark regression checks against the pull request base commit for `./mcptest` and `./testing/benchmark`. It fails when a shared benchmark exceeds the configured guardrail:
+
+- `ns/op`: 15% regression
+- `B/op`: 20% regression
+- `allocs/op`: 10% regression
+
+Local equivalent:
+
+```bash
+make bench BENCH_CURRENT=bench-current.txt
+make bench-guard \
+  BENCH_BASELINE=bench-baseline.txt \
+  BENCH_CURRENT=bench-current.txt \
+  BENCH_MIN_OVERLAP=10
+```
+
+Use `benchstat` when you need statistical significance across repeated runs. `benchguard` is intentionally stricter and simpler: it compares the parsed percentage deltas from two benchmark output files and exits non-zero when any threshold is exceeded.
 
 ## Interpreting Results
 

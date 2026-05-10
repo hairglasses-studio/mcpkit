@@ -30,3 +30,48 @@ jobs:
           go-version: "1.26.1"
           cache: true
       - run: make build-official test-official
+
+  benchmark-regression:
+    name: Benchmark regression guard
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          path: head
+
+      - name: Checkout PR base
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.1"
+          cache: true
+          cache-dependency-path: head/go.sum
+
+      - name: Benchmark base
+        working-directory: base
+        run: |
+          set -euo pipefail
+          go test -bench=. -benchmem -run '^$' ./mcptest ./testing/benchmark | tee ../bench-base.txt
+
+      - name: Benchmark head
+        working-directory: head
+        run: |
+          set -euo pipefail
+          go test -bench=. -benchmem -run '^$' ./mcptest ./testing/benchmark | tee ../bench-head.txt
+
+      - name: Compare benchmark thresholds
+        working-directory: head
+        run: |
+          go run ./tools/benchguard \
+            -baseline ../bench-base.txt \
+            -current ../bench-head.txt \
+            -latency-threshold 15 \
+            -memory-threshold 20 \
+            -alloc-threshold 10 \
+            -min-overlap 10

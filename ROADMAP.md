@@ -265,7 +265,7 @@ Publish integration tests — httptest mock of the MCP registry API; exercise fu
 
 </roadmap-phase>
 
-<roadmap-phase id="P38" status="in_progress" name="Performance Benchmarking">
+<roadmap-phase id="P38" status="complete" name="Performance Benchmarking">
 
 <roadmap-item id="P38-1" package="mcptest" status="complete">
 Baseline benchmark suite — shipped as `mcptest.BenchmarkTool`, `BenchmarkToolParallel`, `BenchmarkSuite`, `BaselineBenchmark`, and cross-protocol benchmarks under `testing/benchmark`.
@@ -279,8 +279,8 @@ Middleware overhead measurement — shipped as `BenchmarkMiddlewareOverhead` plu
 Memory profiling helpers — `mcptest/allocs.go`: `AssertMaxAllocs(tb, maxAllocs, runs, fn)` wraps `testing.AllocsPerRun` with a readable failure message; `ReportAllocDelta(fn)` measures a single invocation via `runtime.MemStats`; `BenchmarkAllocLimit(b, maxAllocs, fn)` runs a benchmark and fails if the mean allocs-per-op exceeds a threshold. Accepts `testing.TB` so it works from tests and benchmarks. 6 unit tests.
 </roadmap-item>
 
-<roadmap-item id="P38-4" status="planned">
-CI regression thresholds — fail CI if any benchmark regresses beyond a configured latency or alloc budget.
+<roadmap-item id="P38-4" status="complete">
+CI regression thresholds — `tools/benchguard`, `make bench-guard`, and the PR benchmark-regression workflow compare base/head benchmark output and fail when latency, memory, or allocation budgets are exceeded.
 </roadmap-item>
 
 <roadmap-item id="P38-5" package="mcptest" status="complete">
