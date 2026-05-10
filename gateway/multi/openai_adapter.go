@@ -205,13 +205,6 @@ func parseArguments(argsJSON string) (map[string]any, error) {
 	return args, nil
 }
 
-// openaiToolResultMessage represents a tool result in OpenAI format.
-type openaiToolResultMessage struct {
-	Role       string `json:"role"`
-	Content    string `json:"content"`
-	ToolCallID string `json:"tool_call_id"`
-}
-
 // openaiChatCompletion represents a minimal OpenAI chat completion response
 // wrapping a tool result message.
 type openaiChatCompletion struct {

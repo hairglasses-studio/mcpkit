@@ -45,17 +45,6 @@ func testReq() registry.CallToolRequest {
 	}
 }
 
-// extractAllText returns the concatenated text from all content blocks.
-func extractAllText(result *registry.CallToolResult) string {
-	var sb strings.Builder
-	for _, block := range result.Content {
-		if text, ok := registry.ExtractTextContent(block); ok {
-			sb.WriteString(text)
-		}
-	}
-	return sb.String()
-}
-
 func TestSmallResponsePassesThrough(t *testing.T) {
 	mw := Middleware(Config{MaxBytes: 4096, HardMax: 16384, Message: DefaultMessage})
 	td := registry.ToolDefinition{}
