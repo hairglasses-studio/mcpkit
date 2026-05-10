@@ -103,6 +103,8 @@ See **[docs/migration-guide.md](docs/migration-guide.md)** for the full guide in
 
 Moving from direct `mcp-go` usage toward the official Go SDK? Use **[docs/sdk-migration-guide.md](docs/sdk-migration-guide.md)** for the compatibility-layer migration path, build tags, package gates, and CI commands.
 
+Migrating from Python FastMCP? Use **[docs/fastmcp-migration-guide.md](docs/fastmcp-migration-guide.md)** for decorator-to-`ToolModule` translations covering tools, resources, prompts, and tests.
+
 ## Package Map
 
 | Package | Purpose | Internal Deps |

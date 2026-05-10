@@ -355,8 +355,8 @@ Multi-agent workflow templates — pre-built workflow graphs for common multi-ag
 Example gallery index — `examples/README.md` lists all 13 runnable examples grouped by theme (basics / discovery+catalog / safety+lifecycle / transport / agent protocols) with one-line summaries plus run+authoring guidance.
 </roadmap-item>
 
-<roadmap-item id="P41-2" status="planned">
-FastMCP migration guide — side-by-side FastMCP Python → mcpkit Go translation for the most common patterns.
+<roadmap-item id="P41-2" status="complete">
+FastMCP migration guide — `docs/fastmcp-migration-guide.md` provides side-by-side Python FastMCP to mcpkit translations for tools, resources, prompts, startup wiring, and test gates.
 </roadmap-item>
 
 <roadmap-item id="P41-3" status="planned">

@@ -619,8 +619,8 @@
         },
         {
           "id": "P41-2",
-          "description": "FastMCP migration guide",
-          "status": "planned",
+          "description": "FastMCP migration guide with side-by-side decorator-to-ToolModule translations",
+          "status": "complete",
           "priority": "medium"
         },
         {
@@ -1297,8 +1297,8 @@
         },
         {
           "id": "P41-2",
-          "description": "FastMCP migration guide",
-          "status": "planned",
+          "description": "FastMCP migration guide with side-by-side decorator-to-ToolModule translations",
+          "status": "complete",
           "priority": "medium"
         },
         {
