@@ -7,7 +7,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/hairglasses-studio/mcpkit/hitools"
@@ -365,20 +364,6 @@ func waitForFactorApproval(ctx context.Context, store hitools.ApprovalStore, req
 			}
 		}
 	}
-}
-
-// prefetchCache holds cached prefetch results shared across iterations.
-// This allows the Ralph loop to reuse prefetch results within a TTL window
-// without reconstructing the middleware each call.
-type prefetchCache struct {
-	mu      sync.RWMutex
-	entries map[string]prefetchCacheEntry
-}
-
-// prefetchCacheEntry holds a single cached prefetch result.
-type prefetchCacheEntry struct {
-	value     any
-	expiresAt time.Time
 }
 
 // generateFactorApprovalID generates a random ID for factor approval requests.

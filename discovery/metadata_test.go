@@ -19,15 +19,8 @@ import (
 // --- helpers for MetadataFromConfig tests ---
 
 // buildToolRegistry returns a ToolRegistry populated with named tools.
+// Uses the same testModule helper already defined in discovery_test.go.
 func buildToolRegistry(toolDefs ...registry.ToolDefinition) *registry.ToolRegistry {
-	type simpleModule struct {
-		tools []registry.ToolDefinition
-	}
-	type mod struct {
-		tools []registry.ToolDefinition
-	}
-
-	// Use the same testModule helper already defined in discovery_test.go.
 	m := &testModule{tools: toolDefs}
 	reg := registry.NewToolRegistry()
 	reg.RegisterModule(m)

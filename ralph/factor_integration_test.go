@@ -4,11 +4,8 @@ package ralph
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -905,16 +902,3 @@ func (m *prefetchCheckModule) Tools() []registry.ToolDefinition {
 	}
 }
 
-// writeSpecJSON is a helper that writes a Spec as JSON and returns the path.
-func writeSpecJSON(t *testing.T, dir string, spec Spec) string {
-	t.Helper()
-	path := filepath.Join(dir, "spec.json")
-	data, err := json.Marshal(spec)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(path, data, 0644); err != nil {
-		t.Fatal(err)
-	}
-	return path
-}

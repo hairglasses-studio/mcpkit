@@ -79,7 +79,6 @@ func ExampleNewPublisher() {
 
 func ExampleMetadataFromRegistry() {
 	// Register some tools.
-	type echoModule struct{}
 	reg := registry.NewToolRegistry()
 	reg.RegisterModule(&exampleModule{
 		tools: []registry.ToolDefinition{

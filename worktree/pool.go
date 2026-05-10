@@ -26,9 +26,6 @@ const DefaultPoolSize = 4
 // considered stale and eligible for automatic cleanup.
 const DefaultStaleThreshold = 24 * time.Hour
 
-// protectedBranches lists branch names that pool worktrees must never merge into.
-var protectedBranches = []string{"main", "master"}
-
 // WorktreePool manages a pool of pre-created git worktrees per repository.
 // Worktrees are acquired for session use and released back for reuse, avoiding
 // the overhead of repeated `git worktree add` / `git worktree remove` cycles.
