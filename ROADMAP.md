@@ -327,8 +327,8 @@ Push notifications — still pending as a dedicated endpoint; `bridge/a2a` alrea
 Swarm mesh — `orchestrator.NewSwarm` provides peer-to-peer broadcast and unicast message routing with concurrency limits, timeouts, fail-fast cancellation, deterministic responses, and error aggregation.
 </roadmap-item>
 
-<roadmap-item id="P40-2" package="orchestrator" status="planned">
-Hierarchical delegation — nested manager/worker trees with result aggregation at each level.
+<roadmap-item id="P40-2" package="orchestrator" status="complete">
+Hierarchical delegation — `HierarchicalDelegation` executes nested manager/worker trees, passes parent outputs to children, enforces depth/concurrency controls, and supports per-node result aggregation.
 </roadmap-item>
 
 <roadmap-item id="P40-3" package="orchestrator" status="planned">
