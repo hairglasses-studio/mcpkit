@@ -6,7 +6,8 @@
 // [Sink]. [MemorySink] is useful for tests and embedded demos. [JSONLSink]
 // writes append-only local JSON Lines files for lightweight deployments.
 // [TelemetryCollector] adds package/tool usage counts and error rates only
-// when [TelemetryConfig.OptIn] is explicitly enabled.
+// when [TelemetryConfig.OptIn] is explicitly enabled. [DashboardHandler] serves
+// the aggregate telemetry as dashboard-friendly JSON.
 //
 // Example:
 //
