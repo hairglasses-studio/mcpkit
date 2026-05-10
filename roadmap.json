@@ -480,9 +480,9 @@
         },
         {
           "id": "P38-5",
-          "description": "Benchmark result comparison tool",
+          "description": "Benchmark output parser and comparison helpers with per-metric percentage deltas",
           "package": "mcptest",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P38-1"
           ],
@@ -1167,9 +1167,9 @@
         },
         {
           "id": "P38-5",
-          "description": "Benchmark result comparison tool",
+          "description": "Benchmark output parser and comparison helpers with per-metric percentage deltas",
           "package": "mcptest",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P38-1"
           ],

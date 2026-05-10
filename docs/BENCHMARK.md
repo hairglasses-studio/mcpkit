@@ -19,6 +19,20 @@ go install golang.org/x/perf/cmd/benchstat@latest
 benchstat old.txt new.txt
 ```
 
+mcpkit also includes a lightweight parser for automation that only needs
+per-benchmark percentage deltas:
+
+```go
+before, _ := mcptest.ParseBenchmarkOutput(oldReader)
+after, _ := mcptest.ParseBenchmarkOutput(newReader)
+deltas := mcptest.CompareBenchmarkResults(before, after)
+for _, delta := range deltas {
+    if delta.Regressed(15) {
+        t.Fatalf("%s regressed: %.1f%% ns/op", delta.Name, delta.NsPerOpPct)
+    }
+}
+```
+
 ## Benchmark Suites
 
 ### mcptest — Tool Benchmarks
@@ -60,7 +74,7 @@ func BenchmarkMyTool(b *testing.B) {
 
 ## CI Integration
 
-The `benchmark.yml` workflow runs on every push to `main` and on PRs. On PRs, it compares against the `main` baseline using `benchstat` and posts the diff in the job summary.
+CI regression thresholds are not enabled by default yet. Capture benchmark output in CI with `go test -bench=. -benchmem`, then compare with either `benchstat` or `mcptest.CompareBenchmarkResults`.
 
 ## Interpreting Results
 
