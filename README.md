@@ -145,7 +145,7 @@ Migrating from Python FastMCP? Use **[docs/fastmcp-migration-guide.md](docs/fast
 | `bootstrap` | Agent workspace init, context reports, capability matrix | `registry`, `resources`, `prompts`, `extensions` |
 | `eval` | Evaluation framework: cases, scorers, JSON suite loading, runner | `registry` |
 | `roadmap` | Machine-readable roadmap management, gap analysis, query functions | `registry`, `handler` |
-| `rdcycle` | R&D cycle orchestration tools: scan, plan, verify, commit, report | `registry`, `handler`, `research`, `roadmap`, `workflow`, `finops` |
+| `rdcycle` | R&D cycle orchestration tools: scan, plan, verify, commit, report, research signals | `registry`, `handler`, `research`, `roadmap`, `workflow`, `finops` |
 | `frontdoor` | Discovery-first starter: mount `tool_catalog`, `tool_search`, `tool_schema`, `server_health` on any registry via `frontdoor.New(reg, opts...)` | `registry`, `handler`, `health` |
 | `feedback` | Structured feedback submission tool with pluggable memory/JSONL sinks, opt-in anonymous usage telemetry, and dashboard JSON export | `registry`, `handler` |
 | `a2a` | Lightweight A2A client/server types, task lifecycle, push notification webhooks, and MCP delegation tool | `registry`, `handler` |

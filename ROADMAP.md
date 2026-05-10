@@ -213,7 +213,7 @@ Cloud platform tests — httptest mocks cover each default monitor, filtering, f
 
 </roadmap-phase>
 
-<roadmap-phase id="P36" status="in_progress" name="A2A Tracking + Competitive Analysis">
+<roadmap-phase id="P36" status="complete" name="A2A Tracking + Competitive Analysis">
 
 <roadmap-item id="P36-1" package="research" status="complete">
 A2AMonitor — `research_a2a_tracking` polls official A2A spec, releases, and samples for version bumps, AgentCard examples, and breaking changes.
@@ -231,8 +231,8 @@ Template reports — SDK comparison and competitive dashboard outputs include co
 Competitive dashboard data — `research_competitive_dashboard` exports normalized dashboard rows, action items, and reports.
 </roadmap-item>
 
-<roadmap-item id="P36-5" package="rdcycle" status="planned">
-rdcycle scan integration — wire A2AMonitor and SDKCompare into the rdcycle_scan tool output.
+<roadmap-item id="P36-5" package="rdcycle" status="complete">
+rdcycle scan integration — `WithResearchSignals` wires competitive dashboard JSON from `research.Module` into `rdcycle_scan` output, artifacts, and action items.
 </roadmap-item>
 
 </roadmap-phase>

@@ -19,6 +19,7 @@ type Module struct {
 	ralphStarter func(ctx context.Context, specPath string) error
 	costReader   func() float64
 	feedback     FeedbackTelemetryProvider
+	research     ResearchSignalProvider
 }
 
 // ModuleOption configures optional Module settings.
@@ -28,6 +29,12 @@ type ModuleOption func(*Module)
 // compatible dashboard JSON exporter.
 type FeedbackTelemetryProvider interface {
 	DashboardJSON() ([]byte, error)
+}
+
+// ResearchSignalProvider is satisfied by research.Module and any compatible
+// competitive dashboard JSON exporter.
+type ResearchSignalProvider interface {
+	DashboardJSON(ctx context.Context) ([]byte, error)
 }
 
 // WithArtifactStore sets the artifact store for the module.
@@ -42,6 +49,13 @@ func WithArtifactStore(store ArtifactStore) ModuleOption {
 func WithFeedbackTelemetry(provider FeedbackTelemetryProvider) ModuleOption {
 	return func(m *Module) {
 		m.feedback = provider
+	}
+}
+
+// WithResearchSignals adds competitive research output as a signal source for scans.
+func WithResearchSignals(provider ResearchSignalProvider) ModuleOption {
+	return func(m *Module) {
+		m.research = provider
 	}
 }
 

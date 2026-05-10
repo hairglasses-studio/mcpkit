@@ -26,6 +26,7 @@ type ScanOutput struct {
 	IssueCount      int                    `json:"issue_count"`
 	ActionItems     []string               `json:"action_items"`
 	FeedbackSignals *FeedbackSignalSummary `json:"feedback_signals,omitempty"`
+	ResearchSignals *ResearchSignalSummary `json:"research_signals,omitempty"`
 	ArtifactID      string                 `json:"artifact_id"`
 }
 
@@ -49,6 +50,29 @@ type FeedbackSignalTarget struct {
 	ErrorRate float64 `json:"error_rate"`
 }
 
+// ResearchSignalSummary summarizes competitive research output for rdcycle scans.
+type ResearchSignalSummary struct {
+	Enabled            bool                `json:"enabled"`
+	Summary            string              `json:"summary,omitempty"`
+	A2ASignals         int                 `json:"a2a_signals"`
+	A2ABreakingSignals int                 `json:"a2a_breaking_signals"`
+	SDKFrameworks      int                 `json:"sdk_frameworks"`
+	SDKFeatures        int                 `json:"sdk_features"`
+	ActionItems        []string            `json:"action_items,omitempty"`
+	TopRows            []ResearchSignalRow `json:"top_rows,omitempty"`
+	Error              string              `json:"error,omitempty"`
+}
+
+// ResearchSignalRow is one normalized competitive dashboard row.
+type ResearchSignalRow struct {
+	Area     string  `json:"area"`
+	Subject  string  `json:"subject"`
+	Status   string  `json:"status"`
+	Severity string  `json:"severity"`
+	Details  string  `json:"details"`
+	Score    float64 `json:"score"`
+}
+
 type feedbackDashboardExport struct {
 	Source string                 `json:"source,omitempty"`
 	Rows   []feedbackDashboardRow `json:"rows"`
@@ -63,9 +87,28 @@ type feedbackDashboardRow struct {
 	ErrorRate float64 `json:"error_rate"`
 }
 
+type researchDashboardExport struct {
+	Summary       string                       `json:"summary"`
+	A2ASignals    int                          `json:"a2a_signals"`
+	SDKFrameworks int                          `json:"sdk_frameworks"`
+	SDKFeatures   int                          `json:"sdk_features"`
+	Rows          []researchDashboardExportRow `json:"rows"`
+	ActionItems   []string                     `json:"action_items"`
+}
+
+type researchDashboardExportRow struct {
+	Area     string  `json:"area"`
+	Subject  string  `json:"subject"`
+	Status   string  `json:"status"`
+	Severity string  `json:"severity"`
+	Details  string  `json:"details"`
+	Score    float64 `json:"score"`
+}
+
 func (m *Module) scanTool() registry.ToolDefinition {
 	desc := "Scan the MCP ecosystem for recent activity across configured GitHub repositories. " +
 		"Returns a structured summary of commits, issues, and actionable items derived from repository activity. " +
+		"Includes optional feedback and competitive research signals when providers are configured. " +
 		"Use repos to override the module-configured list. " +
 		"Use since (ISO 8601 date) to control the scan window (default: 7 days ago)."
 
@@ -115,6 +158,8 @@ func (m *Module) handleScan(ctx context.Context, input ScanInput) (ScanOutput, e
 
 	feedbackSignals := m.feedbackSignalSummary()
 	actionItems = append(actionItems, feedbackActionItems(feedbackSignals)...)
+	researchSignals := m.researchSignalSummary(ctx)
+	actionItems = append(actionItems, researchActionItems(researchSignals)...)
 
 	summary := buildScanSummary(repos, since)
 
@@ -125,6 +170,7 @@ func (m *Module) handleScan(ctx context.Context, input ScanInput) (ScanOutput, e
 		IssueCount:      issueCount,
 		ActionItems:     actionItems,
 		FeedbackSignals: feedbackSignals,
+		ResearchSignals: researchSignals,
 		ArtifactID:      fmt.Sprintf("scan-%d", time.Now().UnixNano()),
 	}
 
@@ -138,6 +184,9 @@ func (m *Module) handleScan(ctx context.Context, input ScanInput) (ScanOutput, e
 	}
 	if output.FeedbackSignals != nil {
 		content["feedback_signals"] = output.FeedbackSignals
+	}
+	if output.ResearchSignals != nil {
+		content["research_signals"] = output.ResearchSignals
 	}
 	_ = m.store.Save(Artifact{
 		ID:        output.ArtifactID,
@@ -235,4 +284,101 @@ func feedbackActionItems(summary *FeedbackSignalSummary) []string {
 			top.Target, top.Errors, top.Calls))
 	}
 	return items
+}
+
+func (m *Module) researchSignalSummary(ctx context.Context) *ResearchSignalSummary {
+	if m.research == nil {
+		return nil
+	}
+	data, err := m.research.DashboardJSON(ctx)
+	if err != nil {
+		return &ResearchSignalSummary{Enabled: true, Error: err.Error()}
+	}
+	var export researchDashboardExport
+	if err := json.Unmarshal(data, &export); err != nil {
+		return &ResearchSignalSummary{Enabled: true, Error: err.Error()}
+	}
+	return researchSignalSummary(export)
+}
+
+func researchSignalSummary(export researchDashboardExport) *ResearchSignalSummary {
+	summary := &ResearchSignalSummary{
+		Enabled:       true,
+		Summary:       export.Summary,
+		A2ASignals:    export.A2ASignals,
+		SDKFrameworks: export.SDKFrameworks,
+		SDKFeatures:   export.SDKFeatures,
+		ActionItems:   dedupeScanStrings(export.ActionItems),
+	}
+	for _, row := range export.Rows {
+		if row.Area == "a2a" && row.Severity == "breaking" {
+			summary.A2ABreakingSignals++
+		}
+		summary.TopRows = append(summary.TopRows, ResearchSignalRow{
+			Area:     row.Area,
+			Subject:  row.Subject,
+			Status:   row.Status,
+			Severity: row.Severity,
+			Details:  row.Details,
+			Score:    row.Score,
+		})
+	}
+	sort.Slice(summary.TopRows, func(i, j int) bool {
+		a, b := summary.TopRows[i], summary.TopRows[j]
+		if a.Severity != b.Severity {
+			return researchSeverityRank(a.Severity) > researchSeverityRank(b.Severity)
+		}
+		if a.Score != b.Score {
+			return a.Score > b.Score
+		}
+		return a.Subject < b.Subject
+	})
+	if len(summary.TopRows) > 8 {
+		summary.TopRows = summary.TopRows[:8]
+	}
+	return summary
+}
+
+func researchActionItems(summary *ResearchSignalSummary) []string {
+	if summary == nil {
+		return nil
+	}
+	if summary.Error != "" {
+		return []string{fmt.Sprintf("Restore competitive research signal provider: %s", summary.Error)}
+	}
+	items := append([]string(nil), summary.ActionItems...)
+	if summary.A2ABreakingSignals > 0 {
+		items = append(items, fmt.Sprintf("Prioritize A2A compatibility review: %d breaking signal%s detected.",
+			summary.A2ABreakingSignals, pluralSuffix(summary.A2ABreakingSignals, "", "s")))
+	}
+	return dedupeScanStrings(items)
+}
+
+func researchSeverityRank(severity string) int {
+	switch severity {
+	case "breaking":
+		return 4
+	case "high":
+		return 3
+	case "agent-card", "version", "medium":
+		return 2
+	default:
+		return 1
+	}
+}
+
+func dedupeScanStrings(values []string) []string {
+	seen := map[string]struct{}{}
+	out := make([]string, 0, len(values))
+	for _, value := range values {
+		if value == "" {
+			continue
+		}
+		if _, ok := seen[value]; ok {
+			continue
+		}
+		seen[value] = struct{}{}
+		out = append(out, value)
+	}
+	return out
 }

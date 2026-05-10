@@ -2,6 +2,8 @@ package rdcycle
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -147,6 +149,74 @@ func TestHandleScan_IncludesFeedbackSignals(t *testing.T) {
 	}
 }
 
+func TestHandleScan_IncludesResearchSignals(t *testing.T) {
+	t.Parallel()
+
+	provider := fakeResearchProvider{payload: researchDashboardExport{
+		Summary:       "Competitive dashboard contains 3 rows.",
+		A2ASignals:    2,
+		SDKFrameworks: 4,
+		SDKFeatures:   10,
+		ActionItems: []string{
+			"Validate mcpkit A2A compatibility against detected A2A versions: v1.0.",
+			"Review SDK parity.",
+		},
+		Rows: []researchDashboardExportRow{
+			{Area: "sdk", Subject: "mcp-go / Tools", Status: "implemented", Severity: "high", Score: 1},
+			{Area: "a2a", Subject: "A2A Releases", Status: "removed", Severity: "breaking", Score: 0.95},
+			{Area: "a2a", Subject: "A2A Specification", Status: "v1.0", Severity: "version", Score: 0.8},
+		},
+	}}
+
+	m := NewModule(CycleConfig{}, WithResearchSignals(provider))
+	out, err := m.handleScan(context.Background(), ScanInput{})
+	if err != nil {
+		t.Fatalf("handleScan: %v", err)
+	}
+	if out.ResearchSignals == nil {
+		t.Fatal("ResearchSignals = nil")
+	}
+	if out.ResearchSignals.A2ASignals != 2 || out.ResearchSignals.SDKFrameworks != 4 || out.ResearchSignals.SDKFeatures != 10 {
+		t.Fatalf("unexpected research signals: %+v", out.ResearchSignals)
+	}
+	if out.ResearchSignals.A2ABreakingSignals != 1 {
+		t.Fatalf("A2ABreakingSignals = %d, want 1", out.ResearchSignals.A2ABreakingSignals)
+	}
+	if len(out.ResearchSignals.TopRows) == 0 || out.ResearchSignals.TopRows[0].Severity != "breaking" {
+		t.Fatalf("expected breaking row first: %+v", out.ResearchSignals.TopRows)
+	}
+	if !containsSubstring(out.ActionItems, "Validate mcpkit A2A compatibility") {
+		t.Fatalf("missing research action item: %+v", out.ActionItems)
+	}
+	if !containsSubstring(out.ActionItems, "Prioritize A2A compatibility review") {
+		t.Fatalf("missing breaking-signal action item: %+v", out.ActionItems)
+	}
+
+	artifact, ok := m.store.Get(out.ArtifactID)
+	if !ok {
+		t.Fatal("scan artifact not stored")
+	}
+	if _, ok := artifact.Content["research_signals"]; !ok {
+		t.Fatalf("artifact missing research_signals: %+v", artifact.Content)
+	}
+}
+
+func TestHandleScan_ResearchSignalsProviderError(t *testing.T) {
+	t.Parallel()
+
+	m := NewModule(CycleConfig{}, WithResearchSignals(fakeResearchProvider{err: fmt.Errorf("offline")}))
+	out, err := m.handleScan(context.Background(), ScanInput{})
+	if err != nil {
+		t.Fatalf("handleScan: %v", err)
+	}
+	if out.ResearchSignals == nil || out.ResearchSignals.Error == "" {
+		t.Fatalf("expected research signal error: %+v", out.ResearchSignals)
+	}
+	if !containsSubstring(out.ActionItems, "Restore competitive research signal provider") {
+		t.Fatalf("missing provider restore action item: %+v", out.ActionItems)
+	}
+}
+
 func TestHandleScan_NoFeedbackCollector(t *testing.T) {
 	t.Parallel()
 
@@ -183,4 +253,16 @@ func containsSubstring(values []string, needle string) bool {
 		}
 	}
 	return false
+}
+
+type fakeResearchProvider struct {
+	payload researchDashboardExport
+	err     error
+}
+
+func (p fakeResearchProvider) DashboardJSON(context.Context) ([]byte, error) {
+	if p.err != nil {
+		return nil, p.err
+	}
+	return json.Marshal(p.payload)
 }

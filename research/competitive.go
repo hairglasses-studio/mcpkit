@@ -2,6 +2,7 @@ package research
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"strings"
@@ -665,4 +666,31 @@ func sdkStatusScore(status string) float64 {
 	default:
 		return 0
 	}
+}
+
+// CompetitiveDashboard runs A2A tracking and SDK comparison, then combines them
+// into dashboard-ready competitive research output.
+func (m *Module) CompetitiveDashboard(ctx context.Context) (CompetitiveDashboardOutput, error) {
+	a2aOut, err := m.handleA2ATracking(ctx, A2ATrackingInput{})
+	if err != nil {
+		return CompetitiveDashboardOutput{}, err
+	}
+	sdkOut, err := m.handleSDKCompare(ctx, SDKCompareInput{})
+	if err != nil {
+		return CompetitiveDashboardOutput{}, err
+	}
+	return m.handleCompetitiveDashboard(ctx, CompetitiveDashboardInput{
+		A2AFindings:        &a2aOut,
+		SDKCompareFindings: &sdkOut,
+	})
+}
+
+// DashboardJSON exports competitive research output as JSON for downstream
+// orchestration tools such as rdcycle_scan.
+func (m *Module) DashboardJSON(ctx context.Context) ([]byte, error) {
+	out, err := m.CompetitiveDashboard(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(out)
 }
