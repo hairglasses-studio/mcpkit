@@ -7,7 +7,7 @@ This guide covers moving an mcpkit-based server from direct `mcp-go` coupling to
 Use these commands before and after every migration slice:
 
 ```bash
-go test ./registry ./handler ./mcptest -count=1
+go test ./registry ./handler ./mcptest ./feedback -count=1
 make build-official
 make test-official
 ```
@@ -15,13 +15,13 @@ make test-official
 `make build-official` currently compiles the supported official-SDK package set:
 
 ```text
-./registry ./handler ./mcptest ./transport ./session ./gateway ./health ./sampling ./resources ./prompts
+./registry ./handler ./mcptest ./transport ./session ./gateway ./health ./sampling ./resources ./prompts ./feedback
 ```
 
 `make test-official` intentionally runs a narrower test set where official-SDK fixtures are complete:
 
 ```text
-./registry ./handler ./mcptest ./transport ./session ./gateway ./health ./sampling
+./registry ./handler ./mcptest ./transport ./session ./gateway ./health ./sampling ./feedback
 ```
 
 Do not change that test scope to `./...` until every package fixture is SDK-neutral.

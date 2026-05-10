@@ -17,7 +17,7 @@ Built on [github.com/mark3labs/mcp-go](https://github.com/mark3labs/mcp-go), mcp
 ## Features
 
 - **100% MCP 2025-11-25 spec coverage** — tools, resources, prompts, sampling, logging, elicitation, structured output, async tasks
-- **72 packages across 4 dependency layers** — use only what you need; all packages are independently importable
+- **80+ packages across 4 dependency layers** — use only what you need; all packages are independently importable
 - **85%+ test coverage across all packages** — comprehensive coverage with `-race` detection
 - **Dual-SDK support** — works with mcp-go today; `//go:build official_sdk` tags enable migration to the official Go SDK without rewriting tool code
 - **Typed handlers** — `TypedHandler[In, Out]` generates schemas from Go structs, populates `structuredContent`, and eliminates manual JSON wiring
@@ -41,6 +41,7 @@ Built on [github.com/mark3labs/mcp-go](https://github.com/mark3labs/mcp-go), mcp
 - **Autonomous loops** — the Ralph Loop pattern for iterative, self-directing task execution (`ralph`)
 - **MCP-A2A bridge** — bidirectional MCP/A2A protocol bridge: expose MCP tools as A2A skills and consume A2A agents as MCP tools (`bridge/a2a`) ([docs](bridge/a2a/README.md))
 - **Multi-protocol gateway** — single HTTP endpoint serving MCP, A2A, and OpenAI function calling via automatic protocol detection and canonical translation (`gateway/multi`) ([docs](gateway/multi/README.md))
+- **Feedback collection** — structured in-server feedback submission with pluggable memory and JSONL sinks (`feedback`)
 
 ## Quick Start
 
@@ -146,6 +147,7 @@ Migrating from Python FastMCP? Use **[docs/fastmcp-migration-guide.md](docs/fast
 | `roadmap` | Machine-readable roadmap management, gap analysis, query functions | `registry`, `handler` |
 | `rdcycle` | R&D cycle orchestration tools: scan, plan, verify, commit, report | `registry`, `handler`, `research`, `roadmap`, `workflow`, `finops` |
 | `frontdoor` | Discovery-first starter: mount `tool_catalog`, `tool_search`, `tool_schema`, `server_health` on any registry via `frontdoor.New(reg, opts...)` | `registry`, `handler`, `health` |
+| `feedback` | Structured feedback submission tool with pluggable memory and JSONL sinks | `registry`, `handler` |
 | `bridge/a2a` | Bidirectional MCP/A2A bridge: tool-to-skill translation, agent card generation, bridge executor, remote agent consumer | `registry`, `handler` |
 | `gateway/multi` | Multi-protocol HTTP gateway: MCP, A2A, and OpenAI adapters with auto-detection and canonical translation | `registry` |
 
@@ -154,7 +156,7 @@ Migrating from Python FastMCP? Use **[docs/fastmcp-migration-guide.md](docs/fast
 ```
 Layer 4  orchestrator ─ handoff ─ workflow ─ bootstrap
             │              │          │
-Layer 3  security ── gateway ── ralph ── skills ── rdcycle
+Layer 3  security ── gateway ── ralph ── skills ── rdcycle ── feedback
             │           │         │                  │
 Layer 2  handler ─ auth ─ resilience ─ mcptest ─ finops ─ eval
          resources ─ prompts ─ discovery ─ sampling ─ ...
@@ -165,7 +167,7 @@ Layer 1  registry ── health ── sanitize ── secrets ── client
 
 - **Layer 1** (no internal deps): `registry`, `health`, `sanitize`, `secrets`, `client`
 - **Layer 2** (depend on Layer 1): `resources`, `prompts`, `handler`, `resilience`, `middleware/truncate`, `mcptest`, `auth`, `observability`, `logging`, `sampling`, `roots`, `research`, `discovery`, `dispatcher`, `extensions`, `memory`, `finops`, `lifecycle`, `eval`, `roadmap`, `gateway/multi`
-- **Layer 3** (depend on Layer 2): `security`, `gateway`, `ralph`, `skills`, `rdcycle`
+- **Layer 3** (depend on Layer 2): `security`, `gateway`, `ralph`, `skills`, `rdcycle`, `feedback`
 - **Layer 4** (depend on Layer 3): `orchestrator`, `handoff`, `workflow`, `bootstrap`
 
 Lower layers never import upper layers. All packages in a layer can be used independently.
@@ -173,7 +175,7 @@ Lower layers never import upper layers. All packages in a layer can be used inde
 ```mermaid
 graph TD
     L4["<b>Layer 4</b><br/>orchestrator · handoff · workflow · bootstrap"]
-    L3["<b>Layer 3</b><br/>security · gateway · ralph · skills · rdcycle"]
+    L3["<b>Layer 3</b><br/>security · gateway · ralph · skills · rdcycle · feedback"]
     L2["<b>Layer 2</b><br/>handler · auth · resilience · mcptest · finops · eval<br/>resources · prompts · discovery · sampling · memory"]
     L1["<b>Layer 1</b><br/>registry · health · sanitize · secrets · client"]
     L4 --> L3 --> L2 --> L1
