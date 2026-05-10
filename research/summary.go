@@ -14,6 +14,7 @@ type SummaryInput struct {
 	SpecFindings      *SpecOutput      `json:"spec_findings,omitempty" jsonschema:"description=Output from research_mcp_spec tool"`
 	SDKFindings       *SDKOutput       `json:"sdk_findings,omitempty" jsonschema:"description=Output from research_sdk_releases tool"`
 	EcosystemFindings *EcosystemOutput `json:"ecosystem_findings,omitempty" jsonschema:"description=Output from research_ecosystem tool"`
+	PlatformFindings  *PlatformOutput  `json:"platform_findings,omitempty" jsonschema:"description=Output from research_platform_activity tool"`
 	AssessFindings    *AssessOutput    `json:"assess_findings,omitempty" jsonschema:"description=Output from research_assess tool"`
 	AdditionalNotes   string           `json:"additional_notes,omitempty" jsonschema:"description=Free-form notes to include in the summary"`
 	OutputFormat      string           `json:"output_format,omitempty" jsonschema:"description=Output format: 'markdown' (default) or 'json',enum=markdown,enum=json"`
@@ -136,6 +137,31 @@ func (m *Module) handleSummary(_ context.Context, input SummaryInput) (SummaryOu
 		}
 
 		sections = append(sections, Section{Title: "Ecosystem", Content: content.String()})
+	}
+
+	// Platform section
+	if input.PlatformFindings != nil {
+		pf := input.PlatformFindings
+		var content strings.Builder
+		if pf.Summary != "" {
+			fmt.Fprintf(&content, "%s\n", pf.Summary)
+		}
+		for _, result := range pf.Results {
+			if result.Error != "" {
+				fmt.Fprintf(&content, "- %s: ERROR - %s\n", result.Platform, result.Error)
+				continue
+			}
+			fmt.Fprintf(&content, "- %s: relevance=%.0f%% (%d sources, %d signals)\n",
+				result.Platform, result.Relevance*100, len(result.Sources), len(result.Signals))
+		}
+		if len(pf.Signals) > 0 {
+			content.WriteString("\nSignals:\n")
+			for _, signal := range pf.Signals {
+				fmt.Fprintf(&content, "- [%s/%s] %s - %s\n", signal.Platform, signal.Severity, signal.Keyword, signal.Snippet)
+			}
+		}
+		actions = append(actions, pf.ActionItems...)
+		sections = append(sections, Section{Title: "Cloud Platforms", Content: content.String()})
 	}
 
 	// Assessment section

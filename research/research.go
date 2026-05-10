@@ -1,4 +1,3 @@
-
 package research
 
 import (
@@ -72,6 +71,7 @@ func (m *Module) Tools() []registry.ToolDefinition {
 		m.specTool(),
 		m.sdkReleasesTool(),
 		m.ecosystemTool(),
+		m.platformActivityTool(),
 		m.assessTool(),
 		m.summaryTool(),
 		m.githubActivityTool(),
