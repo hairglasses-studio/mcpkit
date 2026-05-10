@@ -4,6 +4,7 @@ The Go toolkit for production-grade MCP servers.
 
 - [Quick Start](QUICKSTART.md) — get a server running in 5 minutes
 - [Benchmarks](BENCHMARK.md) — performance characteristics
+- [SDK Migration Guide](sdk-migration-guide.md) — move from direct mcp-go usage toward the official Go SDK build path
 - [Skill Front Doors](SKILL-FRONT-DOORS.md) — framework workflow entry points
 - [Changelog](changelog/) — release history
 
