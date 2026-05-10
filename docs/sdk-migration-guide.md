@@ -2,6 +2,8 @@
 
 This guide covers moving an mcpkit-based server from direct `mcp-go` coupling toward the official `github.com/modelcontextprotocol/go-sdk` build path. mcpkit still defaults to `github.com/mark3labs/mcp-go`; the `official_sdk` build tag is a migration lane that lets tool modules move first while SDK-specific server edges move later.
 
+For the current v2 readiness check, see [go-sdk v2.0 Compatibility Assessment](sdk-v2-compat-assessment.md). As of 2026-05-10, upstream has no `v2.*` module tag and mcpkit remains pinned to `github.com/modelcontextprotocol/go-sdk v1.6.0`.
+
 ## Current Support
 
 Use these commands before and after every migration slice:

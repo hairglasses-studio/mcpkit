@@ -209,7 +209,7 @@
     {
       "id": "P34",
       "name": "Dual-SDK Test Hardening",
-      "status": "in_progress",
+      "status": "complete",
       "items": [
         {
           "id": "P34-1",
@@ -254,9 +254,9 @@
         },
         {
           "id": "P34-6",
-          "description": "go-sdk v2.0 compatibility assessment pending upstream v2.0; latest verified stable is v1.6.0",
+          "description": "go-sdk v2.0 compatibility assessment completed; latest verified stable remains v1.6.0 and no v2 module migration is currently required",
           "package": "registry",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P34-1"
           ],
@@ -957,9 +957,9 @@
         },
         {
           "id": "P34-6",
-          "description": "go-sdk v2.0 compatibility assessment pending upstream v2.0; latest verified stable is v1.6.0",
+          "description": "go-sdk v2.0 compatibility assessment completed; latest verified stable remains v1.6.0 and no v2 module migration is currently required",
           "package": "registry",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P34-1"
           ],
