@@ -84,11 +84,62 @@ func (c *Client) CancelTask(ctx context.Context, taskID string) (*Task, error) {
 	return c.call(ctx, "tasks/cancel", TaskQueryParams{ID: taskID})
 }
 
+// CreateTaskPushNotificationConfig creates a webhook notification config.
+func (c *Client) CreateTaskPushNotificationConfig(ctx context.Context, config PushNotificationConfig) (*PushNotificationConfig, error) {
+	var result PushNotificationConfig
+	if err := c.callRPC(ctx, "CreateTaskPushNotificationConfig", config, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// GetTaskPushNotificationConfig retrieves one webhook notification config.
+func (c *Client) GetTaskPushNotificationConfig(ctx context.Context, taskID, configID string) (*PushNotificationConfig, error) {
+	var result PushNotificationConfig
+	err := c.callRPC(ctx, "GetTaskPushNotificationConfig", GetTaskPushNotificationConfigParams{
+		TaskID: taskID,
+		ID:     configID,
+	}, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// ListTaskPushNotificationConfigs lists webhook notification configs for a task.
+func (c *Client) ListTaskPushNotificationConfigs(ctx context.Context, taskID string) (*ListTaskPushNotificationConfigsResponse, error) {
+	var result ListTaskPushNotificationConfigsResponse
+	err := c.callRPC(ctx, "ListTaskPushNotificationConfigs", ListTaskPushNotificationConfigsParams{
+		TaskID: taskID,
+	}, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// DeleteTaskPushNotificationConfig deletes one webhook notification config.
+func (c *Client) DeleteTaskPushNotificationConfig(ctx context.Context, taskID, configID string) error {
+	var result DeleteTaskPushNotificationConfigResult
+	return c.callRPC(ctx, "DeleteTaskPushNotificationConfig", DeleteTaskPushNotificationConfigParams{
+		TaskID: taskID,
+		ID:     configID,
+	}, &result)
+}
+
 // call sends a JSON-RPC request and decodes the Task from the result.
 func (c *Client) call(ctx context.Context, method string, params interface{}) (*Task, error) {
+	var task Task
+	if err := c.callRPC(ctx, method, params, &task); err != nil {
+		return nil, err
+	}
+	return &task, nil
+}
+
+func (c *Client) callRPC(ctx context.Context, method string, params interface{}, result interface{}) error {
 	paramsJSON, err := json.Marshal(params)
 	if err != nil {
-		return nil, fmt.Errorf("marshal params: %w", err)
+		return fmt.Errorf("marshal params: %w", err)
 	}
 
 	rpcReq := JSONRPCRequest{
@@ -100,41 +151,43 @@ func (c *Client) call(ctx context.Context, method string, params interface{}) (*
 
 	body, err := json.Marshal(rpcReq)
 	if err != nil {
-		return nil, fmt.Errorf("marshal request: %w", err)
+		return fmt.Errorf("marshal request: %w", err)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL, bytes.NewReader(body))
 	if err != nil {
-		return nil, fmt.Errorf("create request: %w", err)
+		return fmt.Errorf("create request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	c.setAuth(req)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("send request: %w", err)
+		return fmt.Errorf("send request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	respBody, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20)) // 1MB limit
 	if err != nil {
-		return nil, fmt.Errorf("read response: %w", err)
+		return fmt.Errorf("read response: %w", err)
 	}
 
 	var rpcResp JSONRPCResponse
 	if err := json.Unmarshal(respBody, &rpcResp); err != nil {
-		return nil, fmt.Errorf("decode response: %w (body: %s)", err, string(respBody[:min(len(respBody), 200)]))
+		return fmt.Errorf("decode response: %w (body: %s)", err, string(respBody[:min(len(respBody), 200)]))
 	}
 
 	if rpcResp.Error != nil {
-		return nil, fmt.Errorf("A2A error %d: %s", rpcResp.Error.Code, rpcResp.Error.Message)
+		return fmt.Errorf("A2A error %d: %s", rpcResp.Error.Code, rpcResp.Error.Message)
 	}
 
-	var task Task
-	if err := json.Unmarshal(rpcResp.Result, &task); err != nil {
-		return nil, fmt.Errorf("decode task: %w", err)
+	if result == nil {
+		return nil
 	}
-	return &task, nil
+	if err := json.Unmarshal(rpcResp.Result, result); err != nil {
+		return fmt.Errorf("decode result: %w", err)
+	}
+	return nil
 }
 
 func (c *Client) setAuth(req *http.Request) {

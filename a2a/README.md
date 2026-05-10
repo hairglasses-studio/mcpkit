@@ -62,6 +62,28 @@ task, err := client.SendTask(ctx, a2a.TaskSendParams{
 })
 ```
 
+### Push Notifications
+
+Enable push notifications in the agent card, then register webhook configs per task through JSON-RPC client helpers or the REST endpoints under `/tasks/{taskID}/pushNotificationConfigs`. Task state transitions are delivered as `StreamResponse` payloads.
+
+```go
+card := a2a.AgentCardFromRegistry(reg,
+    a2a.WithName("my-agent"),
+    a2a.WithPushNotifications(),
+)
+srv := a2a.NewServer(reg, card)
+
+config, err := client.CreateTaskPushNotificationConfig(ctx, a2a.PushNotificationConfig{
+    TaskID: "task-1",
+    URL:    "https://example.com/a2a/webhook",
+    Token:  "session-token",
+    Authentication: &a2a.AuthenticationInfo{
+        Scheme:      "Bearer",
+        Credentials: "${WEBHOOK_TOKEN}",
+    },
+})
+```
+
 ## Architecture
 
 ```
@@ -109,6 +131,7 @@ task, err := client.SendTask(ctx, a2a.TaskSendParams{
 | `AgentCard` / `AgentCardFromRegistry` | Generate A2A agent cards from MCP tool registries |
 | `Server` | Accept A2A JSON-RPC tasks and dispatch to MCP tools |
 | `Client` | Send tasks to remote A2A agents |
+| `PushNotificationConfig` | Register webhook endpoints for task status push delivery |
 | `AuthInterceptor` | Per-agent credential management (Bearer, API key, OAuth2) |
 | `RateLimitInterceptor` | Token-bucket rate limiting per agent URL |
 | `TracingClient` | OpenTelemetry distributed tracing across MCP-A2A boundaries |
@@ -119,7 +142,7 @@ task, err := client.SendTask(ctx, a2a.TaskSendParams{
 
 This package (`a2a/`) provides:
 - Core A2A types (`Task`, `Message`, `Part`, `Artifact`, `AgentCard`)
-- A self-contained JSON-RPC server and client
+- A self-contained JSON-RPC server and client with push notification config endpoints
 - Interceptors (auth, rate limiting, tracing)
 - Compatibility layer with the official a2a-go SDK
 

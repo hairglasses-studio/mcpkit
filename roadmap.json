@@ -493,7 +493,7 @@
     {
       "id": "P39",
       "name": "A2A Protocol Bridge",
-      "status": "in_progress",
+      "status": "complete",
       "items": [
         {
           "id": "P39-1",
@@ -544,9 +544,9 @@
         },
         {
           "id": "P39-6",
-          "description": "Push notification endpoint pending; streaming progress translation helpers are shipped",
+          "description": "Per-task push notification config operations, REST endpoints, send-time webhook config, and StreamResponse webhook delivery on task transitions",
           "package": "a2a",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P39-3"
           ],
@@ -1230,9 +1230,9 @@
         },
         {
           "id": "P39-6",
-          "description": "Push notification endpoint pending; streaming progress translation helpers are shipped",
+          "description": "Per-task push notification config operations, REST endpoints, send-time webhook config, and StreamResponse webhook delivery on task transitions",
           "package": "a2a",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P39-3"
           ],

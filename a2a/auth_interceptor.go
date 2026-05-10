@@ -114,3 +114,23 @@ func (ac *AuthenticatedClient) GetTask(ctx context.Context, taskID string) (*Tas
 func (ac *AuthenticatedClient) CancelTask(ctx context.Context, taskID string) (*Task, error) {
 	return ac.inner.CancelTask(ctx, taskID)
 }
+
+// CreateTaskPushNotificationConfig creates a push config with authentication.
+func (ac *AuthenticatedClient) CreateTaskPushNotificationConfig(ctx context.Context, config PushNotificationConfig) (*PushNotificationConfig, error) {
+	return ac.inner.CreateTaskPushNotificationConfig(ctx, config)
+}
+
+// GetTaskPushNotificationConfig retrieves a push config with authentication.
+func (ac *AuthenticatedClient) GetTaskPushNotificationConfig(ctx context.Context, taskID, configID string) (*PushNotificationConfig, error) {
+	return ac.inner.GetTaskPushNotificationConfig(ctx, taskID, configID)
+}
+
+// ListTaskPushNotificationConfigs lists push configs with authentication.
+func (ac *AuthenticatedClient) ListTaskPushNotificationConfigs(ctx context.Context, taskID string) (*ListTaskPushNotificationConfigsResponse, error) {
+	return ac.inner.ListTaskPushNotificationConfigs(ctx, taskID)
+}
+
+// DeleteTaskPushNotificationConfig deletes a push config with authentication.
+func (ac *AuthenticatedClient) DeleteTaskPushNotificationConfig(ctx context.Context, taskID, configID string) error {
+	return ac.inner.DeleteTaskPushNotificationConfig(ctx, taskID, configID)
+}

@@ -10,6 +10,7 @@
 //   - [AgentCard] generates an A2A agent card from an MCP tool registry
 //   - [Client] sends tasks to remote A2A agents
 //   - [Server] accepts A2A tasks and dispatches them as MCP tool calls
+//   - [PushNotificationConfig] configures webhook delivery for task updates
 //   - [Bridge] provides bidirectional MCP↔A2A translation
 //
 // This is the first Go implementation of an MCP↔A2A bridge.
