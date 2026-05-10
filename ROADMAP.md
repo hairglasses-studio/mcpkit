@@ -213,22 +213,22 @@ Cloud platform tests — httptest mocks cover each default monitor, filtering, f
 
 </roadmap-phase>
 
-<roadmap-phase id="P36" status="planned" name="A2A Tracking + Competitive Analysis">
+<roadmap-phase id="P36" status="in_progress" name="A2A Tracking + Competitive Analysis">
 
-<roadmap-item id="P36-1" package="research" status="planned">
-A2AMonitor — poll Google A2A repository for spec version bumps, new agent card examples, and breaking changes.
+<roadmap-item id="P36-1" package="research" status="complete">
+A2AMonitor — `research_a2a_tracking` polls official A2A spec, releases, and samples for version bumps, AgentCard examples, and breaking changes.
 </roadmap-item>
 
-<roadmap-item id="P36-2" package="research" status="planned">
-SDKCompare analysis — diff feature matrices across mcp-go, go-sdk, FastMCP, and TypeScript SDK.
+<roadmap-item id="P36-2" package="research" status="complete">
+SDKCompare analysis — `research_sdk_compare` builds feature matrices across mcp-go, go-sdk, FastMCP, and TypeScript SDK.
 </roadmap-item>
 
-<roadmap-item id="P36-3" package="research" status="planned">
-Template reports — pre-built report templates for competitive analysis and gap summaries.
+<roadmap-item id="P36-3" package="research" status="complete">
+Template reports — SDK comparison and competitive dashboard outputs include competitive, gap, and A2A tracking report templates.
 </roadmap-item>
 
-<roadmap-item id="P36-4" package="research" status="planned">
-Competitive dashboard data — export structured JSON suitable for a monitoring dashboard.
+<roadmap-item id="P36-4" package="research" status="complete">
+Competitive dashboard data — `research_competitive_dashboard` exports normalized dashboard rows, action items, and reports.
 </roadmap-item>
 
 <roadmap-item id="P36-5" package="rdcycle" status="planned">
