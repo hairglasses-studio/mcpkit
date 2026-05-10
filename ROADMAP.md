@@ -167,8 +167,8 @@ _official_test.go files — added official-SDK fixtures for registry schema comp
 Dual-SDK CI gate — `.github/workflows/ci.yml` now runs the default reusable Go test job plus `make build-official test-official` for the supported official-SDK package set.
 </roadmap-item>
 
-<roadmap-item id="P34-4" status="planned">
-Migration guide document — step-by-step guide for projects moving from mcp-go to go-sdk with mcpkit.
+<roadmap-item id="P34-4" status="complete">
+Migration guide document — `docs/sdk-migration-guide.md` now documents the mcp-go to official Go SDK path, compatibility-layer rules, package gates, CI commands, and remaining unsupported fixtures.
 </roadmap-item>
 
 <roadmap-item id="P34-5" status="planned">

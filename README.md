@@ -101,6 +101,8 @@ Not sure which deployment model to use? The [migration guide](docs/migration-gui
 
 See **[docs/migration-guide.md](docs/migration-guide.md)** for the full guide including a decision matrix and step-by-step migration instructions.
 
+Moving from direct `mcp-go` usage toward the official Go SDK? Use **[docs/sdk-migration-guide.md](docs/sdk-migration-guide.md)** for the compatibility-layer migration path, build tags, package gates, and CI commands.
+
 ## Package Map
 
 | Package | Purpose | Internal Deps |

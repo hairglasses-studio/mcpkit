@@ -239,8 +239,8 @@
         },
         {
           "id": "P34-4",
-          "description": "Migration guide document",
-          "status": "planned",
+          "description": "Migration guide for mcp-go to official Go SDK path",
+          "status": "complete",
           "depends_on": [
             "P34-1"
           ],
@@ -942,8 +942,8 @@
         },
         {
           "id": "P34-4",
-          "description": "Migration guide document",
-          "status": "planned",
+          "description": "Migration guide for mcp-go to official Go SDK path",
+          "status": "complete",
           "depends_on": [
             "P34-1"
           ],
