@@ -209,20 +209,20 @@
     {
       "id": "P34",
       "name": "Dual-SDK Test Hardening",
-      "status": "planned",
+      "status": "in_progress",
       "items": [
         {
           "id": "P34-1",
-          "description": "Audit all compat.go aliases for go-sdk coverage",
+          "description": "Audit compat aliases and public adapters under default + official SDK",
           "package": "registry",
-          "status": "planned",
+          "status": "complete",
           "priority": "high"
         },
         {
           "id": "P34-2",
-          "description": "Create _official_test.go files for core packages",
+          "description": "Create official_sdk coverage for registry, handler, mcptest, and core transports",
           "package": "registry",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P34-1"
           ],
@@ -230,8 +230,8 @@
         },
         {
           "id": "P34-3",
-          "description": "Dual-SDK CI matrix (mcp-go + go-sdk)",
-          "status": "planned",
+          "description": "Dual-SDK CI gate for supported official_sdk package set",
+          "status": "complete",
           "depends_on": [
             "P34-2"
           ],
@@ -916,16 +916,16 @@
       "items": [
         {
           "id": "P34-1",
-          "description": "Audit all compat.go aliases for go-sdk coverage",
+          "description": "Audit compat aliases and public adapters under default + official SDK",
           "package": "registry",
-          "status": "planned",
+          "status": "complete",
           "priority": "high"
         },
         {
           "id": "P34-2",
-          "description": "Create _official_test.go files for core packages",
+          "description": "Create official_sdk coverage for registry, handler, mcptest, and core transports",
           "package": "registry",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P34-1"
           ],
@@ -933,8 +933,8 @@
         },
         {
           "id": "P34-3",
-          "description": "Dual-SDK CI matrix (mcp-go + go-sdk)",
-          "status": "planned",
+          "description": "Dual-SDK CI gate for supported official_sdk package set",
+          "status": "complete",
           "depends_on": [
             "P34-2"
           ],

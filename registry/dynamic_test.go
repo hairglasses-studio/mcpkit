@@ -369,12 +369,12 @@ func TestRegisterFilteredWithServer(t *testing.T) {
 		name: "test",
 		tools: []ToolDefinition{
 			{
-				Tool:     Tool{Name: "cat_a_tool", Description: "catA tool", InputSchema: ToolInputSchema{Type: "object"}},
+				Tool:     Tool{Name: "cat_a_tool", Description: "catA tool", InputSchema: objectInputSchema()},
 				Handler:  func(_ context.Context, _ CallToolRequest) (*CallToolResult, error) { return MakeTextResult("ok"), nil },
 				Category: "catA",
 			},
 			{
-				Tool:     Tool{Name: "cat_b_tool", Description: "catB tool", InputSchema: ToolInputSchema{Type: "object"}},
+				Tool:     Tool{Name: "cat_b_tool", Description: "catB tool", InputSchema: objectInputSchema()},
 				Handler:  func(_ context.Context, _ CallToolRequest) (*CallToolResult, error) { return MakeTextResult("ok"), nil },
 				Category: "catB",
 			},
@@ -391,12 +391,12 @@ func TestRegisterFilteredWithServer(t *testing.T) {
 func TestRegisterFilteredWithServer_WithOutputSchema(t *testing.T) {
 	r := NewToolRegistry()
 
-	outputSchema := &ToolOutputSchema{}
+	outputSchema := emptyOutputSchema()
 	r.RegisterModule(&testModule{
 		name: "test",
 		tools: []ToolDefinition{
 			{
-				Tool:         Tool{Name: "schema_tool", Description: "tool with output schema", InputSchema: ToolInputSchema{Type: "object"}},
+				Tool:         Tool{Name: "schema_tool", Description: "tool with output schema", InputSchema: objectInputSchema()},
 				Handler:      func(_ context.Context, _ CallToolRequest) (*CallToolResult, error) { return MakeTextResult("ok"), nil },
 				Category:     "cat",
 				OutputSchema: outputSchema,
