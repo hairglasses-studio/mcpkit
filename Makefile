@@ -1,4 +1,4 @@
-.PHONY: build test vet lint check build-official test-official check-dual rdloop-build rdloop-dry rdloop rdloop-12h rdloop-status skill-surface skill-surface-check smoke-matrix
+.PHONY: build test vet lint check build-official test-official check-dual bench bench-guard rdloop-build rdloop-dry rdloop rdloop-12h rdloop-status skill-surface skill-surface-check smoke-matrix
 
 OFFICIAL_SDK_BUILD_PACKAGES := \
 	./registry \
@@ -21,6 +21,15 @@ OFFICIAL_SDK_TEST_PACKAGES := \
 	./gateway \
 	./health \
 	./sampling
+
+BENCH_PACKAGES ?= ./mcptest ./testing/benchmark
+BENCH_FLAGS ?= -bench=. -benchmem -run '^$$'
+BENCH_BASELINE ?= bench-baseline.txt
+BENCH_CURRENT ?= bench-current.txt
+BENCH_LATENCY_THRESHOLD ?= 15
+BENCH_MEMORY_THRESHOLD ?= 20
+BENCH_ALLOC_THRESHOLD ?= 10
+BENCH_MIN_OVERLAP ?= 1
 
 build:
 	go build ./...
@@ -47,6 +56,19 @@ test-official:
 	go test -tags official_sdk $(OFFICIAL_SDK_TEST_PACKAGES) -count=1
 
 check-dual: check build-official test-official
+
+bench:
+	go test $(BENCH_FLAGS) $(BENCH_PACKAGES) > "$(BENCH_CURRENT)"
+	cat "$(BENCH_CURRENT)"
+
+bench-guard:
+	go run ./tools/benchguard \
+		-baseline "$(BENCH_BASELINE)" \
+		-current "$(BENCH_CURRENT)" \
+		-latency-threshold "$(BENCH_LATENCY_THRESHOLD)" \
+		-memory-threshold "$(BENCH_MEMORY_THRESHOLD)" \
+		-alloc-threshold "$(BENCH_ALLOC_THRESHOLD)" \
+		-min-overlap "$(BENCH_MIN_OVERLAP)"
 
 # rdloop targets — autonomous R&D cycle launcher.
 rdloop-build:
