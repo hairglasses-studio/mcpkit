@@ -493,20 +493,20 @@
     {
       "id": "P39",
       "name": "A2A Protocol Bridge",
-      "status": "planned",
+      "status": "in_progress",
       "items": [
         {
           "id": "P39-1",
-          "description": "A2A type definitions (AgentCard, Task, Message)",
+          "description": "A2A types for AgentCard, Task, Message, Artifact, JSON-RPC envelopes, and capabilities",
           "package": "a2a",
-          "status": "planned",
+          "status": "complete",
           "priority": "high"
         },
         {
           "id": "P39-2",
-          "description": "AgentCard generation from MCP server metadata",
+          "description": "AgentCard generation from registry metadata and bridge agent-card generator",
           "package": "a2a",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P39-1"
           ],
@@ -514,9 +514,9 @@
         },
         {
           "id": "P39-3",
-          "description": "A2A task lifecycle (create, status, cancel)",
+          "description": "A2A task lifecycle with send, get, cancel, status transitions, timeouts, and tests",
           "package": "a2a",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P39-1"
           ],
@@ -524,9 +524,9 @@
         },
         {
           "id": "P39-4",
-          "description": "MCP-to-A2A bridge (tool calls as A2A tasks)",
+          "description": "MCP-to-A2A bridge exposing mcpkit tools as A2A skills and task artifacts",
           "package": "a2a",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P39-3"
           ],
@@ -534,9 +534,9 @@
         },
         {
           "id": "P39-5",
-          "description": "A2A-to-MCP bridge (A2A tasks as tool calls)",
+          "description": "A2A-to-MCP bridge wrapping remote A2A agent skills as registry tools",
           "package": "a2a",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P39-3"
           ],
@@ -544,7 +544,7 @@
         },
         {
           "id": "P39-6",
-          "description": "Push notification support",
+          "description": "Push notification endpoint pending; streaming progress translation helpers are shipped",
           "package": "a2a",
           "status": "planned",
           "depends_on": [
@@ -1183,16 +1183,16 @@
       "items": [
         {
           "id": "P39-1",
-          "description": "A2A type definitions (AgentCard, Task, Message)",
+          "description": "A2A types for AgentCard, Task, Message, Artifact, JSON-RPC envelopes, and capabilities",
           "package": "a2a",
-          "status": "planned",
+          "status": "complete",
           "priority": "high"
         },
         {
           "id": "P39-2",
-          "description": "AgentCard generation from MCP server metadata",
+          "description": "AgentCard generation from registry metadata and bridge agent-card generator",
           "package": "a2a",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P39-1"
           ],
@@ -1200,9 +1200,9 @@
         },
         {
           "id": "P39-3",
-          "description": "A2A task lifecycle (create, status, cancel)",
+          "description": "A2A task lifecycle with send, get, cancel, status transitions, timeouts, and tests",
           "package": "a2a",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P39-1"
           ],
@@ -1210,9 +1210,9 @@
         },
         {
           "id": "P39-4",
-          "description": "MCP-to-A2A bridge (tool calls as A2A tasks)",
+          "description": "MCP-to-A2A bridge exposing mcpkit tools as A2A skills and task artifacts",
           "package": "a2a",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P39-3"
           ],
@@ -1220,9 +1220,9 @@
         },
         {
           "id": "P39-5",
-          "description": "A2A-to-MCP bridge (A2A tasks as tool calls)",
+          "description": "A2A-to-MCP bridge wrapping remote A2A agent skills as registry tools",
           "package": "a2a",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P39-3"
           ],
@@ -1230,7 +1230,7 @@
         },
         {
           "id": "P39-6",
-          "description": "Push notification support",
+          "description": "Push notification endpoint pending; streaming progress translation helpers are shipped",
           "package": "a2a",
           "status": "planned",
           "depends_on": [

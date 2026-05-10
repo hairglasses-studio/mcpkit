@@ -5,7 +5,7 @@ Last updated: 2026-05-09.
 ## Status Summary
 
 - **Spec coverage**: 100% (all MCP 2025-11-25 features implemented)
-- **Tiers 1–4**: Complete (A2A deferred — spec not stable)
+- **Tiers 1–4**: Complete; A2A bridge work has moved into T9 with push-notification endpoints still pending.
 - **Test coverage**: All Phase 1–30 packages at 90%+ coverage. `transport` (added Phase 33) at 16% — pending test hardening
 - **SDK migration**: P34 core dual-SDK hardening is in progress; `make build-official` and `make test-official` gate the supported official-SDK package set.
 - **Documentation**: 37 packages have `doc.go`, 36 `example_test.go` files (as of 2026-04-03)
@@ -293,30 +293,30 @@ Benchmark comparison tool — compare two BenchmarkSuite runs and report per-too
 
 <roadmap-tier id="T9" name="Agent Protocol Evolution">
 
-<roadmap-phase id="P39" status="planned" name="A2A Protocol Bridge">
+<roadmap-phase id="P39" status="in_progress" name="A2A Protocol Bridge">
 
-<roadmap-item id="P39-1" package="a2a" status="planned">
-A2A types — AgentCard, Task, TaskStatus, Artifact, and Message structs aligned to A2A spec v0.9+.
+<roadmap-item id="P39-1" package="a2a" status="complete">
+A2A types — shipped in `a2a/types.go` with AgentCard, Task, TaskState, Message, Part, Artifact, JSON-RPC envelopes, capability flags, and lifecycle tests.
 </roadmap-item>
 
-<roadmap-item id="P39-2" package="a2a" status="planned">
-AgentCard generation — derive AgentCard from registry.Registry metadata and server card fields.
+<roadmap-item id="P39-2" package="a2a" status="complete">
+AgentCard generation — shipped via `a2a.AgentCardFromRegistry` and `bridge/a2a.AgentCardGenerator`, deriving skills from `registry.ToolRegistry` metadata with filtering and cache invalidation tests.
 </roadmap-item>
 
-<roadmap-item id="P39-3" package="a2a" status="planned">
-Task lifecycle — submit, update, cancel, and poll task state with A2A-compliant status transitions.
+<roadmap-item id="P39-3" package="a2a" status="complete">
+Task lifecycle — shipped in `a2a.Server`, `a2a.Client`, and `bridge/a2a.BridgeExecutor` with send/get/cancel, terminal-state handling, timeout, error, and round-trip tests.
 </roadmap-item>
 
-<roadmap-item id="P39-4" package="a2a" status="planned">
-MCP-to-A2A bridge — translate MCP tool calls into A2A Task submissions and relay results back.
+<roadmap-item id="P39-4" package="a2a" status="complete">
+MCP-to-A2A bridge — shipped as `a2a.NewBridgeTool` and `bridge/a2a.NewBridge`, exposing mcpkit tools as A2A skills and translating tool results into A2A task artifacts.
 </roadmap-item>
 
-<roadmap-item id="P39-5" package="a2a" status="planned">
-A2A-to-MCP bridge — expose an A2A agent endpoint that dispatches to mcpkit tool handlers.
+<roadmap-item id="P39-5" package="a2a" status="complete">
+A2A-to-MCP bridge — shipped via `bridge/a2a.RemoteAgent`, which wraps remote A2A agent skills as `registry.ToolModule` tools and relays responses back as MCP tool results.
 </roadmap-item>
 
 <roadmap-item id="P39-6" package="a2a" status="planned">
-Push notifications — Server-Sent Events stream for A2A task status updates.
+Push notifications — still pending as a dedicated endpoint; `bridge/a2a` already includes streaming progress translation helpers and tests for MCP progress to A2A status events.
 </roadmap-item>
 
 </roadmap-phase>
