@@ -143,6 +143,11 @@ var examples = []ExampleConfig{
 		HTTPPort:        0, // resolved at runtime
 	},
 	{
+		Name:            "docker",
+		StdioSkipReason: "HTTP-transport example (no stdio mode)",
+		HTTPPort:        0, // resolved at runtime
+	},
+	{
 		Name:            "stateless-http",
 		StdioSkipReason: "HTTP-transport example (no stdio mode)",
 		HTTPPort:        0, // resolved at runtime
