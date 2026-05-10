@@ -625,8 +625,8 @@
         },
         {
           "id": "P41-3",
-          "description": "Docker-compose multi-server example",
-          "status": "planned",
+          "description": "Docker Compose multi-server example in examples/docker with health checks and lifecycle readiness",
+          "status": "complete",
           "priority": "medium"
         },
         {
@@ -1303,8 +1303,8 @@
         },
         {
           "id": "P41-3",
-          "description": "Docker-compose multi-server example",
-          "status": "planned",
+          "description": "Docker Compose multi-server example in examples/docker with health checks and lifecycle readiness",
+          "status": "complete",
           "priority": "medium"
         },
         {

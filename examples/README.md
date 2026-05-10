@@ -30,6 +30,7 @@ Runnable MCP servers demonstrating mcpkit packages and patterns. Every example i
 | Example | Summary |
 |---|---|
 | [http](http/) | StreamableHTTP transport on `:8080/mcp` with `.well-known/mcp.json` server card. |
+| [docker](docker/) | Docker Compose deployment with two MCP HTTP servers behind nginx, container health checks, lifecycle readiness, and identity smoke tests. |
 | [stateless-http](stateless-http/) | Horizontally scalable HTTP server with Redis-backed sessions, multi-source session extraction, and health checks. |
 | [gateway](gateway/) | Aggregate tools from multiple upstream MCP servers behind namespaced routing with per-upstream resilience. |
 

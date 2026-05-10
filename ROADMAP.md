@@ -359,8 +359,8 @@ Example gallery index — `examples/README.md` lists all 13 runnable examples gr
 FastMCP migration guide — `docs/fastmcp-migration-guide.md` provides side-by-side Python FastMCP to mcpkit translations for tools, resources, prompts, startup wiring, and test gates.
 </roadmap-item>
 
-<roadmap-item id="P41-3" status="planned">
-Docker-compose example — `examples/docker/` with compose file, health checks, and lifecycle integration.
+<roadmap-item id="P41-3" status="complete">
+Docker-compose example — `examples/docker/` provides two StreamableHTTP MCP servers behind nginx with compose health checks, identity smoke tests, and lifecycle-driven readiness/drain handling.
 </roadmap-item>
 
 <roadmap-item id="P41-4" status="complete">
