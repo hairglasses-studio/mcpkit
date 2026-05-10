@@ -321,7 +321,7 @@ Push notifications — still pending as a dedicated endpoint; `bridge/a2a` alrea
 
 </roadmap-phase>
 
-<roadmap-phase id="P40" status="in_progress" name="Enhanced Orchestration">
+<roadmap-phase id="P40" status="complete" name="Enhanced Orchestration">
 
 <roadmap-item id="P40-1" package="orchestrator" status="complete">
 Swarm mesh — `orchestrator.NewSwarm` provides peer-to-peer broadcast and unicast message routing with concurrency limits, timeouts, fail-fast cancellation, deterministic responses, and error aggregation.
@@ -339,8 +339,8 @@ Dynamic pattern selector — `SelectDynamicPattern` and `RunDynamicPattern` choo
 Performance benchmarks — `orchestrator/bench_test.go` covers fan-out at 1/10/100 agents, swarm broadcast, hierarchical delegation, and a conservative 100-agent latency budget test.
 </roadmap-item>
 
-<roadmap-item id="P40-5" package="workflow" status="planned">
-Multi-agent workflow templates — pre-built workflow graphs for common multi-agent topologies.
+<roadmap-item id="P40-5" package="workflow" status="complete">
+Multi-agent workflow templates — `workflow` now provides reusable node builders and single-node graph templates for fan-out, pipeline, select, dynamic orchestration, swarm broadcast, and hierarchical delegation.
 </roadmap-item>
 
 </roadmap-phase>

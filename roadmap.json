@@ -557,7 +557,7 @@
     {
       "id": "P40",
       "name": "Enhanced Orchestration",
-      "status": "in_progress",
+      "status": "complete",
       "items": [
         {
           "id": "P40-1",
@@ -596,9 +596,9 @@
         },
         {
           "id": "P40-5",
-          "description": "Multi-agent workflow templates",
+          "description": "Reusable workflow node builders and graph templates for fan-out, pipeline, select, dynamic orchestration, swarm broadcast, and hierarchical delegation",
           "package": "workflow",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P40-3"
           ],
@@ -1275,9 +1275,9 @@
         },
         {
           "id": "P40-5",
-          "description": "Multi-agent workflow templates",
+          "description": "Reusable workflow node builders and graph templates for fan-out, pipeline, select, dynamic orchestration, swarm broadcast, and hierarchical delegation",
           "package": "workflow",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P40-3"
           ],
