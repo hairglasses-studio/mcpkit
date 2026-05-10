@@ -185,30 +185,30 @@ go-sdk v2.0 compat assessment — still pending upstream v2.0; live module versi
 
 <roadmap-tier id="T7" name="Research Enhancement">
 
-<roadmap-phase id="P35" status="planned" name="Cloud Platform Monitoring">
+<roadmap-phase id="P35" status="complete" name="Cloud Platform Monitoring">
 
-<roadmap-item id="P35-1" package="research" status="planned">
-PlatformMonitor interface — common interface for cloud-platform MCP activity monitors.
+<roadmap-item id="P35-1" package="research" status="complete">
+PlatformMonitor interface — shipped as `research.PlatformMonitor`, `PlatformSource`, `PlatformMonitorResult`, and `PlatformSignal`.
 </roadmap-item>
 
-<roadmap-item id="P35-2" package="research" status="planned">
-Cloudflare Workers monitor — poll Cloudflare blog and Workers changelog for MCP-adjacent announcements.
+<roadmap-item id="P35-2" package="research" status="complete">
+Cloudflare Workers monitor — shipped via `NewCloudflareWorkersMonitor`, polling the official MCP blog feed and Workers changelog sources for MCP-adjacent announcements.
 </roadmap-item>
 
-<roadmap-item id="P35-3" package="research" status="planned">
-Vercel adapter monitor — track Vercel AI SDK changelog for MCP transport and adapter updates.
+<roadmap-item id="P35-3" package="research" status="complete">
+Vercel adapter monitor — shipped via `NewVercelAIMonitor`, tracking Vercel changelog, AI SDK MCP docs, and AI SDK releases.
 </roadmap-item>
 
-<roadmap-item id="P35-4" package="research" status="planned">
-Azure MCP Center monitor — track Azure AI Foundry MCP Center releases and breaking changes.
+<roadmap-item id="P35-4" package="research" status="complete">
+Azure MCP Center monitor — shipped via `NewAzureFoundryMonitor`, tracking Azure AI Foundry MCP docs and Agent Service updates.
 </roadmap-item>
 
-<roadmap-item id="P35-5" package="research" status="planned">
-Platform activity aggregation — aggregate PlatformMonitor results into a unified SummaryOutput for rdcycle scan.
+<roadmap-item id="P35-5" package="research" status="complete">
+Platform activity aggregation — `research_platform_activity` now feeds platform results, signals, and action items into `research_summary`.
 </roadmap-item>
 
-<roadmap-item id="P35-6" package="research" status="planned">
-Cloud platform tests — httptest mocks and unit tests for each platform monitor.
+<roadmap-item id="P35-6" package="research" status="complete">
+Cloud platform tests — httptest mocks cover each default monitor, filtering, failure handling, and summary aggregation.
 </roadmap-item>
 
 </roadmap-phase>

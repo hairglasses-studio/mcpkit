@@ -1,4 +1,3 @@
-
 package research
 
 import (
@@ -373,14 +372,15 @@ func TestModuleInterface(t *testing.T) {
 	}
 
 	tools := m.Tools()
-	if len(tools) != 7 {
-		t.Fatalf("tools count = %d, want 7", len(tools))
+	if len(tools) != 8 {
+		t.Fatalf("tools count = %d, want 8", len(tools))
 	}
 
 	expectedNames := []string{
 		"research_mcp_spec",
 		"research_sdk_releases",
 		"research_ecosystem",
+		"research_platform_activity",
 		"research_assess",
 		"research_summary",
 		"research_github_activity",
@@ -411,6 +411,7 @@ func TestRegistryIntegration(t *testing.T) {
 		"research_mcp_spec",
 		"research_sdk_releases",
 		"research_ecosystem",
+		"research_platform_activity",
 		"research_assess",
 		"research_summary",
 		"research_github_activity",
@@ -424,8 +425,8 @@ func TestRegistryIntegration(t *testing.T) {
 	}
 
 	toolNames := srv.ToolNames()
-	if len(toolNames) != 7 {
-		t.Errorf("tool count = %d, want 7", len(toolNames))
+	if len(toolNames) != 8 {
+		t.Errorf("tool count = %d, want 8", len(toolNames))
 	}
 }
 
