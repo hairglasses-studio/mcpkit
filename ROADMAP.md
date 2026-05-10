@@ -379,8 +379,8 @@ Tutorial content outline — `docs/tutorial-outline.md` lays out an eight-part "
 Feedback tool — `feedback.NewModule` exposes `feedback_submit` with typed validation, consent-aware contact capture, and pluggable `MemorySink` / JSONL file sinks.
 </roadmap-item>
 
-<roadmap-item id="P42-2" package="feedback" status="planned">
-Anonymous telemetry — opt-in usage telemetry (package usage counts, error rates) with explicit consent gate.
+<roadmap-item id="P42-2" package="feedback" status="complete">
+Anonymous telemetry — `feedback.TelemetryCollector` requires explicit opt-in, aggregates package/tool usage counts and error rates, and exposes registry middleware plus sorted snapshots.
 </roadmap-item>
 
 <roadmap-item id="P42-3" package="rdcycle" status="planned">

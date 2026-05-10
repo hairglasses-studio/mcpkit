@@ -657,9 +657,9 @@
         },
         {
           "id": "P42-2",
-          "description": "Anonymous usage telemetry with opt-in",
+          "description": "Opt-in anonymous telemetry collector with middleware, usage counts, and error rates",
           "package": "feedback",
-          "status": "planned",
+          "status": "complete",
           "priority": "medium"
         },
         {
@@ -1328,9 +1328,9 @@
         },
         {
           "id": "P42-2",
-          "description": "Anonymous usage telemetry with opt-in",
+          "description": "Opt-in anonymous telemetry collector with middleware, usage counts, and error rates",
           "package": "feedback",
-          "status": "planned",
+          "status": "complete",
           "priority": "medium"
         },
         {
