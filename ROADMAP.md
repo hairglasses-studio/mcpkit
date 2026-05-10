@@ -153,7 +153,7 @@ Transport integration tests — covered by `transport/*_test.go` for HTTP, middl
 
 <roadmap-tier id="T6" name="SDK Migration">
 
-<roadmap-phase id="P34" status="in_progress" name="Dual-SDK Test Hardening">
+<roadmap-phase id="P34" status="complete" name="Dual-SDK Test Hardening">
 
 <roadmap-item id="P34-1" package="registry" status="complete">
 Audit compat.go aliases — `registry`, `handler`, and `mcptest` now compile and test under both default and `official_sdk` build tags, covering schema adapters, content helpers, argument extraction, and public test helpers.
@@ -175,8 +175,8 @@ Migration guide document — `docs/sdk-migration-guide.md` now documents the mcp
 Bump mcp-go to latest — updated `github.com/mark3labs/mcp-go` from v0.47.0 to v0.52.0 and validated default core tests plus official-SDK build/test gates. Official `github.com/modelcontextprotocol/go-sdk` was also updated from v1.5.0 to v1.6.0.
 </roadmap-item>
 
-<roadmap-item id="P34-6" package="registry" status="planned">
-go-sdk v2.0 compat assessment — still pending upstream v2.0; live module version check on 2026-05-09 showed latest stable `github.com/modelcontextprotocol/go-sdk` is v1.6.0.
+<roadmap-item id="P34-6" package="registry" status="complete">
+go-sdk v2.0 compat assessment — completed in `docs/sdk-v2-compat-assessment.md`; live module version check on 2026-05-10 still shows latest stable `github.com/modelcontextprotocol/go-sdk` is v1.6.0 and no v2 module migration is currently required.
 </roadmap-item>
 
 </roadmap-phase>
@@ -419,7 +419,7 @@ Roadmap consolidation adapters — document migration paths for ralphglasses sem
 |------|-----------|
 | Before P33 | Evaluate the June 2026 spec draft for WebSocket transport details before implementing the WebSocket stub beyond a placeholder. |
 | Before P39 | A2A spec must reach v0.9+ under Linux Foundation governance before any A2A bridge work begins. |
-| Before P34-6 | Wait for an official go-sdk v2.0 announcement before scoping compat.go updates. |
+| After P34-6 | Reopen official go-sdk compatibility work only when a `v2.*` module tag or upstream v2 migration guide is published. |
 | P38 benchmark threshold | Define middleware overhead threshold: no single middleware layer may add more than 5% p99 latency. |
 
 ---
