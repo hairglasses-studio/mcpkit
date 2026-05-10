@@ -124,7 +124,7 @@ Migrating from Python FastMCP? Use **[docs/fastmcp-migration-guide.md](docs/fast
 | `sanitize` | Input/output sanitization, secret/PII redaction, URI validation | none |
 | `secrets` | Secret provider interface, env/file providers, sanitizer | none |
 | `client` | HTTP pool and client utilities | none |
-| `discovery` | MCP Registry client for server discovery and publishing, multi-registry metadata extraction | `registry`, `client`, `resources`, `prompts` |
+| `discovery` | MCP Registry client for server discovery, validation-first publishing workflows, and multi-registry metadata extraction | `registry`, `client`, `resources`, `prompts` |
 | `resources` | Resource registry, middleware chain, server integration for URI-based data, URI validation middleware | `registry` |
 | `prompts` | Prompt registry, middleware chain, server integration for reusable templates | `registry` |
 | `logging` | slog.Handler bridge to MCP clients, tool invocation logging middleware | `registry` |

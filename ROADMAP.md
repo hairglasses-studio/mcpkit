@@ -241,14 +241,14 @@ rdcycle scan integration — wire A2AMonitor and SDKCompare into the rdcycle_sca
 
 <roadmap-tier id="T8" name="Production DX">
 
-<roadmap-phase id="P37" status="planned" name="Server Registry Publishing">
+<roadmap-phase id="P37" status="in_progress" name="Server Registry Publishing">
 
-<roadmap-item id="P37-1" package="discovery" status="planned">
-PublishWorkflow + validation — multi-step publish: validate server card, check schema compliance, then publish.
+<roadmap-item id="P37-1" package="discovery" status="complete">
+PublishWorkflow + validation — `discovery.RunPublishWorkflow` validates metadata, records workflow steps, supports validate-only runs, then registers or updates through `Publisher`.
 </roadmap-item>
 
-<roadmap-item id="P37-2" package="discovery" status="planned">
-Schema compliance checker — validate a ServerCard struct against the MCP registry JSON schema before publishing.
+<roadmap-item id="P37-2" package="discovery" status="complete">
+Schema compliance checker — `ValidateServerMetadata` returns structured issues and warnings for required identity fields, URL fields, transports, auth, tags, tools, resources, and prompts before publishing.
 </roadmap-item>
 
 <roadmap-item id="P37-3" package="cmd" status="planned">

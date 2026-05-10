@@ -4,9 +4,10 @@
 // [Client] queries the MCP Registry API for [ServerMetadata], caches results
 // with a configurable TTL, and maps HTTP status codes to typed sentinel
 // errors. [Publisher] registers or updates a server's metadata in the
-// registry using an API token. [MetadataFromConfig] introspects a local
-// [registry.ToolRegistry] (and optionally resources/prompts registries) to
-// build a [ServerMetadata] value without a live registry round-trip.
+// registry using an API token. [RunPublishWorkflow] validates metadata with
+// [ValidateServerMetadata] before making registry calls. [MetadataFromConfig]
+// introspects a local [registry.ToolRegistry] (and optionally resources/prompts
+// registries) to build a [ServerMetadata] value without a live registry round-trip.
 // [ServerCardHandler] and [StaticServerCardHandler] serve the
 // .well-known/mcp.json server card over HTTP.
 //
