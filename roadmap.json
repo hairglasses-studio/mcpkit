@@ -1,11 +1,11 @@
 {
   "title": "mcpkit Roadmap",
-  "description": "Machine-readable roadmap for mcpkit development. Phases 1-30 complete (MCP 2025-11-25 full coverage, 35+ packages, 90%+ test coverage). Phases 31-42 target spec forward-compatibility, SDK migration, research enhancement, production DX, agent protocol evolution, and community growth.",
+  "description": "Machine-readable roadmap for mcpkit development. Phases 1-31 and 43 complete (MCP 2025-11-25 full coverage, 35+ packages, 90%+ test coverage). Remaining phases target spec forward-compatibility, SDK migration, research enhancement, production DX, agent protocol evolution, community growth, and feedback telemetry.",
   "phases": [
     {
       "id": "P31",
       "name": "Session Management Foundation",
-      "status": "planned",
+      "status": "complete",
       "items": [
         {
           "id": "P31-1",
@@ -683,6 +683,41 @@
           "priority": "low"
         }
       ]
+    },
+    {
+      "id": "P43",
+      "name": "Shared Embedding Primitives",
+      "status": "complete",
+      "items": [
+        {
+          "id": "P43-1",
+          "description": "Sparse-vector and TF-IDF helpers for tokenization, cosine similarity, and top-k ranking",
+          "package": "embedding",
+          "status": "complete",
+          "priority": "medium"
+        },
+        {
+          "id": "P43-2",
+          "description": "Embedding provider interfaces with deterministic sparse local defaults and optional dense-provider adapters",
+          "package": "embedding",
+          "status": "complete",
+          "depends_on": [
+            "P43-1"
+          ],
+          "priority": "medium"
+        },
+        {
+          "id": "P43-3",
+          "description": "Roadmap consolidation adapters for ralphglasses semantic primitives and shielddd TF-IDF evidence search",
+          "package": "embedding",
+          "status": "complete",
+          "depends_on": [
+            "P43-1",
+            "P43-2"
+          ],
+          "priority": "low"
+        }
+      ]
     }
   ],
   "tiers": [
@@ -1317,9 +1352,37 @@
             "P42-2"
           ],
           "priority": "low"
+        },
+        {
+          "id": "P43-1",
+          "description": "Sparse-vector and TF-IDF helpers for tokenization, cosine similarity, and top-k ranking",
+          "package": "embedding",
+          "status": "complete",
+          "priority": "medium"
+        },
+        {
+          "id": "P43-2",
+          "description": "Embedding provider interfaces with deterministic sparse local defaults and optional dense-provider adapters",
+          "package": "embedding",
+          "status": "complete",
+          "depends_on": [
+            "P43-1"
+          ],
+          "priority": "medium"
+        },
+        {
+          "id": "P43-3",
+          "description": "Roadmap consolidation adapters for ralphglasses semantic primitives and shielddd TF-IDF evidence search",
+          "package": "embedding",
+          "status": "complete",
+          "depends_on": [
+            "P43-1",
+            "P43-2"
+          ],
+          "priority": "low"
         }
       ]
     }
   ],
-  "updated_at": "2026-03-15"
+  "updated_at": "2026-05-09"
 }

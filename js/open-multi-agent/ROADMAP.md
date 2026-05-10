@@ -8,9 +8,7 @@ Build AI agent teams that work together. One agent plans, another implements, a 
 
 ## Planned
 
-- [ ] Add comprehensive test suite
-- [ ] Improve documentation
-- [ ] Release v1.0
+- No generic template backlog. Add concrete open-multi-agent tasks here only when the JS package is actively maintained again.
 
 ## Completed
 
