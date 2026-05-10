@@ -416,9 +416,9 @@
         },
         {
           "id": "P37-4",
-          "description": "Registry authentication flow",
+          "description": "OAuth2 client-credentials token source with publisher integration and CLI flags/env vars",
           "package": "discovery",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P37-1"
           ],
@@ -1110,9 +1110,9 @@
         },
         {
           "id": "P37-4",
-          "description": "Registry authentication flow",
+          "description": "OAuth2 client-credentials token source with publisher integration and CLI flags/env vars",
           "package": "discovery",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P37-1"
           ],

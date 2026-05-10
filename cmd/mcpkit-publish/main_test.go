@@ -101,6 +101,52 @@ func TestRunPublishCLIUsesTokenEnv(t *testing.T) {
 	}
 }
 
+func TestRunPublishCLIOAuthClientCredentials(t *testing.T) {
+	card := writePublishCLICard(t, validCLIMetadata())
+	tokenServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if err := r.ParseForm(); err != nil {
+			t.Fatalf("ParseForm: %v", err)
+		}
+		if got := r.Form.Get("grant_type"); got != "client_credentials" {
+			t.Fatalf("grant_type = %q, want client_credentials", got)
+		}
+		if got := r.Form.Get("client_id"); got != "client-id" {
+			t.Fatalf("client_id = %q, want client-id", got)
+		}
+		if got := r.Form.Get("scope"); got != "registry.publish registry.delete" {
+			t.Fatalf("scope = %q", got)
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"access_token": "oauth-cli-token",
+			"token_type":   "Bearer",
+		})
+	}))
+	defer tokenServer.Close()
+	var auth string
+	registryServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		auth = r.Header.Get("Authorization")
+		_ = json.NewEncoder(w).Encode(discovery.ServerMetadata{ID: "srv-oauth", Name: "published"})
+	}))
+	defer registryServer.Close()
+	var stdout, stderr bytes.Buffer
+
+	code := runPublishCLI([]string{
+		"-card", card,
+		"-registry-url", registryServer.URL,
+		"-token-url", tokenServer.URL,
+		"-client-id", "client-id",
+		"-client-secret", "client-secret",
+		"-scopes", "registry.publish, registry.delete",
+	}, &stdout, &stderr, func(string) string { return "" })
+
+	if code != 0 {
+		t.Fatalf("code = %d, stderr = %s", code, stderr.String())
+	}
+	if auth != "Bearer oauth-cli-token" {
+		t.Fatalf("auth = %q, want OAuth bearer", auth)
+	}
+}
+
 func writePublishCLICard(t *testing.T, meta discovery.ServerMetadata) string {
 	t.Helper()
 	dir := t.TempDir()

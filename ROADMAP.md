@@ -255,8 +255,8 @@ Schema compliance checker — `ValidateServerMetadata` returns structured issues
 CLI publishing helper — `cmd/mcpkit-publish` reads server-card JSON, runs `RunPublishWorkflow`, supports validate-only/register/update modes, and uses `-token` or `MCP_REGISTRY_TOKEN` for CI.
 </roadmap-item>
 
-<roadmap-item id="P37-4" package="discovery" status="planned">
-Registry auth flow — OAuth2 client credentials flow for authenticating with the MCP registry API.
+<roadmap-item id="P37-4" package="discovery" status="complete">
+Registry auth flow — `ClientCredentialsTokenSource` implements OAuth2 client-credentials token fetch/cache, `Publisher` accepts dynamic token sources, and `cmd/mcpkit-publish` exposes OAuth flags/env vars.
 </roadmap-item>
 
 <roadmap-item id="P37-5" package="discovery" status="planned">

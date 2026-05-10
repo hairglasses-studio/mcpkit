@@ -19,7 +19,12 @@ type PublisherConfig struct {
 	BaseURL string
 
 	// Token is the Bearer token used for authenticated requests. Required.
+	// Ignored when TokenSource is set.
 	Token string
+
+	// TokenSource supplies Bearer tokens dynamically, for example via OAuth2
+	// client credentials.
+	TokenSource RegistryTokenSource
 
 	// HTTPClient overrides the default HTTP client.
 	HTTPClient *http.Client
@@ -28,13 +33,18 @@ type PublisherConfig struct {
 // Publisher registers and manages server metadata in the MCP Registry.
 type Publisher struct {
 	baseURL    string
-	token      string
+	token      RegistryTokenSource
 	httpClient *http.Client
 }
 
-// NewPublisher creates a new Publisher. Returns an error if Token is empty.
+// NewPublisher creates a new Publisher. Returns an error if neither Token nor
+// TokenSource is configured.
 func NewPublisher(cfg PublisherConfig) (*Publisher, error) {
-	if cfg.Token == "" {
+	tokenSource := cfg.TokenSource
+	if tokenSource == nil && cfg.Token != "" {
+		tokenSource = staticTokenSource(cfg.Token)
+	}
+	if tokenSource == nil {
 		return nil, fmt.Errorf("discovery: publisher token is required")
 	}
 	if cfg.BaseURL == "" {
@@ -45,7 +55,7 @@ func NewPublisher(cfg PublisherConfig) (*Publisher, error) {
 	}
 	return &Publisher{
 		baseURL:    cfg.BaseURL,
-		token:      cfg.Token,
+		token:      tokenSource,
 		httpClient: cfg.HTTPClient,
 	}, nil
 }
@@ -74,7 +84,11 @@ func (p *Publisher) Deregister(ctx context.Context, id string) error {
 	if err != nil {
 		return fmt.Errorf("discovery: build request: %w", err)
 	}
-	req.Header.Set("Authorization", "Bearer "+p.token)
+	token, err := p.token.Token(ctx)
+	if err != nil {
+		return fmt.Errorf("discovery: publisher token: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := p.httpClient.Do(req)
@@ -98,7 +112,11 @@ func (p *Publisher) doJSON(ctx context.Context, method, reqURL string, payload a
 	if err != nil {
 		return ServerMetadata{}, fmt.Errorf("discovery: build request: %w", err)
 	}
-	req.Header.Set("Authorization", "Bearer "+p.token)
+	token, err := p.token.Token(ctx)
+	if err != nil {
+		return ServerMetadata{}, fmt.Errorf("discovery: publisher token: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 
