@@ -139,7 +139,7 @@ Migrating from Python FastMCP? Use **[docs/fastmcp-migration-guide.md](docs/fast
 | `skills` | Context-aware lazy tool loading with skill bundles and triggers | `registry` |
 | `handoff` | Agent delegation protocol with manager/agent-as-tool patterns, delegate middleware | `registry`, `sampling`, `finops` |
 | `orchestrator` | Multi-agent execution patterns: fan-out, pipeline, select, swarm mesh, hierarchical delegation, dynamic pattern selection, stage middleware | none |
-| `workflow` | Cyclical graph engine with conditional branching, checkpoints, state machines, node middleware | `orchestrator`, `registry`, `sampling` |
+| `workflow` | Cyclical graph engine with conditional branching, checkpoints, state machines, node middleware, and reusable orchestrator-backed templates | `orchestrator`, `registry`, `sampling` |
 | `extensions` | MCP Extensions negotiation and capability handshake | none |
 | `lifecycle` | Production server lifecycle: signal handling, graceful drain, shutdown hooks | none |
 | `bootstrap` | Agent workspace init, context reports, capability matrix | `registry`, `resources`, `prompts`, `extensions` |
