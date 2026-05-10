@@ -406,9 +406,9 @@
         },
         {
           "id": "P37-3",
-          "description": "CLI helper for interactive publishing",
+          "description": "cmd/mcpkit-publish validates server-card JSON and runs register/update publish workflows for CI",
           "package": "cmd",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P37-1"
           ],
@@ -1100,9 +1100,9 @@
         },
         {
           "id": "P37-3",
-          "description": "CLI helper for interactive publishing",
+          "description": "cmd/mcpkit-publish validates server-card JSON and runs register/update publish workflows for CI",
           "package": "cmd",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P37-1"
           ],

@@ -251,8 +251,8 @@ PublishWorkflow + validation — `discovery.RunPublishWorkflow` validates metada
 Schema compliance checker — `ValidateServerMetadata` returns structured issues and warnings for required identity fields, URL fields, transports, auth, tags, tools, resources, and prompts before publishing.
 </roadmap-item>
 
-<roadmap-item id="P37-3" package="cmd" status="planned">
-CLI publishing helper — thin CLI wrapper around PublishWorkflow for use in CI pipelines.
+<roadmap-item id="P37-3" package="cmd" status="complete">
+CLI publishing helper — `cmd/mcpkit-publish` reads server-card JSON, runs `RunPublishWorkflow`, supports validate-only/register/update modes, and uses `-token` or `MCP_REGISTRY_TOKEN` for CI.
 </roadmap-item>
 
 <roadmap-item id="P37-4" package="discovery" status="planned">
