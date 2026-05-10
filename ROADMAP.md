@@ -335,8 +335,8 @@ Hierarchical delegation — `HierarchicalDelegation` executes nested manager/wor
 Dynamic pattern selector — `SelectDynamicPattern` and `RunDynamicPattern` choose fan-out, pipeline, or select from runtime metadata with explicit overrides and conservative defaults.
 </roadmap-item>
 
-<roadmap-item id="P40-4" package="orchestrator" status="planned">
-Performance benchmarks — BenchmarkSuite covering fan-out at 1/10/100 agents with latency assertions.
+<roadmap-item id="P40-4" package="orchestrator" status="complete">
+Performance benchmarks — `orchestrator/bench_test.go` covers fan-out at 1/10/100 agents, swarm broadcast, hierarchical delegation, and a conservative 100-agent latency budget test.
 </roadmap-item>
 
 <roadmap-item id="P40-5" package="workflow" status="planned">

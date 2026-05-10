@@ -586,9 +586,9 @@
         },
         {
           "id": "P40-4",
-          "description": "Orchestrator performance benchmarks",
+          "description": "Orchestrator fan-out/swarm/delegation benchmarks with 100-agent latency budget test",
           "package": "orchestrator",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P40-1"
           ],
@@ -1265,9 +1265,9 @@
         },
         {
           "id": "P40-4",
-          "description": "Orchestrator performance benchmarks",
+          "description": "Orchestrator fan-out/swarm/delegation benchmarks with 100-agent latency budget test",
           "package": "orchestrator",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P40-1"
           ],
