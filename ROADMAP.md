@@ -387,8 +387,8 @@ Anonymous telemetry — `feedback.TelemetryCollector` requires explicit opt-in, 
 rdcycle integration — wire feedback summaries into rdcycle_scan output as a signal source.
 </roadmap-item>
 
-<roadmap-item id="P42-4" package="feedback" status="planned">
-Telemetry dashboard export — export aggregated telemetry as JSON suitable for a Grafana data source.
+<roadmap-item id="P42-4" package="feedback" status="complete">
+Telemetry dashboard export — feedback telemetry snapshots now export stable dashboard JSON rows with target names, counts, error rates, timestamps, and an HTTP handler.
 </roadmap-item>
 
 </roadmap-phase>

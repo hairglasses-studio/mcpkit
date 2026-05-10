@@ -674,9 +674,9 @@
         },
         {
           "id": "P42-4",
-          "description": "Telemetry dashboard data export",
+          "description": "Telemetry dashboard JSON export and HTTP handler",
           "package": "feedback",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P42-2"
           ],
@@ -1345,9 +1345,9 @@
         },
         {
           "id": "P42-4",
-          "description": "Telemetry dashboard data export",
+          "description": "Telemetry dashboard JSON export and HTTP handler",
           "package": "feedback",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P42-2"
           ],
