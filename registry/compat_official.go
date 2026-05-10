@@ -10,6 +10,7 @@ package registry
 
 import (
 	"encoding/json"
+	"errors"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -141,6 +142,37 @@ func ExtractArguments(req CallToolRequest) map[string]interface{} {
 		return nil
 	}
 	return args
+}
+
+// NewCallToolRequest constructs a CallToolRequest with SDK-compatible arguments.
+func NewCallToolRequest(name string, args map[string]any) (CallToolRequest, error) {
+	req := CallToolRequest{
+		Params: &mcp.CallToolParamsRaw{Name: name},
+	}
+	if err := SetCallToolArguments(&req, args); err != nil {
+		return CallToolRequest{}, err
+	}
+	return req, nil
+}
+
+// SetCallToolArguments stores arguments on a CallToolRequest.
+func SetCallToolArguments(req *CallToolRequest, args map[string]any) error {
+	if req == nil {
+		return errors.New("registry: nil CallToolRequest")
+	}
+	if req.Params == nil {
+		req.Params = &mcp.CallToolParamsRaw{}
+	}
+	if args == nil {
+		req.Params.Arguments = nil
+		return nil
+	}
+	data, err := json.Marshal(args)
+	if err != nil {
+		return err
+	}
+	req.Params.Arguments = data
+	return nil
 }
 
 // GetToolTaskSupport returns the TaskSupport setting from a Tool.

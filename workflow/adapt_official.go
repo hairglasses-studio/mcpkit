@@ -4,7 +4,6 @@ package workflow
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/hairglasses-studio/mcpkit/orchestrator"
 	"github.com/hairglasses-studio/mcpkit/registry"
@@ -45,13 +44,10 @@ func FromToolHandler(name string, handler registry.ToolHandlerFunc) NodeFunc {
 		for k, v := range state.Data {
 			args[k] = v
 		}
-		req := registry.CallToolRequest{}
-		argsJSON, err := json.Marshal(args)
+		req, err := registry.NewCallToolRequest(name, args)
 		if err != nil {
 			return state, err
 		}
-		req.Params.Arguments = argsJSON
-		req.Params.Name = name
 
 		result, err := handler(ctx, req)
 		if err != nil {

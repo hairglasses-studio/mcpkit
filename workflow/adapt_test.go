@@ -153,14 +153,7 @@ func (m *mockSampler) CreateMessage(_ context.Context, _ sampling.CreateMessageR
 }
 
 func TestSamplingNode(t *testing.T) {
-	response := &sampling.CreateMessageResult{
-		SamplingMessage: sampling.SamplingMessage{
-			Role:    registry.RoleAssistant,
-			Content: registry.TextContent{Type: "text", Text: "LLM says hello"},
-		},
-		Model: "test-model",
-	}
-
+	response := newSamplingTextResult("LLM says hello", "test-model")
 	mock := &mockSampler{response: response}
 
 	fn := SamplingNode(mock, func(s State) sampling.CreateMessageRequest {
@@ -184,12 +177,7 @@ func TestSamplingNode(t *testing.T) {
 }
 
 func TestSamplingNodeDefaultOutputKey(t *testing.T) {
-	response := &sampling.CreateMessageResult{
-		SamplingMessage: sampling.SamplingMessage{
-			Role:    registry.RoleAssistant,
-			Content: registry.TextContent{Type: "text", Text: "response"},
-		},
-	}
+	response := newSamplingTextResult("response", "")
 
 	fn := SamplingNode(&mockSampler{response: response}, func(s State) sampling.CreateMessageRequest {
 		return sampling.CreateMessageRequest{}
@@ -220,12 +208,7 @@ func TestSamplingNodeNilResult(t *testing.T) {
 
 func TestSamplingNodeNonTextContent(t *testing.T) {
 	// Content is not TextContent — should not set output key
-	response := &sampling.CreateMessageResult{
-		SamplingMessage: sampling.SamplingMessage{
-			Role:    registry.RoleAssistant,
-			Content: "not a TextContent",
-		},
-	}
+	response := newSamplingNonTextResult()
 
 	fn := SamplingNode(&mockSampler{response: response}, func(s State) sampling.CreateMessageRequest {
 		return sampling.CreateMessageRequest{}

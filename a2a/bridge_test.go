@@ -32,13 +32,11 @@ func TestNewBridgeTool_FireAndForget(t *testing.T) {
 	td := NewBridgeTool()
 
 	// Invoke the tool via its handler (fire-and-forget, no wait).
-	req := registry.CallToolRequest{}
-	req.Params.Name = "a2a_send_task"
-	req.Params.Arguments = map[string]any{
+	req := newBridgeToolCall(t, map[string]any{
 		"agent_url": ts.URL,
 		"message":   "hello agent",
 		"wait":      false,
-	}
+	})
 
 	result, err := td.Handler(context.Background(), req)
 	if err != nil {
@@ -97,13 +95,11 @@ func TestNewBridgeTool_WaitForCompletion(t *testing.T) {
 
 	td := NewBridgeTool()
 
-	req := registry.CallToolRequest{}
-	req.Params.Name = "a2a_send_task"
-	req.Params.Arguments = map[string]any{
+	req := newBridgeToolCall(t, map[string]any{
 		"agent_url": ts.URL,
 		"message":   "compute something",
 		"wait":      true,
-	}
+	})
 
 	result, err := td.Handler(context.Background(), req)
 	if err != nil {
@@ -135,12 +131,10 @@ func TestNewBridgeTool_ServerError(t *testing.T) {
 
 	td := NewBridgeTool()
 
-	req := registry.CallToolRequest{}
-	req.Params.Name = "a2a_send_task"
-	req.Params.Arguments = map[string]any{
+	req := newBridgeToolCall(t, map[string]any{
 		"agent_url": ts.URL,
 		"message":   "hello",
-	}
+	})
 
 	// The tool should not return a Go error; it wraps failures in the output.
 	result, err := td.Handler(context.Background(), req)
@@ -174,13 +168,11 @@ func TestNewBridgeTool_WaitCanceled(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
-	req := registry.CallToolRequest{}
-	req.Params.Name = "a2a_send_task"
-	req.Params.Arguments = map[string]any{
+	req := newBridgeToolCall(t, map[string]any{
 		"agent_url": ts.URL,
 		"message":   "hello",
 		"wait":      true,
-	}
+	})
 
 	result, err := td.Handler(ctx, req)
 	if err != nil {
@@ -207,6 +199,15 @@ func TestTaskToOutput_NoAgentMessages(t *testing.T) {
 	if out.Response != "" {
 		t.Errorf("expected empty response, got %q", out.Response)
 	}
+}
+
+func newBridgeToolCall(t *testing.T, args map[string]any) registry.CallToolRequest {
+	t.Helper()
+	req, err := registry.NewCallToolRequest("a2a_send_task", args)
+	if err != nil {
+		t.Fatalf("NewCallToolRequest: %v", err)
+	}
+	return req
 }
 
 func TestTaskToOutput_WithArtifacts(t *testing.T) {

@@ -39,9 +39,10 @@ func FromToolHandler(name string, handler registry.ToolHandlerFunc) NodeFunc {
 	return func(ctx context.Context, state State) (State, error) {
 		args := make(map[string]any, len(state.Data))
 		maps.Copy(args, state.Data)
-		req := registry.CallToolRequest{}
-		req.Params.Arguments = args
-		req.Params.Name = name
+		req, err := registry.NewCallToolRequest(name, args)
+		if err != nil {
+			return state, err
+		}
 
 		result, err := handler(ctx, req)
 		if err != nil {
