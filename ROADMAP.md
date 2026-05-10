@@ -265,17 +265,17 @@ Publish integration tests — httptest mock of the MCP registry API; exercise fu
 
 </roadmap-phase>
 
-<roadmap-phase id="P38" status="planned" name="Performance Benchmarking">
+<roadmap-phase id="P38" status="in_progress" name="Performance Benchmarking">
 
-<roadmap-item id="P38-1" package="mcptest" status="planned">
-Baseline benchmark suite — BenchmarkTool baselines for registry, handler, and no-op middleware overhead.
+<roadmap-item id="P38-1" package="mcptest" status="complete">
+Baseline benchmark suite — shipped as `mcptest.BenchmarkTool`, `BenchmarkToolParallel`, `BenchmarkSuite`, `BaselineBenchmark`, and cross-protocol benchmarks under `testing/benchmark`.
 </roadmap-item>
 
-<roadmap-item id="P38-2" package="mcptest" status="planned">
-Middleware overhead measurement — per-middleware latency measurement using BenchmarkSuite with named layers.
+<roadmap-item id="P38-2" package="mcptest" status="complete">
+Middleware overhead measurement — shipped as `BenchmarkMiddlewareOverhead` plus benchmark cases for no middleware, 1/5/10 no-op middleware layers, context middleware, and parallel middleware throughput.
 </roadmap-item>
 
-<roadmap-item id="P38-3" package="mcptest" status="shipped">
+<roadmap-item id="P38-3" package="mcptest" status="complete">
 Memory profiling helpers — `mcptest/allocs.go`: `AssertMaxAllocs(tb, maxAllocs, runs, fn)` wraps `testing.AllocsPerRun` with a readable failure message; `ReportAllocDelta(fn)` measures a single invocation via `runtime.MemStats`; `BenchmarkAllocLimit(b, maxAllocs, fn)` runs a benchmark and fails if the mean allocs-per-op exceeds a threshold. Accepts `testing.TB` so it works from tests and benchmarks. 6 unit tests.
 </roadmap-item>
 
