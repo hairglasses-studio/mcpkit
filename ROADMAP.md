@@ -1,6 +1,6 @@
 # mcpkit Roadmap
 
-Last updated: 2026-03-15.
+Last updated: 2026-05-09.
 
 ## Status Summary
 
@@ -60,33 +60,33 @@ All Phase 1–30 packages raised to 90%+ coverage. All 33 packages at that time 
 
 <roadmap-tier id="T5" name="Spec Forward-Compatibility">
 
-<roadmap-phase id="P31" status="planned" name="Session Management Foundation">
+<roadmap-phase id="P31" status="complete" name="Session Management Foundation">
 
-<roadmap-item id="P31-1" package="session" status="planned">
+<roadmap-item id="P31-1" package="session" status="complete">
 Session and SessionStore interfaces — define core session lifecycle types used across all session middleware.
 </roadmap-item>
 
-<roadmap-item id="P31-2" package="session" status="planned">
+<roadmap-item id="P31-2" package="session" status="complete">
 In-memory session store — thread-safe default SessionStore implementation with map-backed storage.
 </roadmap-item>
 
-<roadmap-item id="P31-3" package="session" status="planned">
+<roadmap-item id="P31-3" package="session" status="complete">
 Session middleware — attach/read session from MCP request context, create on first contact.
 </roadmap-item>
 
-<roadmap-item id="P31-4" package="session" status="planned">
+<roadmap-item id="P31-4" package="session" status="complete">
 Session migration helpers — utilities to migrate session identity across transport reconnects.
 </roadmap-item>
 
-<roadmap-item id="P31-5" package="session" status="planned">
+<roadmap-item id="P31-5" package="session" status="complete">
 Session TTL and eviction — configurable expiry with background eviction goroutine.
 </roadmap-item>
 
-<roadmap-item id="P31-6" package="gateway" status="planned">
+<roadmap-item id="P31-6" package="gateway" status="complete">
 Gateway session affinity — route requests with a session token to the same upstream backend.
 </roadmap-item>
 
-<roadmap-item id="P31-7" package="mcptest" status="planned">
+<roadmap-item id="P31-7" package="mcptest" status="complete">
 Session integration tests — mcptest helpers for asserting session lifecycle across tool calls.
 </roadmap-item>
 
@@ -392,6 +392,22 @@ Telemetry dashboard export — export aggregated telemetry as JSON suitable for 
 
 </roadmap-phase>
 
+<roadmap-phase id="P43" status="complete" name="Shared Embedding Primitives">
+
+<roadmap-item id="P43-1" package="embedding" status="complete">
+Sparse-vector and TF-IDF helpers — factor reusable tokenization, TF-IDF, cosine, and top-k ranking primitives from downstream repos without introducing dense-model dependencies.
+</roadmap-item>
+
+<roadmap-item id="P43-2" package="embedding" status="complete">
+Embedding provider interface — define small interfaces for optional dense/vector providers while keeping sparse local defaults deterministic and dependency-light.
+</roadmap-item>
+
+<roadmap-item id="P43-3" package="embedding" status="complete">
+Roadmap consolidation adapters — document migration paths for ralphglasses semantic cache/GraphRAG scaffolds and shielddd TF-IDF evidence search so consumers do not duplicate primitives.
+</roadmap-item>
+
+</roadmap-phase>
+
 </roadmap-tier>
 
 ---
@@ -409,21 +425,21 @@ Telemetry dashboard export — export aggregated telemetry as JSON suitable for 
 
 ## Ralph Loop Execution Strategy
 
-- **Parallel streams**: P31 (session), P32 (stateless HTTP), and P33 (transport) can run concurrently — the packages are independent.
+- **Parallel streams**: P31 (session) is complete; P32 (stateless HTTP) and P33 (transport) can run concurrently — the packages are independent.
 - **P34** (dual-SDK hardening) is independent of P31–P33 and can run in a separate stream.
-- **Budget profiles**: Use `PersonalProfile` for P35–P36 (research-heavy, lower token budget); use `WorkAPIProfile` for P31–P34 (implementation-heavy, higher throughput budget).
+- **Budget profiles**: Use `PersonalProfile` for P35–P36 (research-heavy, lower token budget); use `WorkAPIProfile` for remaining P32–P34 implementation-heavy work.
 - **Self-improvement**: `rdcycle_improve` runs every 10 cycles and may inject lessons into the next `rdcycle_schedule` spec.
 
 ---
 
 ## Dependency Layers (including planned packages)
 
-- **Layer 1** (no internal deps): `registry`, `health`, `sanitize`, `secrets`, `client`
+- **Layer 1** (no internal deps): `registry`, `health`, `sanitize`, `secrets`, `client`, `embedding`
 - **Layer 2** (depend on Layer 1): `resources`, `prompts`, `handler`, `resilience`, `mcptest`, `auth`, `observability`, `logging`, `sampling`, `roots`, `research`, `discovery`, `dispatcher`, `extensions`, `memory`, `finops`, `lifecycle`, `eval`, `roadmap`, `session`, `transport`, `feedback`
 - **Layer 3** (depend on Layer 2): `security`, `gateway`, `ralph`, `skills`, `a2a`, `rdcycle`
 - **Layer 4** (depend on Layer 3): `orchestrator`, `handoff`, `workflow`, `bootstrap`
 
-_Note: `session` and `transport` depend only on Layer 1 packages. `feedback` has no internal deps beyond `registry`._
+_Note: `session` and `transport` depend only on Layer 1 packages. `feedback` has no internal deps beyond `registry`; `embedding` is stdlib-only._
 
 <!-- whiteclaw-rollout:start -->
 ## Whiteclaw-Derived Overhaul (2026-04-08)
@@ -491,4 +507,3 @@ Key recommendations relevant to this repo:
 - **Discovery surfaces are MCP resources**, not tools (`<server>:///catalog/server`).
 
 See the pattern doc for the full `# Adoption checklist` and `# Anti-patterns` sections.
-
