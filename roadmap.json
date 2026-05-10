@@ -333,7 +333,7 @@
     {
       "id": "P36",
       "name": "A2A Tracking + Competitive Analysis",
-      "status": "in_progress",
+      "status": "complete",
       "items": [
         {
           "id": "P36-1",
@@ -374,7 +374,7 @@
           "id": "P36-5",
           "description": "Integration with rdcycle scan",
           "package": "rdcycle",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P36-1"
           ],
@@ -1069,7 +1069,7 @@
           "id": "P36-5",
           "description": "Integration with rdcycle scan",
           "package": "rdcycle",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P36-1"
           ],

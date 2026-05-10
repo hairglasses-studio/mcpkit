@@ -2,6 +2,7 @@ package research
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -189,6 +190,27 @@ func TestCompetitiveDashboardTool(t *testing.T) {
 	}
 	if out.Reports["a2a_tracking"] == "" || out.Reports["competitive_summary"] == "" {
 		t.Fatalf("missing reports: %+v", out.Reports)
+	}
+}
+
+func TestDashboardJSONRunsCompetitiveResearch(t *testing.T) {
+	ts, overrides := competitiveTestServer(t)
+	defer ts.Close()
+
+	m := NewModule(Config{HTTPClient: ts.Client(), SourceOverrides: overrides})
+	data, err := m.DashboardJSON(context.Background())
+	if err != nil {
+		t.Fatalf("DashboardJSON: %v", err)
+	}
+	var out CompetitiveDashboardOutput
+	if err := json.Unmarshal(data, &out); err != nil {
+		t.Fatalf("decode dashboard: %v", err)
+	}
+	if out.A2ASignals == 0 || out.SDKFrameworks != 4 || out.SDKFeatures == 0 {
+		t.Fatalf("unexpected dashboard summary: %+v", out)
+	}
+	if len(out.Rows) == 0 {
+		t.Fatal("expected dashboard rows")
 	}
 }
 
