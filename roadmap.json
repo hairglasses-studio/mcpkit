@@ -385,7 +385,7 @@
     {
       "id": "P37",
       "name": "Server Registry Publishing",
-      "status": "in_progress",
+      "status": "complete",
       "items": [
         {
           "id": "P37-1",
@@ -426,9 +426,9 @@
         },
         {
           "id": "P37-5",
-          "description": "Publish/unpublish integration tests",
+          "description": "Stateful httptest registry lifecycle test for validate/register, update, and unpublish",
           "package": "discovery",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P37-1",
             "P37-4"
@@ -1120,9 +1120,9 @@
         },
         {
           "id": "P37-5",
-          "description": "Publish/unpublish integration tests",
+          "description": "Stateful httptest registry lifecycle test for validate/register, update, and unpublish",
           "package": "discovery",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P37-1",
             "P37-4"

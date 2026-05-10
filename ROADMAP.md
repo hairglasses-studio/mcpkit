@@ -241,7 +241,7 @@ rdcycle scan integration — wire A2AMonitor and SDKCompare into the rdcycle_sca
 
 <roadmap-tier id="T8" name="Production DX">
 
-<roadmap-phase id="P37" status="in_progress" name="Server Registry Publishing">
+<roadmap-phase id="P37" status="complete" name="Server Registry Publishing">
 
 <roadmap-item id="P37-1" package="discovery" status="complete">
 PublishWorkflow + validation — `discovery.RunPublishWorkflow` validates metadata, records workflow steps, supports validate-only runs, then registers or updates through `Publisher`.
@@ -259,8 +259,8 @@ CLI publishing helper — `cmd/mcpkit-publish` reads server-card JSON, runs `Run
 Registry auth flow — `ClientCredentialsTokenSource` implements OAuth2 client-credentials token fetch/cache, `Publisher` accepts dynamic token sources, and `cmd/mcpkit-publish` exposes OAuth flags/env vars.
 </roadmap-item>
 
-<roadmap-item id="P37-5" package="discovery" status="planned">
-Publish integration tests — httptest mock of the MCP registry API; exercise full publish + unpublish lifecycle.
+<roadmap-item id="P37-5" package="discovery" status="complete">
+Publish integration tests — `discovery/publish_integration_test.go` exercises validate/register, update, and unpublish against a stateful httptest MCP registry mock.
 </roadmap-item>
 
 </roadmap-phase>
