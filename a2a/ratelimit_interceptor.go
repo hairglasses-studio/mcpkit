@@ -95,6 +95,46 @@ func (rc *RateLimitedClient) GetTask(ctx context.Context, taskID string) (*Task,
 	return rc.inner.GetTask(ctx, taskID)
 }
 
+// CancelTask cancels a task with rate limiting.
+func (rc *RateLimitedClient) CancelTask(ctx context.Context, taskID string) (*Task, error) {
+	if err := rc.limiter.Allow(rc.inner.baseURL); err != nil {
+		return nil, err
+	}
+	return rc.inner.CancelTask(ctx, taskID)
+}
+
+// CreateTaskPushNotificationConfig creates a push config with rate limiting.
+func (rc *RateLimitedClient) CreateTaskPushNotificationConfig(ctx context.Context, config PushNotificationConfig) (*PushNotificationConfig, error) {
+	if err := rc.limiter.Allow(rc.inner.baseURL); err != nil {
+		return nil, err
+	}
+	return rc.inner.CreateTaskPushNotificationConfig(ctx, config)
+}
+
+// GetTaskPushNotificationConfig retrieves a push config with rate limiting.
+func (rc *RateLimitedClient) GetTaskPushNotificationConfig(ctx context.Context, taskID, configID string) (*PushNotificationConfig, error) {
+	if err := rc.limiter.Allow(rc.inner.baseURL); err != nil {
+		return nil, err
+	}
+	return rc.inner.GetTaskPushNotificationConfig(ctx, taskID, configID)
+}
+
+// ListTaskPushNotificationConfigs lists push configs with rate limiting.
+func (rc *RateLimitedClient) ListTaskPushNotificationConfigs(ctx context.Context, taskID string) (*ListTaskPushNotificationConfigsResponse, error) {
+	if err := rc.limiter.Allow(rc.inner.baseURL); err != nil {
+		return nil, err
+	}
+	return rc.inner.ListTaskPushNotificationConfigs(ctx, taskID)
+}
+
+// DeleteTaskPushNotificationConfig deletes a push config with rate limiting.
+func (rc *RateLimitedClient) DeleteTaskPushNotificationConfig(ctx context.Context, taskID, configID string) error {
+	if err := rc.limiter.Allow(rc.inner.baseURL); err != nil {
+		return err
+	}
+	return rc.inner.DeleteTaskPushNotificationConfig(ctx, taskID, configID)
+}
+
 // tokenBucket implements a simple token bucket rate limiter.
 type tokenBucket struct {
 	mu       sync.Mutex

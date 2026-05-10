@@ -148,6 +148,7 @@ Migrating from Python FastMCP? Use **[docs/fastmcp-migration-guide.md](docs/fast
 | `rdcycle` | R&D cycle orchestration tools: scan, plan, verify, commit, report | `registry`, `handler`, `research`, `roadmap`, `workflow`, `finops` |
 | `frontdoor` | Discovery-first starter: mount `tool_catalog`, `tool_search`, `tool_schema`, `server_health` on any registry via `frontdoor.New(reg, opts...)` | `registry`, `handler`, `health` |
 | `feedback` | Structured feedback submission tool with pluggable memory/JSONL sinks, opt-in anonymous usage telemetry, and dashboard JSON export | `registry`, `handler` |
+| `a2a` | Lightweight A2A client/server types, task lifecycle, push notification webhooks, and MCP delegation tool | `registry`, `handler` |
 | `bridge/a2a` | Bidirectional MCP/A2A bridge: tool-to-skill translation, agent card generation, bridge executor, remote agent consumer | `registry`, `handler` |
 | `gateway/multi` | Multi-protocol HTTP gateway: MCP, A2A, and OpenAI adapters with auto-detection and canonical translation | `registry` |
 

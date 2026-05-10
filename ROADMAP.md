@@ -293,7 +293,7 @@ Benchmark comparison tool — shipped as `mcptest.ParseBenchmarkOutput`, `Compar
 
 <roadmap-tier id="T9" name="Agent Protocol Evolution">
 
-<roadmap-phase id="P39" status="in_progress" name="A2A Protocol Bridge">
+<roadmap-phase id="P39" status="complete" name="A2A Protocol Bridge">
 
 <roadmap-item id="P39-1" package="a2a" status="complete">
 A2A types — shipped in `a2a/types.go` with AgentCard, Task, TaskState, Message, Part, Artifact, JSON-RPC envelopes, capability flags, and lifecycle tests.
@@ -315,8 +315,8 @@ MCP-to-A2A bridge — shipped as `a2a.NewBridgeTool` and `bridge/a2a.NewBridge`,
 A2A-to-MCP bridge — shipped via `bridge/a2a.RemoteAgent`, which wraps remote A2A agent skills as `registry.ToolModule` tools and relays responses back as MCP tool results.
 </roadmap-item>
 
-<roadmap-item id="P39-6" package="a2a" status="planned">
-Push notifications — still pending as a dedicated endpoint; `bridge/a2a` already includes streaming progress translation helpers and tests for MCP progress to A2A status events.
+<roadmap-item id="P39-6" package="a2a" status="complete">
+Push notifications — `a2a.Server` now supports per-task push notification config create/get/list/delete operations, REST endpoints under `/tasks/{taskID}/pushNotificationConfigs`, optional send-time webhook config, and `StreamResponse` webhook delivery on task transitions.
 </roadmap-item>
 
 </roadmap-phase>

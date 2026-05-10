@@ -9,12 +9,12 @@ import (
 type TaskState string
 
 const (
-	TaskSubmitted  TaskState = "submitted"
-	TaskWorking    TaskState = "working"
+	TaskSubmitted   TaskState = "submitted"
+	TaskWorking     TaskState = "working"
 	TaskInputNeeded TaskState = "input-needed"
-	TaskCompleted  TaskState = "completed"
-	TaskCanceled   TaskState = "canceled"
-	TaskFailed     TaskState = "failed"
+	TaskCompleted   TaskState = "completed"
+	TaskCanceled    TaskState = "canceled"
+	TaskFailed      TaskState = "failed"
 )
 
 // IsTerminal returns true if the task state is a terminal state.
@@ -24,13 +24,20 @@ func (s TaskState) IsTerminal() bool {
 
 // Task represents an A2A task — the primary unit of work.
 type Task struct {
-	ID       string            `json:"id"`
-	State    TaskState         `json:"state"`
-	Messages []Message         `json:"messages,omitempty"`
-	Artifacts []Artifact       `json:"artifacts,omitempty"`
-	Metadata map[string]string `json:"metadata,omitempty"`
-	Created  time.Time         `json:"created"`
-	Updated  time.Time         `json:"updated"`
+	ID        string            `json:"id"`
+	State     TaskState         `json:"state"`
+	Messages  []Message         `json:"messages,omitempty"`
+	Artifacts []Artifact        `json:"artifacts,omitempty"`
+	Metadata  map[string]string `json:"metadata,omitempty"`
+	Created   time.Time         `json:"created"`
+	Updated   time.Time         `json:"updated"`
+}
+
+// TaskStatus captures the current status for streaming and push updates.
+type TaskStatus struct {
+	State     TaskState `json:"state"`
+	Message   *Message  `json:"message,omitempty"`
+	Timestamp time.Time `json:"timestamp,omitempty"`
 }
 
 // snapshot returns a shallow copy of the task with slices and maps copied so
@@ -62,10 +69,10 @@ type Message struct {
 
 // Part is a piece of content within a message.
 type Part struct {
-	Type     string          `json:"type"` // "text", "file", "data"
-	Text     string          `json:"text,omitempty"`
-	File     *FileContent    `json:"file,omitempty"`
-	Data     json.RawMessage `json:"data,omitempty"`
+	Type     string            `json:"type"` // "text", "file", "data"
+	Text     string            `json:"text,omitempty"`
+	File     *FileContent      `json:"file,omitempty"`
+	Data     json.RawMessage   `json:"data,omitempty"`
 	Metadata map[string]string `json:"metadata,omitempty"`
 }
 
@@ -92,16 +99,40 @@ type Artifact struct {
 	LastChunk   bool   `json:"lastChunk,omitempty"`
 }
 
+// TaskStatusUpdateEvent notifies a client that a task state changed.
+type TaskStatusUpdateEvent struct {
+	TaskID   string            `json:"taskId"`
+	Status   TaskStatus        `json:"status"`
+	Metadata map[string]string `json:"metadata,omitempty"`
+}
+
+// TaskArtifactUpdateEvent notifies a client that a task artifact changed.
+type TaskArtifactUpdateEvent struct {
+	TaskID    string            `json:"taskId"`
+	Artifact  Artifact          `json:"artifact"`
+	Append    bool              `json:"append,omitempty"`
+	LastChunk bool              `json:"lastChunk,omitempty"`
+	Metadata  map[string]string `json:"metadata,omitempty"`
+}
+
+// StreamResponse is the payload shape used by streaming and push notifications.
+type StreamResponse struct {
+	Task           *Task                    `json:"task,omitempty"`
+	Message        *Message                 `json:"message,omitempty"`
+	StatusUpdate   *TaskStatusUpdateEvent   `json:"statusUpdate,omitempty"`
+	ArtifactUpdate *TaskArtifactUpdateEvent `json:"artifactUpdate,omitempty"`
+}
+
 // AgentCard describes an A2A agent's capabilities for discovery.
 type AgentCard struct {
-	Name         string   `json:"name"`
-	Description  string   `json:"description,omitempty"`
-	URL          string   `json:"url"`
-	Version      string   `json:"version,omitempty"`
-	Provider     *Provider `json:"provider,omitempty"`
+	Name         string        `json:"name"`
+	Description  string        `json:"description,omitempty"`
+	URL          string        `json:"url"`
+	Version      string        `json:"version,omitempty"`
+	Provider     *Provider     `json:"provider,omitempty"`
 	Capabilities *Capabilities `json:"capabilities,omitempty"`
-	Skills       []Skill  `json:"skills,omitempty"`
-	Auth         *AuthConfig `json:"authentication,omitempty"`
+	Skills       []Skill       `json:"skills,omitempty"`
+	Auth         *AuthConfig   `json:"authentication,omitempty"`
 }
 
 // Provider identifies the organization running the agent.
@@ -112,8 +143,8 @@ type Provider struct {
 
 // Capabilities describes what the agent supports.
 type Capabilities struct {
-	Streaming        bool `json:"streaming,omitempty"`
-	PushNotifications bool `json:"pushNotifications,omitempty"`
+	Streaming              bool `json:"streaming,omitempty"`
+	PushNotifications      bool `json:"pushNotifications,omitempty"`
 	StateTransitionHistory bool `json:"stateTransitionHistory,omitempty"`
 }
 
@@ -131,11 +162,57 @@ type AuthConfig struct {
 	Schemes []string `json:"schemes"` // "bearer", "oauth2", "apiKey"
 }
 
+// AuthenticationInfo describes webhook authentication for push notifications.
+type AuthenticationInfo struct {
+	Scheme      string `json:"scheme"`
+	Credentials string `json:"credentials,omitempty"`
+}
+
+// PushNotificationConfig tells an A2A server where to POST task updates.
+type PushNotificationConfig struct {
+	ID             string              `json:"id,omitempty"`
+	TaskID         string              `json:"taskId,omitempty"`
+	URL            string              `json:"url"`
+	Token          string              `json:"token,omitempty"`
+	Authentication *AuthenticationInfo `json:"authentication,omitempty"`
+}
+
+// GetTaskPushNotificationConfigParams identifies one push config.
+type GetTaskPushNotificationConfigParams struct {
+	TaskID string `json:"taskId"`
+	ID     string `json:"id"`
+}
+
+// ListTaskPushNotificationConfigsParams identifies push configs for a task.
+type ListTaskPushNotificationConfigsParams struct {
+	TaskID    string `json:"taskId"`
+	PageSize  int    `json:"pageSize,omitempty"`
+	PageToken string `json:"pageToken,omitempty"`
+}
+
+// ListTaskPushNotificationConfigsResponse contains push configs for a task.
+type ListTaskPushNotificationConfigsResponse struct {
+	Configs       []PushNotificationConfig `json:"configs,omitempty"`
+	NextPageToken string                   `json:"nextPageToken,omitempty"`
+}
+
+// DeleteTaskPushNotificationConfigParams identifies one config to delete.
+type DeleteTaskPushNotificationConfigParams struct {
+	TaskID string `json:"taskId"`
+	ID     string `json:"id"`
+}
+
+// DeleteTaskPushNotificationConfigResult confirms idempotent deletion.
+type DeleteTaskPushNotificationConfigResult struct {
+	Deleted bool `json:"deleted"`
+}
+
 // TaskSendParams are the parameters for sending a task.
 type TaskSendParams struct {
-	ID       string    `json:"id"`
-	Messages []Message `json:"message"`
-	Metadata map[string]string `json:"metadata,omitempty"`
+	ID               string                  `json:"id"`
+	Messages         []Message               `json:"message"`
+	Metadata         map[string]string       `json:"metadata,omitempty"`
+	PushNotification *PushNotificationConfig `json:"pushNotificationConfig,omitempty"`
 }
 
 // TaskQueryParams are the parameters for querying a task.
