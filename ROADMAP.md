@@ -373,7 +373,7 @@ Tutorial content outline — `docs/tutorial-outline.md` lays out an eight-part "
 
 </roadmap-phase>
 
-<roadmap-phase id="P42" status="in_progress" name="User Feedback + Telemetry">
+<roadmap-phase id="P42" status="complete" name="User Feedback + Telemetry">
 
 <roadmap-item id="P42-1" package="feedback" status="complete">
 Feedback tool — `feedback.NewModule` exposes `feedback_submit` with typed validation, consent-aware contact capture, and pluggable `MemorySink` / JSONL file sinks.
@@ -383,8 +383,8 @@ Feedback tool — `feedback.NewModule` exposes `feedback_submit` with typed vali
 Anonymous telemetry — `feedback.TelemetryCollector` requires explicit opt-in, aggregates package/tool usage counts and error rates, and exposes registry middleware plus sorted snapshots.
 </roadmap-item>
 
-<roadmap-item id="P42-3" package="rdcycle" status="planned">
-rdcycle integration — wire feedback summaries into rdcycle_scan output as a signal source.
+<roadmap-item id="P42-3" package="rdcycle" status="complete">
+rdcycle integration — `WithFeedbackTelemetry` accepts dashboard JSON providers such as `feedback.TelemetryCollector` and folds feedback usage/error summaries into `rdcycle_scan` output, artifacts, and action items.
 </roadmap-item>
 
 <roadmap-item id="P42-4" package="feedback" status="complete">

@@ -646,7 +646,7 @@
     {
       "id": "P42",
       "name": "User Feedback + Telemetry",
-      "status": "in_progress",
+      "status": "complete",
       "items": [
         {
           "id": "P42-1",
@@ -664,9 +664,9 @@
         },
         {
           "id": "P42-3",
-          "description": "rdcycle integration for feedback-driven prioritization",
+          "description": "rdcycle scan integration for feedback dashboard summaries and action items",
           "package": "rdcycle",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P42-1"
           ],
@@ -1335,9 +1335,9 @@
         },
         {
           "id": "P42-3",
-          "description": "rdcycle integration for feedback-driven prioritization",
+          "description": "rdcycle scan integration for feedback dashboard summaries and action items",
           "package": "rdcycle",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P42-1"
           ],

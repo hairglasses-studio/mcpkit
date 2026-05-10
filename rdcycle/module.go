@@ -18,16 +18,30 @@ type Module struct {
 	orchState    *orchestratorState
 	ralphStarter func(ctx context.Context, specPath string) error
 	costReader   func() float64
+	feedback     FeedbackTelemetryProvider
 }
 
 // ModuleOption configures optional Module settings.
 type ModuleOption func(*Module)
+
+// FeedbackTelemetryProvider is satisfied by feedback.TelemetryCollector and any
+// compatible dashboard JSON exporter.
+type FeedbackTelemetryProvider interface {
+	DashboardJSON() ([]byte, error)
+}
 
 // WithArtifactStore sets the artifact store for the module.
 // If not provided, an InMemoryArtifactStore is used.
 func WithArtifactStore(store ArtifactStore) ModuleOption {
 	return func(m *Module) {
 		m.store = store
+	}
+}
+
+// WithFeedbackTelemetry adds feedback telemetry as a signal source for scans.
+func WithFeedbackTelemetry(provider FeedbackTelemetryProvider) ModuleOption {
+	return func(m *Module) {
+		m.feedback = provider
 	}
 }
 
