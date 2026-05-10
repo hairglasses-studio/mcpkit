@@ -1,6 +1,6 @@
 {
   "title": "mcpkit Roadmap",
-  "description": "Machine-readable roadmap for mcpkit development. Phases 1-32 and 43 complete (MCP 2025-11-25 full coverage, 35+ packages, 90%+ test coverage). Remaining phases target spec forward-compatibility, SDK migration, research enhancement, production DX, agent protocol evolution, community growth, and feedback telemetry.",
+  "description": "Machine-readable roadmap for mcpkit development. Phases 1-33 and 43 complete (MCP 2025-11-25 full coverage, 35+ packages, 90%+ test coverage). Remaining phases target SDK migration, research enhancement, production DX, agent protocol evolution, community growth, and feedback telemetry.",
   "phases": [
     {
       "id": "P31",
@@ -144,20 +144,20 @@
     {
       "id": "P33",
       "name": "WebSocket Transport Prep",
-      "status": "planned",
+      "status": "complete",
       "items": [
         {
           "id": "P33-1",
           "description": "Transport abstraction layer interfaces",
           "package": "transport",
-          "status": "planned",
+          "status": "complete",
           "priority": "high"
         },
         {
           "id": "P33-2",
           "description": "Stdio transport adapter",
           "package": "transport",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P33-1"
           ],
@@ -167,7 +167,7 @@
           "id": "P33-3",
           "description": "HTTP transport adapter",
           "package": "transport",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P33-1"
           ],
@@ -177,7 +177,7 @@
           "id": "P33-4",
           "description": "WebSocket transport stub",
           "package": "transport",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P33-1"
           ],
@@ -187,7 +187,7 @@
           "id": "P33-5",
           "description": "Transport middleware chain",
           "package": "transport",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P33-1"
           ],
@@ -197,7 +197,7 @@
           "id": "P33-6",
           "description": "Transport integration tests",
           "package": "transport",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P33-2",
             "P33-3"
@@ -854,14 +854,14 @@
           "id": "P33-1",
           "description": "Transport abstraction layer interfaces",
           "package": "transport",
-          "status": "planned",
+          "status": "complete",
           "priority": "high"
         },
         {
           "id": "P33-2",
           "description": "Stdio transport adapter",
           "package": "transport",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P33-1"
           ],
@@ -871,7 +871,7 @@
           "id": "P33-3",
           "description": "HTTP transport adapter",
           "package": "transport",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P33-1"
           ],
@@ -881,7 +881,7 @@
           "id": "P33-4",
           "description": "WebSocket transport stub",
           "package": "transport",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P33-1"
           ],
@@ -891,7 +891,7 @@
           "id": "P33-5",
           "description": "Transport middleware chain",
           "package": "transport",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P33-1"
           ],
@@ -901,7 +901,7 @@
           "id": "P33-6",
           "description": "Transport integration tests",
           "package": "transport",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P33-2",
             "P33-3"

@@ -120,30 +120,30 @@ Session store health checks — shipped as `health.WithSessionStore` over any `P
 
 </roadmap-phase>
 
-<roadmap-phase id="P33" status="planned" name="WebSocket Transport Prep">
+<roadmap-phase id="P33" status="complete" name="WebSocket Transport Prep">
 
-<roadmap-item id="P33-1" package="transport" status="planned">
-Transport abstraction interfaces — Transport, Conn, and Message interfaces decoupling protocol from tool dispatch.
+<roadmap-item id="P33-1" package="transport" status="complete">
+Transport abstraction interfaces — shipped as `transport.Transport`, `Message`, middleware chain, and concrete connection adapters.
 </roadmap-item>
 
-<roadmap-item id="P33-2" package="transport" status="planned">
-Stdio transport adapter — wrap existing stdio server path behind the Transport interface.
+<roadmap-item id="P33-2" package="transport" status="complete">
+Stdio transport adapter — shipped as `StdioTransport` and `NewStdioTransportFromRW` over the shared `ReadWriteTransport`.
 </roadmap-item>
 
-<roadmap-item id="P33-3" package="transport" status="planned">
-HTTP transport adapter — wrap StreamableHTTP server path behind the Transport interface.
+<roadmap-item id="P33-3" package="transport" status="complete">
+HTTP transport adapter — shipped as `HTTPTransport` with request/response receive-channel delivery and metadata capture.
 </roadmap-item>
 
-<roadmap-item id="P33-4" package="transport" status="planned">
-WebSocket transport stub — placeholder WebSocket Transport implementation gated on spec stabilization.
+<roadmap-item id="P33-4" package="transport" status="complete">
+WebSocket transport stub — shipped as dependency-free `WebSocketTransport` over caller-provided `WebSocketConn`, with security tests.
 </roadmap-item>
 
-<roadmap-item id="P33-5" package="transport" status="planned">
-Transport middleware chain — apply registry middleware at the transport boundary before dispatch.
+<roadmap-item id="P33-5" package="transport" status="complete">
+Transport middleware chain — shipped via `transport.Chain`, `LoggingMiddleware`, and `MetricsMiddleware`.
 </roadmap-item>
 
-<roadmap-item id="P33-6" package="transport" status="planned">
-Transport integration tests — end-to-end tests exercising tool calls through each transport adapter.
+<roadmap-item id="P33-6" package="transport" status="complete">
+Transport integration tests — covered by `transport/*_test.go` for HTTP, middleware, base transport, WebSocket, Unix socket, and session extraction.
 </roadmap-item>
 
 </roadmap-phase>
@@ -425,9 +425,9 @@ Roadmap consolidation adapters — document migration paths for ralphglasses sem
 
 ## Ralph Loop Execution Strategy
 
-- **Parallel streams**: P31 (session) and P32 (stateless HTTP) are complete; P33 (transport) can proceed independently.
+- **Parallel streams**: P31 (session), P32 (stateless HTTP), and P33 (transport) are complete.
 - **P34** (dual-SDK hardening) is independent of P31–P33 and can run in a separate stream.
-- **Budget profiles**: Use `PersonalProfile` for P35–P36 (research-heavy, lower token budget); use `WorkAPIProfile` for remaining P33–P34 implementation-heavy work.
+- **Budget profiles**: Use `PersonalProfile` for P35–P36 (research-heavy, lower token budget); use `WorkAPIProfile` for remaining P34 implementation-heavy work.
 - **Self-improvement**: `rdcycle_improve` runs every 10 cycles and may inject lessons into the next `rdcycle_schedule` spec.
 
 ---
