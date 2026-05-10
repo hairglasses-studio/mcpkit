@@ -31,10 +31,10 @@ func TestMockSamplingClient_RecordsCalls(t *testing.T) {
 	mock := NewMockSamplingClient(nil)
 
 	req1 := registry.CreateMessageRequest{}
-	req1.MaxTokens = 100
+	setSamplingMaxTokens(&req1, 100)
 
 	req2 := registry.CreateMessageRequest{}
-	req2.MaxTokens = 200
+	setSamplingMaxTokens(&req2, 200)
 
 	mock.CreateMessage(context.Background(), req1) //nolint:errcheck
 	mock.CreateMessage(context.Background(), req2) //nolint:errcheck
@@ -43,11 +43,11 @@ func TestMockSamplingClient_RecordsCalls(t *testing.T) {
 	if len(calls) != 2 {
 		t.Fatalf("expected 2 calls, got %d", len(calls))
 	}
-	if calls[0].Request.MaxTokens != 100 {
-		t.Errorf("call[0] MaxTokens = %d, want 100", calls[0].Request.MaxTokens)
+	if got := samplingMaxTokens(calls[0].Request); got != 100 {
+		t.Errorf("call[0] MaxTokens = %d, want 100", got)
 	}
-	if calls[1].Request.MaxTokens != 200 {
-		t.Errorf("call[1] MaxTokens = %d, want 200", calls[1].Request.MaxTokens)
+	if got := samplingMaxTokens(calls[1].Request); got != 200 {
+		t.Errorf("call[1] MaxTokens = %d, want 200", got)
 	}
 }
 

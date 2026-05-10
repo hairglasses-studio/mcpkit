@@ -1,5 +1,27 @@
 .PHONY: build test vet lint check build-official test-official check-dual rdloop-build rdloop-dry rdloop rdloop-12h rdloop-status skill-surface skill-surface-check smoke-matrix
 
+OFFICIAL_SDK_BUILD_PACKAGES := \
+	./registry \
+	./handler \
+	./mcptest \
+	./transport \
+	./session \
+	./gateway \
+	./health \
+	./sampling \
+	./resources \
+	./prompts
+
+OFFICIAL_SDK_TEST_PACKAGES := \
+	./registry \
+	./handler \
+	./mcptest \
+	./transport \
+	./session \
+	./gateway \
+	./health \
+	./sampling
+
 build:
 	go build ./...
 
@@ -15,15 +37,16 @@ lint:
 
 check: build vet test skill-surface-check
 
-# Dual-SDK targets — verify the official_sdk build tag compiles.
-# Tests under official_sdk are limited to packages with complete implementations.
+# Dual-SDK targets — verify the official_sdk build tag on packages with
+# complete official-SDK implementations. Test scope is intentionally narrower
+# than build scope until all package test fixtures are SDK-neutral.
 build-official:
-	go build -tags official_sdk ./...
+	go build -tags official_sdk $(OFFICIAL_SDK_BUILD_PACKAGES)
 
 test-official:
-	go test -tags official_sdk ./... -count=1
+	go test -tags official_sdk $(OFFICIAL_SDK_TEST_PACKAGES) -count=1
 
-check-dual: check build-official
+check-dual: check build-official test-official
 
 # rdloop targets — autonomous R&D cycle launcher.
 rdloop-build:

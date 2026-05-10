@@ -7,6 +7,7 @@ Last updated: 2026-05-09.
 - **Spec coverage**: 100% (all MCP 2025-11-25 features implemented)
 - **Tiers 1–4**: Complete (A2A deferred — spec not stable)
 - **Test coverage**: All Phase 1–30 packages at 90%+ coverage. `transport` (added Phase 33) at 16% — pending test hardening
+- **SDK migration**: P34 core dual-SDK hardening is in progress; `make build-official` and `make test-official` gate the supported official-SDK package set.
 - **Documentation**: 37 packages have `doc.go`, 36 `example_test.go` files (as of 2026-04-03)
 
 See [RESEARCH.md](RESEARCH.md) for detailed analysis and evidence.
@@ -152,18 +153,18 @@ Transport integration tests — covered by `transport/*_test.go` for HTTP, middl
 
 <roadmap-tier id="T6" name="SDK Migration">
 
-<roadmap-phase id="P34" status="planned" name="Dual-SDK Test Hardening">
+<roadmap-phase id="P34" status="in_progress" name="Dual-SDK Test Hardening">
 
-<roadmap-item id="P34-1" package="registry" status="planned">
-Audit compat.go aliases — verify all public adapter functions (MakeTextContent, MakeErrorResult, ExtractArguments) compile under both build tags.
+<roadmap-item id="P34-1" package="registry" status="complete">
+Audit compat.go aliases — `registry`, `handler`, and `mcptest` now compile and test under both default and `official_sdk` build tags, covering schema adapters, content helpers, argument extraction, and public test helpers.
 </roadmap-item>
 
-<roadmap-item id="P34-2" package="registry" status="planned">
-_official_test.go files — parallel test files under the official_sdk build tag covering compat.go paths.
+<roadmap-item id="P34-2" package="registry" status="complete">
+_official_test.go files — added official-SDK fixtures for registry schema compatibility, mcptest benchmark helpers, sampling request helpers, and in-memory server/client coverage.
 </roadmap-item>
 
-<roadmap-item id="P34-3" status="planned">
-Dual-SDK CI matrix — GitHub Actions matrix builds with and without the official_sdk tag on every PR.
+<roadmap-item id="P34-3" status="complete">
+Dual-SDK CI gate — `.github/workflows/ci.yml` now runs the default reusable Go test job plus `make build-official test-official` for the supported official-SDK package set.
 </roadmap-item>
 
 <roadmap-item id="P34-4" status="planned">

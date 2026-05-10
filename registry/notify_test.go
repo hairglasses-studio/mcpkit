@@ -11,7 +11,7 @@ func TestWireToolListChanged_Add(t *testing.T) {
 
 	// Register initial tool
 	d.AddTool(ToolDefinition{
-		Tool:    Tool{Name: "initial", Description: "initial tool", InputSchema: ToolInputSchema{Type: "object"}},
+		Tool:    Tool{Name: "initial", Description: "initial tool", InputSchema: objectInputSchema()},
 		Handler: func(_ context.Context, _ CallToolRequest) (*CallToolResult, error) { return MakeTextResult("ok"), nil },
 	})
 
@@ -19,7 +19,7 @@ func TestWireToolListChanged_Add(t *testing.T) {
 
 	// Add a new tool — should trigger WireToolListChanged
 	d.AddTool(ToolDefinition{
-		Tool:    Tool{Name: "added", Description: "added tool", InputSchema: ToolInputSchema{Type: "object"}},
+		Tool:    Tool{Name: "added", Description: "added tool", InputSchema: objectInputSchema()},
 		Handler: func(_ context.Context, _ CallToolRequest) (*CallToolResult, error) { return MakeTextResult("ok"), nil },
 	})
 
@@ -34,11 +34,11 @@ func TestWireToolListChanged_Remove(t *testing.T) {
 	s := NewMCPServer("test", "0.0.0")
 
 	d.AddTool(ToolDefinition{
-		Tool:    Tool{Name: "keep", Description: "keep", InputSchema: ToolInputSchema{Type: "object"}},
+		Tool:    Tool{Name: "keep", Description: "keep", InputSchema: objectInputSchema()},
 		Handler: func(_ context.Context, _ CallToolRequest) (*CallToolResult, error) { return MakeTextResult("ok"), nil },
 	})
 	d.AddTool(ToolDefinition{
-		Tool:    Tool{Name: "remove_me", Description: "remove", InputSchema: ToolInputSchema{Type: "object"}},
+		Tool:    Tool{Name: "remove_me", Description: "remove", InputSchema: objectInputSchema()},
 		Handler: func(_ context.Context, _ CallToolRequest) (*CallToolResult, error) { return MakeTextResult("ok"), nil },
 	})
 
@@ -63,11 +63,11 @@ func TestWireToolListChanged_AddAndRemove(t *testing.T) {
 	s := NewMCPServer("test", "0.0.0")
 
 	d.AddTool(ToolDefinition{
-		Tool:    Tool{Name: "alpha", Description: "alpha", InputSchema: ToolInputSchema{Type: "object"}},
+		Tool:    Tool{Name: "alpha", Description: "alpha", InputSchema: objectInputSchema()},
 		Handler: func(_ context.Context, _ CallToolRequest) (*CallToolResult, error) { return MakeTextResult("ok"), nil },
 	})
 	d.AddTool(ToolDefinition{
-		Tool:    Tool{Name: "beta", Description: "beta", InputSchema: ToolInputSchema{Type: "object"}},
+		Tool:    Tool{Name: "beta", Description: "beta", InputSchema: objectInputSchema()},
 		Handler: func(_ context.Context, _ CallToolRequest) (*CallToolResult, error) { return MakeTextResult("ok"), nil },
 	})
 
@@ -76,7 +76,7 @@ func TestWireToolListChanged_AddAndRemove(t *testing.T) {
 	// Remove one, add another
 	d.RemoveTool("beta")
 	d.AddTool(ToolDefinition{
-		Tool:    Tool{Name: "gamma", Description: "gamma", InputSchema: ToolInputSchema{Type: "object"}},
+		Tool:    Tool{Name: "gamma", Description: "gamma", InputSchema: objectInputSchema()},
 		Handler: func(_ context.Context, _ CallToolRequest) (*CallToolResult, error) { return MakeTextResult("ok"), nil },
 	})
 

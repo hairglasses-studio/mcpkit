@@ -67,7 +67,7 @@ func setupTestServerWithAll(t *testing.T) (*Server, *Client) {
 
 	// Register a test resource
 	registry.AddResourceToServer(s.MCP,
-		registry.Resource{Name: "test://greeting", Description: "A greeting resource"},
+		registry.Resource{URI: "test://greeting", Name: "greeting", Description: "A greeting resource"},
 		func(_ context.Context, _ *registry.ReadResourceRequest) (*registry.ReadResourceResult, error) {
 			return &registry.ReadResourceResult{
 				Contents: []*registry.ResourceContents{
