@@ -4,6 +4,21 @@ This guide covers moving an mcpkit-based server from direct `mcp-go` coupling to
 
 For the current v2 readiness check, see [go-sdk v2.0 Compatibility Assessment](sdk-v2-compat-assessment.md). As of 2026-05-10, upstream has no `v2.*` module tag and mcpkit remains pinned to `github.com/modelcontextprotocol/go-sdk v1.6.0`.
 
+## Consumer pin status (2026-05-10, post-v0.6.0)
+
+Fleet consumers of mcpkit pin to the following versions (audit from `~/hairglasses-studio/*/go.mod`):
+
+| Repo | Pin | Migration status |
+|---|---|---|
+| mapitall | `v0.3.1-0.20260405143724-9e0ed2c34989` (with `replace` to local) | Local replace — auto-tracks main |
+| github-runner-mcp | `v0.5.1` (with `replace` to local) | Local replace — auto-tracks main |
+| docs | `v0.5.1` | Bump to v0.6.0 recommended (additive only; no migration needed) |
+| shielddd | `v0.5.2` | Closest to current; bump to v0.6.0 recommended |
+| secretstudios-mcp | `v0.5.1` (with `replace` to local) | Local replace — auto-tracks main |
+| shopp | `v0.5.1` | Bump to v0.6.0 recommended |
+
+No fleet consumer is on the dual-SDK build tag (`-tags official_sdk`) by default; mcpkit's `mark3labs/mcp-go` path remains the production runtime. For consumers that *do* want to test the official-SDK path, `make build-official` + `make test-official` are the canonical entrypoints (see Current Support below).
+
 ## Current Support
 
 Use these commands before and after every migration slice:
