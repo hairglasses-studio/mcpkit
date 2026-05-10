@@ -41,8 +41,12 @@ func TestNewPublisher_ValidToken_Defaults(t *testing.T) {
 	if p.baseURL != DefaultRegistryURL {
 		t.Errorf("baseURL: got %q, want %q", p.baseURL, DefaultRegistryURL)
 	}
-	if p.token != "secret" {
-		t.Errorf("token: got %q, want %q", p.token, "secret")
+	token, err := p.token.Token(context.Background())
+	if err != nil {
+		t.Fatalf("token: %v", err)
+	}
+	if token != "secret" {
+		t.Errorf("token: got %q, want %q", token, "secret")
 	}
 	if p.httpClient == nil {
 		t.Error("httpClient should not be nil")

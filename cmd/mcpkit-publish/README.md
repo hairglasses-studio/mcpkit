@@ -13,4 +13,5 @@ Useful modes:
 
 - `-validate-only`: validate metadata and print the workflow result without calling the registry.
 - `-mode update -server-id <id>`: update an existing registry entry.
+- `-token-url -client-id -client-secret`: fetch an OAuth2 client-credentials token instead of passing a static bearer token.
 - `-json=false`: print a compact text summary instead of the JSON workflow result.
