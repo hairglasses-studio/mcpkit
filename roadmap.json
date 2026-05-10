@@ -333,27 +333,27 @@
     {
       "id": "P36",
       "name": "A2A Tracking + Competitive Analysis",
-      "status": "planned",
+      "status": "in_progress",
       "items": [
         {
           "id": "P36-1",
           "description": "A2AMonitor for protocol spec changes",
           "package": "research",
-          "status": "planned",
+          "status": "complete",
           "priority": "high"
         },
         {
           "id": "P36-2",
           "description": "SDKCompare cross-framework analysis",
           "package": "research",
-          "status": "planned",
+          "status": "complete",
           "priority": "medium"
         },
         {
           "id": "P36-3",
           "description": "Template report generation",
           "package": "research",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P36-1",
             "P36-2"
@@ -364,7 +364,7 @@
           "id": "P36-4",
           "description": "Competitive landscape dashboard data",
           "package": "research",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P36-2"
           ],
@@ -1034,21 +1034,21 @@
           "id": "P36-1",
           "description": "A2AMonitor for protocol spec changes",
           "package": "research",
-          "status": "planned",
+          "status": "complete",
           "priority": "high"
         },
         {
           "id": "P36-2",
           "description": "SDKCompare cross-framework analysis",
           "package": "research",
-          "status": "planned",
+          "status": "complete",
           "priority": "medium"
         },
         {
           "id": "P36-3",
           "description": "Template report generation",
           "package": "research",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P36-1",
             "P36-2"
@@ -1059,7 +1059,7 @@
           "id": "P36-4",
           "description": "Competitive landscape dashboard data",
           "package": "research",
-          "status": "planned",
+          "status": "complete",
           "depends_on": [
             "P36-2"
           ],

@@ -130,7 +130,7 @@ Migrating from Python FastMCP? Use **[docs/fastmcp-migration-guide.md](docs/fast
 | `logging` | slog.Handler bridge to MCP clients, tool invocation logging middleware | `registry` |
 | `sampling` | Sampling client interface, context injection middleware, request builders, GenAI client spans | `registry`, `finops` |
 | `roots` | Client workspace root discovery, caching, context helpers | `registry` |
-| `research` | MCP ecosystem, cloud-platform monitoring, and viability assessment tools | `registry`, `handler`, `client` |
+| `research` | MCP ecosystem, cloud-platform, A2A, SDK comparison, and viability assessment tools | `registry`, `handler`, `client` |
 | `gateway` | Multi-server aggregation with namespaced tool routing, per-upstream resilience (circuit breaker, rate limit, timeout) | `registry`, `client`, `resilience` |
 | `dispatcher` | Priority worker pool with concurrency groups, middleware integration | `registry` |
 | `ralph` | Autonomous loop runner for iterative task execution (Ralph Loop pattern) | `registry`, `handler`, `sampling`, `finops` |

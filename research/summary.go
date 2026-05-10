@@ -11,13 +11,16 @@ import (
 
 // SummaryInput accepts outputs from all other research tools.
 type SummaryInput struct {
-	SpecFindings      *SpecOutput      `json:"spec_findings,omitempty" jsonschema:"description=Output from research_mcp_spec tool"`
-	SDKFindings       *SDKOutput       `json:"sdk_findings,omitempty" jsonschema:"description=Output from research_sdk_releases tool"`
-	EcosystemFindings *EcosystemOutput `json:"ecosystem_findings,omitempty" jsonschema:"description=Output from research_ecosystem tool"`
-	PlatformFindings  *PlatformOutput  `json:"platform_findings,omitempty" jsonschema:"description=Output from research_platform_activity tool"`
-	AssessFindings    *AssessOutput    `json:"assess_findings,omitempty" jsonschema:"description=Output from research_assess tool"`
-	AdditionalNotes   string           `json:"additional_notes,omitempty" jsonschema:"description=Free-form notes to include in the summary"`
-	OutputFormat      string           `json:"output_format,omitempty" jsonschema:"description=Output format: 'markdown' (default) or 'json',enum=markdown,enum=json"`
+	SpecFindings        *SpecOutput                 `json:"spec_findings,omitempty" jsonschema:"description=Output from research_mcp_spec tool"`
+	SDKFindings         *SDKOutput                  `json:"sdk_findings,omitempty" jsonschema:"description=Output from research_sdk_releases tool"`
+	EcosystemFindings   *EcosystemOutput            `json:"ecosystem_findings,omitempty" jsonschema:"description=Output from research_ecosystem tool"`
+	PlatformFindings    *PlatformOutput             `json:"platform_findings,omitempty" jsonschema:"description=Output from research_platform_activity tool"`
+	A2AFindings         *A2ATrackingOutput          `json:"a2a_findings,omitempty" jsonschema:"description=Output from research_a2a_tracking tool"`
+	SDKCompareFindings  *SDKCompareOutput           `json:"sdk_compare_findings,omitempty" jsonschema:"description=Output from research_sdk_compare tool"`
+	CompetitiveFindings *CompetitiveDashboardOutput `json:"competitive_findings,omitempty" jsonschema:"description=Output from research_competitive_dashboard tool"`
+	AssessFindings      *AssessOutput               `json:"assess_findings,omitempty" jsonschema:"description=Output from research_assess tool"`
+	AdditionalNotes     string                      `json:"additional_notes,omitempty" jsonschema:"description=Free-form notes to include in the summary"`
+	OutputFormat        string                      `json:"output_format,omitempty" jsonschema:"description=Output format: 'markdown' (default) or 'json',enum=markdown,enum=json"`
 }
 
 // SummaryOutput is the combined research summary.
@@ -36,7 +39,7 @@ type Section struct {
 
 func (m *Module) summaryTool() registry.ToolDefinition {
 	desc := "Combine outputs from all research tools into a unified summary report. " +
-		"Accepts spec, SDK, ecosystem, and assessment findings and produces a markdown report " +
+		"Accepts spec, SDK, ecosystem, platform, A2A, competitive, and assessment findings and produces a markdown report " +
 		"with action items and an updated feature matrix." +
 		handler.FormatExamples([]handler.ToolExample{
 			{
@@ -162,6 +165,55 @@ func (m *Module) handleSummary(_ context.Context, input SummaryInput) (SummaryOu
 		}
 		actions = append(actions, pf.ActionItems...)
 		sections = append(sections, Section{Title: "Cloud Platforms", Content: content.String()})
+	}
+
+	// A2A section
+	if input.A2AFindings != nil {
+		af := input.A2AFindings
+		var content strings.Builder
+		if af.Summary != "" {
+			fmt.Fprintf(&content, "%s\n", af.Summary)
+		}
+		if len(af.VersionCandidates) > 0 {
+			fmt.Fprintf(&content, "Detected versions: %s\n", strings.Join(af.VersionCandidates, ", "))
+		}
+		for _, signal := range af.Signals {
+			fmt.Fprintf(&content, "- [%s] %s from %s - %s\n", signal.Severity, signal.Keyword, signal.Source, signal.Snippet)
+		}
+		actions = append(actions, af.ActionItems...)
+		sections = append(sections, Section{Title: "A2A Tracking", Content: content.String()})
+	}
+
+	// SDK comparison section
+	if input.SDKCompareFindings != nil {
+		sf := input.SDKCompareFindings
+		var content strings.Builder
+		if sf.Summary != "" {
+			fmt.Fprintf(&content, "%s\n", sf.Summary)
+		}
+		for _, row := range sf.Matrix {
+			var parts []string
+			for _, support := range row.Supports {
+				parts = append(parts, fmt.Sprintf("%s=%s", support.SDK, support.Status))
+			}
+			fmt.Fprintf(&content, "- %s: %s\n", row.Feature, strings.Join(parts, ", "))
+		}
+		actions = append(actions, sf.ActionItems...)
+		sections = append(sections, Section{Title: "SDK Comparison", Content: content.String()})
+	}
+
+	// Competitive dashboard section
+	if input.CompetitiveFindings != nil {
+		cf := input.CompetitiveFindings
+		var content strings.Builder
+		if cf.Summary != "" {
+			fmt.Fprintf(&content, "%s\n", cf.Summary)
+		}
+		for _, row := range cf.Rows {
+			fmt.Fprintf(&content, "- [%s/%s] %s: %s\n", row.Area, row.Severity, row.Subject, row.Status)
+		}
+		actions = append(actions, cf.ActionItems...)
+		sections = append(sections, Section{Title: "Competitive Dashboard", Content: content.String()})
 	}
 
 	// Assessment section
