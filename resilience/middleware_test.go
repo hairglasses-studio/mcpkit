@@ -12,11 +12,6 @@ import (
 	"github.com/hairglasses-studio/mcpkit/registry"
 )
 
-// successHandler returns a successful text result.
-func successHandler(_ context.Context, _ registry.CallToolRequest) (*registry.CallToolResult, error) {
-	return registry.MakeTextResult("ok"), nil
-}
-
 // errorHandler returns an error result (IsError=true).
 func errorHandler(_ context.Context, _ registry.CallToolRequest) (*registry.CallToolResult, error) {
 	return registry.MakeErrorResult("tool failed"), nil

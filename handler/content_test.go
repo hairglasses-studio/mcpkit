@@ -8,9 +8,6 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
-//go:fix inline
-func ptrFloat(f float64) *float64 { return new(f) }
-
 func TestFilterByAudience_KeepsMatching(t *testing.T) {
 	result := &mcp.CallToolResult{
 		Content: []mcp.Content{
