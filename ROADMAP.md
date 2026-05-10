@@ -373,10 +373,10 @@ Tutorial content outline — `docs/tutorial-outline.md` lays out an eight-part "
 
 </roadmap-phase>
 
-<roadmap-phase id="P42" status="planned" name="User Feedback + Telemetry">
+<roadmap-phase id="P42" status="in_progress" name="User Feedback + Telemetry">
 
-<roadmap-item id="P42-1" package="feedback" status="planned">
-Feedback tool — MCP tool that collects structured user feedback and writes to a configured sink.
+<roadmap-item id="P42-1" package="feedback" status="complete">
+Feedback tool — `feedback.NewModule` exposes `feedback_submit` with typed validation, consent-aware contact capture, and pluggable `MemorySink` / JSONL file sinks.
 </roadmap-item>
 
 <roadmap-item id="P42-2" package="feedback" status="planned">

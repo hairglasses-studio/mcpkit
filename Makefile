@@ -10,7 +10,8 @@ OFFICIAL_SDK_BUILD_PACKAGES := \
 	./health \
 	./sampling \
 	./resources \
-	./prompts
+	./prompts \
+	./feedback
 
 OFFICIAL_SDK_TEST_PACKAGES := \
 	./registry \
@@ -20,7 +21,8 @@ OFFICIAL_SDK_TEST_PACKAGES := \
 	./session \
 	./gateway \
 	./health \
-	./sampling
+	./sampling \
+	./feedback
 
 BENCH_PACKAGES ?= ./mcptest ./testing/benchmark
 BENCH_FLAGS ?= -bench=. -benchmem -run '^$$'

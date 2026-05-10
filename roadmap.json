@@ -646,13 +646,13 @@
     {
       "id": "P42",
       "name": "User Feedback + Telemetry",
-      "status": "planned",
+      "status": "in_progress",
       "items": [
         {
           "id": "P42-1",
-          "description": "Feedback tool for in-server issue reporting",
+          "description": "Feedback submission tool with typed validation and pluggable memory/jsonl sinks",
           "package": "feedback",
-          "status": "planned",
+          "status": "complete",
           "priority": "medium"
         },
         {
@@ -1321,9 +1321,9 @@
         },
         {
           "id": "P42-1",
-          "description": "Feedback tool for in-server issue reporting",
+          "description": "Feedback submission tool with typed validation and pluggable memory/jsonl sinks",
           "package": "feedback",
-          "status": "planned",
+          "status": "complete",
           "priority": "medium"
         },
         {
