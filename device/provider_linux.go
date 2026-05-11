@@ -18,6 +18,23 @@ import (
 	"unsafe"
 )
 
+var (
+	readProcBusInputDevices = func() ([]byte, error) { return os.ReadFile("/proc/bus/input/devices") }
+	midiDeviceGlob          = func() ([]string, error) { return filepath.Glob("/dev/snd/midiC*D*") }
+	readFile                = os.ReadFile
+	statFile                = os.Stat
+	commandOutput           = func(name string, args ...string) ([]byte, error) {
+		return exec.Command(name, args...).Output()
+	}
+	openFile          = os.OpenFile
+	evdevIoctlFunc    = evdevIoctl
+	netlinkSocket     = syscall.Socket
+	netlinkBind       = syscall.Bind
+	netlinkClose      = syscall.Close
+	netlinkRecvfrom   = syscall.Recvfrom
+	setSockoptTimeval = syscall.SetsockoptTimeval
+)
+
 func init() {
 	RegisterProvider(func() DeviceProvider { return &linuxInputProvider{} })
 	RegisterProvider(func() DeviceProvider { return &linuxMIDIProvider{} })
@@ -36,7 +53,7 @@ func (p *linuxInputProvider) DeviceTypes() []DeviceType {
 }
 
 func (p *linuxInputProvider) Enumerate(_ context.Context) ([]Info, error) {
-	data, err := os.ReadFile("/proc/bus/input/devices")
+	data, err := readProcBusInputDevices()
 	if err != nil {
 		return nil, fmt.Errorf("read /proc/bus/input/devices: %w", err)
 	}
@@ -173,10 +190,10 @@ type absInfo struct {
 
 // ioctl helpers for evdev.
 const (
-	evIOCGABS  = 0x80184540 // EVIOCGABS(0) base — add ABS code to get specific axis
-	evIOCGRAB  = 0x40044590 // EVIOCGRAB
-	evIOCSFF   = 0x40304580 // EVIOCSFF — upload force-feedback effect
-	evIOCRMFF  = 0x40044581 // EVIOCRMFF — erase force-feedback effect
+	evIOCGABS = 0x80184540 // EVIOCGABS(0) base — add ABS code to get specific axis
+	evIOCGRAB = 0x40044590 // EVIOCGRAB
+	evIOCSFF  = 0x40304580 // EVIOCSFF — upload force-feedback effect
+	evIOCRMFF = 0x40044581 // EVIOCRMFF — erase force-feedback effect
 )
 
 func evdevIoctl(fd uintptr, req uintptr, arg uintptr) error {
@@ -213,9 +230,9 @@ func (c *linuxEvdevConnection) Alive() bool { return c.alive }
 func (c *linuxEvdevConnection) Start(ctx context.Context) error {
 	// Open read-write to allow force-feedback (FF) effect upload via ioctl.
 	// Falls back to read-only if read-write fails (e.g. insufficient permissions).
-	f, err := os.OpenFile(c.path, os.O_RDWR, 0)
+	f, err := openFile(c.path, os.O_RDWR, 0)
 	if err != nil {
-		f, err = os.OpenFile(c.path, os.O_RDONLY, 0)
+		f, err = openFile(c.path, os.O_RDONLY, 0)
 		if err != nil {
 			return fmt.Errorf("open %s: %w", c.path, err)
 		}
@@ -227,7 +244,7 @@ func (c *linuxEvdevConnection) Start(ctx context.Context) error {
 	for code := uint16(0); code <= 0x3f; code++ {
 		var ai absInfo
 		req := uintptr(evIOCGABS) + uintptr(code)
-		err := evdevIoctl(f.Fd(), req, uintptr(unsafe.Pointer(&ai)))
+		err := evdevIoctlFunc(f.Fd(), req, uintptr(unsafe.Pointer(&ai)))
 		if err == nil && (ai.Minimum != 0 || ai.Maximum != 0) {
 			c.absInfos[code] = &ai
 		}
@@ -403,7 +420,7 @@ func (c *linuxEvdevConnection) Grab() error {
 	if c.fd == nil {
 		return fmt.Errorf("device not open")
 	}
-	if err := evdevIoctl(c.fd.Fd(), evIOCGRAB, 1); err != nil {
+	if err := evdevIoctlFunc(c.fd.Fd(), evIOCGRAB, 1); err != nil {
 		return fmt.Errorf("EVIOCGRAB: %w", err)
 	}
 	c.grabbed = true
@@ -415,7 +432,7 @@ func (c *linuxEvdevConnection) ReleaseGrab() error {
 	if c.fd == nil || !c.grabbed {
 		return nil
 	}
-	if err := evdevIoctl(c.fd.Fd(), evIOCGRAB, 0); err != nil {
+	if err := evdevIoctlFunc(c.fd.Fd(), evIOCGRAB, 0); err != nil {
 		return fmt.Errorf("EVIOCGRAB release: %w", err)
 	}
 	c.grabbed = false
@@ -504,7 +521,7 @@ func (f *linuxEvdevFeedback) SetRumble(motor int, intensity float64, duration ti
 
 	// Erase any previously uploaded effect to avoid effect ID exhaustion.
 	if f.effectID >= 0 {
-		_ = evdevIoctl(f.fd.Fd(), evIOCRMFF, uintptr(f.effectID))
+		_ = evdevIoctlFunc(f.fd.Fd(), evIOCRMFF, uintptr(f.effectID))
 		f.effectID = -1
 	}
 
@@ -520,7 +537,7 @@ func (f *linuxEvdevFeedback) SetRumble(motor int, intensity float64, duration ti
 	}
 
 	// Upload the effect via ioctl.
-	if err := evdevIoctl(f.fd.Fd(), evIOCSFF, uintptr(unsafe.Pointer(&effect))); err != nil {
+	if err := evdevIoctlFunc(f.fd.Fd(), evIOCSFF, uintptr(unsafe.Pointer(&effect))); err != nil {
 		return fmt.Errorf("EVIOCSFF upload: %w", err)
 	}
 	f.effectID = effect.ID
@@ -578,13 +595,13 @@ func (p *linuxMIDIProvider) Enumerate(_ context.Context) ([]Info, error) {
 	}
 
 	// Fallback to /dev/snd/midiC*D* glob.
-	matches, _ := filepath.Glob("/dev/snd/midiC*D*")
+	matches, _ := midiDeviceGlob()
 	for _, m := range matches {
 		base := filepath.Base(m)
 		var card, dev int
 		_, _ = fmt.Sscanf(base, "midiC%dD%d", &card, &dev)
 
-		nameBytes, _ := os.ReadFile(fmt.Sprintf("/proc/asound/card%d/id", card))
+		nameBytes, _ := readFile(fmt.Sprintf("/proc/asound/card%d/id", card))
 		name := strings.TrimSpace(string(nameBytes))
 		if name == "" {
 			name = fmt.Sprintf("Card %d Device %d", card, dev)
@@ -606,8 +623,7 @@ func (p *linuxMIDIProvider) Enumerate(_ context.Context) ([]Info, error) {
 }
 
 func enumMIDIAmidi() []Info {
-	cmd := exec.Command("amidi", "-l")
-	out, err := cmd.Output()
+	out, err := commandOutput("amidi", "-l")
 	if err != nil {
 		return nil
 	}
@@ -667,7 +683,7 @@ func (p *linuxMIDIProvider) Open(_ context.Context, id DeviceID) (DeviceConnecti
 	}
 
 	devPath := fmt.Sprintf("/dev/snd/midiC%dD%d", card, dev)
-	if _, err := os.Stat(devPath); err != nil {
+	if _, err := statFile(devPath); err != nil {
 		return nil, fmt.Errorf("%w: %s", ErrDeviceNotFound, devPath)
 	}
 
@@ -702,7 +718,7 @@ func (c *linuxMIDIConnection) Feedback() DeviceFeedback {
 }
 
 func (c *linuxMIDIConnection) Start(ctx context.Context) error {
-	f, err := os.OpenFile(c.path, os.O_RDWR, 0)
+	f, err := openFile(c.path, os.O_RDWR, 0)
 	if err != nil {
 		return fmt.Errorf("open %s: %w", c.path, err)
 	}
@@ -962,14 +978,14 @@ func (w *LinuxHotPlugWatcher) Start(ctx context.Context) error {
 	}
 
 	// Try to create a netlink socket for instant uevent notification.
-	fd, err := syscall.Socket(syscall.AF_NETLINK, syscall.SOCK_DGRAM, netlinkKobjectUevent)
+	fd, err := netlinkSocket(syscall.AF_NETLINK, syscall.SOCK_DGRAM, netlinkKobjectUevent)
 	if err == nil {
 		sa := &syscall.SockaddrNetlink{
 			Family: syscall.AF_NETLINK,
 			Groups: 1, // Multicast group 1 = kernel uevents
 		}
-		if bindErr := syscall.Bind(fd, sa); bindErr != nil {
-			_ = syscall.Close(fd)
+		if bindErr := netlinkBind(fd, sa); bindErr != nil {
+			_ = netlinkClose(fd)
 			fd = -1
 			slog.Warn("hotplug: netlink bind failed, falling back to polling", "error", bindErr)
 		}
@@ -1010,9 +1026,9 @@ func (w *LinuxHotPlugWatcher) netlinkLoop(ctx context.Context) {
 
 		// Set a read deadline so we can check context cancellation periodically.
 		tv := syscall.Timeval{Sec: 1}
-		_ = syscall.SetsockoptTimeval(w.netlinkFD, syscall.SOL_SOCKET, syscall.SO_RCVTIMEO, &tv)
+		_ = setSockoptTimeval(w.netlinkFD, syscall.SOL_SOCKET, syscall.SO_RCVTIMEO, &tv)
 
-		n, _, err := syscall.Recvfrom(w.netlinkFD, buf, 0)
+		n, _, err := netlinkRecvfrom(w.netlinkFD, buf, 0)
 		if err != nil {
 			// EAGAIN/EWOULDBLOCK means the timeout fired — just loop.
 			if err == syscall.EAGAIN || err == syscall.EWOULDBLOCK {
@@ -1167,7 +1183,7 @@ func (w *LinuxHotPlugWatcher) Close() error {
 		w.cancel()
 	}
 	if w.netlinkFD >= 0 {
-		_ = syscall.Close(w.netlinkFD)
+		_ = netlinkClose(w.netlinkFD)
 		w.netlinkFD = -1
 	}
 	return nil

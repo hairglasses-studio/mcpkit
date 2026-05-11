@@ -15,6 +15,16 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+var (
+	gridSerialTTYGlob = func() ([]string, error) { return filepath.Glob("/sys/class/tty/ttyACM*") }
+	gridSerialDevPath = func(devName string) string { return "/dev/" + devName }
+	openGridSerial    = openGridSerialLinux
+	serialOpenFile    = os.OpenFile
+	ioctlGetTermios   = unix.IoctlGetTermios
+	ioctlSetTermios   = unix.IoctlSetTermios
+	setNonblock       = unix.SetNonblock
+)
+
 func init() {
 	RegisterProvider(func() DeviceProvider {
 		return &gridSerialProviderLinux{}
@@ -28,12 +38,12 @@ type gridSerialProviderLinux struct {
 	conns map[DeviceID]*gridSerialConnectionLinux
 }
 
-func (p *gridSerialProviderLinux) Name() string             { return "grid_serial" }
+func (p *gridSerialProviderLinux) Name() string              { return "grid_serial" }
 func (p *gridSerialProviderLinux) DeviceTypes() []DeviceType { return []DeviceType{TypeGenericHID} }
 
 func (p *gridSerialProviderLinux) Enumerate(ctx context.Context) ([]Info, error) {
 	// Walk /sys/class/tty/ttyACM* to find CDC-ACM serial devices.
-	matches, err := filepath.Glob("/sys/class/tty/ttyACM*")
+	matches, err := gridSerialTTYGlob()
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +56,7 @@ func (p *gridSerialProviderLinux) Enumerate(ctx context.Context) ([]Info, error)
 		}
 
 		devName := filepath.Base(sysPath)
-		devPath := "/dev/" + devName
+		devPath := gridSerialDevPath(devName)
 
 		infos = append(infos, Info{
 			ID:           DeviceID("grid_serial:" + devPath),
@@ -134,7 +144,7 @@ func (p *gridSerialProviderLinux) Open(ctx context.Context, id DeviceID) (Device
 		return nil, fmt.Errorf("grid serial device %s not found", id)
 	}
 
-	conn, err := openGridSerialLinux(info)
+	conn, err := openGridSerial(info)
 	if err != nil {
 		return nil, err
 	}
@@ -166,15 +176,15 @@ type gridSerialConnectionLinux struct {
 }
 
 func openGridSerialLinux(info Info) (*gridSerialConnectionLinux, error) {
-	fd, err := os.OpenFile(info.PlatformPath, os.O_RDWR|unix.O_NOCTTY|unix.O_NONBLOCK, 0)
+	fd, err := serialOpenFile(info.PlatformPath, os.O_RDWR|unix.O_NOCTTY|unix.O_NONBLOCK, 0)
 	if err != nil {
 		return nil, fmt.Errorf("open serial %s: %w", info.PlatformPath, err)
 	}
 
 	// Configure raw serial: 115200 baud, 8N1, no flow control.
 	rawFD := int(fd.Fd())
-	var termios unix.Termios
-	if _, err := unix.IoctlGetTermios(rawFD, unix.TCGETS); err != nil {
+	termios, err := ioctlGetTermios(rawFD, unix.TCGETS)
+	if err != nil {
 		_ = fd.Close()
 		return nil, fmt.Errorf("get termios: %w", err)
 	}
@@ -195,13 +205,13 @@ func openGridSerialLinux(info Info) (*gridSerialConnectionLinux, error) {
 	termios.Cc[unix.VMIN] = 0
 	termios.Cc[unix.VTIME] = 1
 
-	if err := unix.IoctlSetTermios(rawFD, unix.TCSETS, &termios); err != nil {
+	if err := ioctlSetTermios(rawFD, unix.TCSETS, termios); err != nil {
 		_ = fd.Close()
 		return nil, fmt.Errorf("set termios: %w", err)
 	}
 
 	// Clear nonblock now that termios is set.
-	if err := unix.SetNonblock(rawFD, false); err != nil {
+	if err := setNonblock(rawFD, false); err != nil {
 		_ = fd.Close()
 		return nil, fmt.Errorf("clear nonblock: %w", err)
 	}
