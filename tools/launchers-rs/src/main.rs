@@ -23,12 +23,12 @@ fn main() {
     // 4. Exec the target agent
     let target_agent = if args.len() > 1 { &args[1] } else { "codex" };
     println!("Preparing to launch agent: {}", target_agent);
-    
+
     // In a real implementation this would execve using std::os::unix::process::CommandExt
     let mut child = Command::new("echo")
         .arg(format!("Agent {} launched successfully", target_agent))
         .spawn()
         .expect("Failed to launch agent");
-        
+
     let _ = child.wait();
 }

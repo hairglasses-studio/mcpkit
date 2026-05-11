@@ -44,11 +44,11 @@ func handleAnalyzeScript(ctx context.Context, args AnalyzeScriptInput) (AnalyzeS
 		return out, fmt.Errorf("failed to read script: %w", err)
 	}
 	content := string(data)
-	
+
 	// Basic analysis heuristics
 	lines := strings.Split(content, "\n")
 	out.LineCount = len(lines)
-	
+
 	for _, line := range lines {
 		lower := strings.ToLower(line)
 		if strings.Contains(lower, "curl") || strings.Contains(lower, "wget") || strings.Contains(lower, "requests.") || strings.Contains(lower, "rclone") {
@@ -61,16 +61,16 @@ func handleAnalyzeScript(ctx context.Context, args AnalyzeScriptInput) (AnalyzeS
 			out.UsesSystem = true
 		}
 	}
-	
+
 	out.RecommendedLanguage = "Go"
 	out.Reason = "Go is preferred for network-heavy, concurrent orchestration tasks in the hairglasses-studio fleet."
-	
+
 	if out.UsesSystem && !out.UsesNetwork && out.LineCount < 100 {
 		out.RecommendedLanguage = "Rust"
 		out.Reason = "Rust is preferred for single-binary fast startup, CLI launchers, and system-level bindings."
 	}
-	
+
 	out.SuggestedArchitecture = "Use `mcpkit/workflow` for orchestrated stages if Go, or a standard Rust CLI if Rust."
-	
+
 	return out, nil
 }

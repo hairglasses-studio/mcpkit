@@ -34,12 +34,12 @@ func discoverScriptsToolDef() registry.ToolDefinition {
 func handleDiscoverScripts(ctx context.Context, args DiscoverScriptsInput) (DiscoverScriptsOutput, error) {
 	var scripts []string
 	var out DiscoverScriptsOutput
-	
+
 	err := filepath.WalkDir(args.WorkspacePath, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil // Skip errors like permission denied
 		}
-		
+
 		// Skip common non-relevant directories
 		if d.IsDir() {
 			name := d.Name()
@@ -48,23 +48,23 @@ func handleDiscoverScripts(ctx context.Context, args DiscoverScriptsInput) (Disc
 			}
 			return nil
 		}
-		
+
 		// Match by extension
 		ext := strings.ToLower(filepath.Ext(path))
 		if ext == ".sh" || ext == ".bash" || ext == ".py" {
 			scripts = append(scripts, path)
 		}
-		
+
 		return nil
 	})
-	
+
 	if err != nil {
 		return out, fmt.Errorf("failed to scan workspace: %w", err)
 	}
-	
+
 	out.Count = len(scripts)
 	out.Summary = fmt.Sprintf("Found %d bash/python scripts in %s.", out.Count, args.WorkspacePath)
-	
+
 	// Return a limited list to avoid massive payloads
 	limit := 100
 	if len(scripts) > limit {
@@ -72,6 +72,6 @@ func handleDiscoverScripts(ctx context.Context, args DiscoverScriptsInput) (Disc
 	} else {
 		out.Scripts = scripts
 	}
-	
+
 	return out, nil
 }
