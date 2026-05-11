@@ -11,6 +11,8 @@ import (
 	"github.com/hairglasses-studio/mcpkit/registry"
 )
 
+var serveAuto = registry.ServeAuto
+
 // ServerConfig holds the server identity for bootstrap.Serve.
 // This is separate from Config (used by GenerateReport) to avoid
 // overloading a single type.
@@ -79,5 +81,5 @@ func Serve(cfg ServerConfig, opts ...Option) error {
 		o.promptRegistry.RegisterWithServer(srv)
 	}
 
-	return registry.ServeAuto(srv)
+	return serveAuto(srv)
 }
