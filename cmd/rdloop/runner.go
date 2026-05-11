@@ -14,6 +14,7 @@ import (
 	"github.com/hairglasses-studio/mcpkit/finops"
 	"github.com/hairglasses-studio/mcpkit/ralph"
 	"github.com/hairglasses-studio/mcpkit/rdcycle"
+	"github.com/hairglasses-studio/mcpkit/refactor"
 	"github.com/hairglasses-studio/mcpkit/registry"
 	"github.com/hairglasses-studio/mcpkit/research"
 	"github.com/hairglasses-studio/mcpkit/roadmap"
@@ -267,6 +268,9 @@ func (r *MultiCycleRunner) runOneCycle(ctx context.Context, cycleNum int, specFi
 
 	fileMod := &ralph.FileToolModule{Root: "."}
 	reg.RegisterModule(fileMod)
+
+	refactorMod := refactor.NewModule()
+	reg.RegisterModule(refactorMod)
 
 	rdcycleMod := rdcycle.NewModule(rdcycle.CycleConfig{
 		RoadmapPath: r.cfg.RoadmapPath,

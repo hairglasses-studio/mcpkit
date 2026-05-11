@@ -22,6 +22,7 @@ import (
 	"github.com/hairglasses-studio/mcpkit/frontdoor"
 	"github.com/hairglasses-studio/mcpkit/handler"
 	"github.com/hairglasses-studio/mcpkit/health"
+	"github.com/hairglasses-studio/mcpkit/refactor"
 	"github.com/hairglasses-studio/mcpkit/registry"
 )
 
@@ -108,6 +109,8 @@ func main() {
 		frontdoor.WithPrefix("fd_"),
 		frontdoor.WithHealthChecker(chk),
 	))
+
+	reg.RegisterModule(refactor.NewModule())
 
 	s := registry.NewMCPServer("frontdoor-example", "1.0.0")
 	reg.RegisterWithServer(s)
