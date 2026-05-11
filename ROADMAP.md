@@ -6,9 +6,9 @@ Last updated: 2026-05-10.
 
 - **Spec coverage**: 100% (all MCP 2025-11-25 features implemented)
 - **Tiers 1–4**: Complete; A2A bridge work has moved into T9 with push-notification endpoints still pending.
-- **Test coverage**: All Phase 1–30 packages at 90%+ coverage. `transport` (added Phase 33) at **93.2%** — hardening complete (verified 2026-05-10 post-Phase-33). Five remaining packages below 85% target: `device` (41.3%), `bootstrap` (44.2%), `a2a` (69.1%), `embedding` (71.0%), `cmd/rdloop` (1.4% — CLI entrypoint, accepted as baseline).
+- **Test coverage**: All Phase 1–30 packages at 90%+ coverage. `transport` (added Phase 33) at **93.2%** and `worktree` at **87.2%** — hardening complete (verified 2026-05-10). Remaining packages below 85% target: `device` (41.3%), `bootstrap` (44.2%), `a2a` (79.1% partial), `cmd/rdloop` (1.4% — CLI entrypoint, accepted as baseline). `embedding` is now **93.3%**.
 - **SDK migration**: P34 core dual-SDK hardening is in progress; `make build-official` and `make test-official` gate the supported official-SDK package set.
-- **Documentation**: 49 packages have `doc.go`, 37 `example_test.go` files (as of 2026-05-10). Packages still missing `doc.go`: `worktree` (the one core gap) plus 3 internal tools (`tools/benchguard`, `tools/genskillsurface`, `tools/smoke-matrix`).
+- **Documentation**: `worktree` now has `doc.go`; remaining known `doc.go` gaps are internal tools (`tools/benchguard`, `tools/genskillsurface`, `tools/smoke-matrix`).
 
 See [RESEARCH.md](RESEARCH.md) for detailed analysis and evidence.
 

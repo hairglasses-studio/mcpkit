@@ -10,6 +10,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 > earlier-tag detail, `git log v0.<prior>..v0.<next>` until per-tag backfill
 > ships as a follow-up.
 
+## [Unreleased]
+
+### Added
+
+- **worktree** — Real-git integration tests for pool acquire/release, warmup, stale cleanup, linked-worktree wiring, and error paths; package coverage is now 87.2%.
+
 ## [v0.6.0] - 2026-05-10
 
 36 commits since v0.5.2 (commit `6fe6dd5`, "Add shared embedding primitives"). All work is additive (no breaking API changes); minor bump appropriate. Fleet consumers (jobb, ralphglasses, hg-mcp) can `go get -u github.com/hairglasses-studio/mcpkit@v0.6.0` cleanly.
