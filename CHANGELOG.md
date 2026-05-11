@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Added
 
 - **worktree** — Real-git integration tests for pool acquire/release, warmup, stale cleanup, linked-worktree wiring, and error paths; package coverage is now 87.2%.
+- **bootstrap** — Option and server-assembly tests covering module, middleware, resource, prompt, audit, safety-tier, and final serve delegation paths; package coverage is now 95.2%.
 
 ## [v0.6.0] - 2026-05-10
 
