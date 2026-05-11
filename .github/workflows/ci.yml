@@ -11,9 +11,17 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     uses: hairglasses-studio/.github/.github/workflows/go-test.yml@main
+    with:
+      lane: ${{ github.event_name == 'pull_request' && 'fast' || 'standard' }}
+    with:
+      lane: ${{ github.event_name == 'pull_request' && 'fast' || 'standard' }}
     with:
       go-version: "1.26.1"
       test-flags: "-count=1 -race"
