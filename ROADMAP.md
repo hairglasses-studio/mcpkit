@@ -529,3 +529,29 @@ Key recommendations:
 - **Compose with `yagni-audit` skill** (Go-specific, 5 phases A-E): adopt the skill body's phase ordering and guardrails; fossil-mcp becomes an opt-in Phase A2 when the repo has multi-language surfaces or you want call-graph reach.
 
 See the pattern doc for the full `# Adoption checklist`, `# Anti-patterns`, and `# Sources` sections.
+
+### Execution status (2026-05-11)
+
+- [x] Workspace + repo MCP wiring landed (`.mcp.json` + `FOSSIL_NO_UPDATE_CHECK=1`).
+- [x] Local fossil installation verified (`fossil-mcp 0.1.8` on PATH).
+- [x] `mcpkit/fossil` wrapper package landed for `scan`, `dead-code`, `clones`, and `scaffolding`.
+- [x] CI informational SARIF workflow landed (`.github/workflows/fossil-scan.yml`).
+- [x] Real binary-backed integration test landed for the wrapper package.
+- [ ] Add typed `check` contract with calibrated exit semantics (0 = pass, 1 = threshold violation).
+- [ ] Add examples showing downstream usage in consumer repos.
+- [ ] Start Wave A repo adoption (`mapitall`, `shopp`), then record any skips/exceptions.
+
+### Next executable tranches
+
+1. **Typed `check` wrapper**
+   - **Command contract:** `fossil-mcp check <dir> --format json [threshold flags]`
+   - **Acceptance:** parse JSON even when fossil exits `1` on threshold violation; preserve `violations[]`, `passed`, and count fields.
+   - **Abort criteria:** stop if the installed fossil version changes the output shape or stops emitting machine-readable JSON on failure.
+2. **Wave A proof in one active repo**
+   - **Target:** land fossil MCP config or adoption wiring in one approved consumer repo before broad rollout.
+   - **Acceptance:** repo-local MCP surface remains valid and existing server entries still work.
+   - **Abort criteria:** skip repos whose roadmap/lifecycle policy forbids new adoption work.
+3. **Examples + rollout docs**
+   - **Acceptance:** `README.md` or package examples show how a consumer uses the typed wrapper rather than parsing raw CLI output.
+4. **Wave A expansion**
+   - **Targets:** `mapitall`, `shopp`; record `github-runner-mcp` as a policy-driven skip unless explicitly re-authorized.

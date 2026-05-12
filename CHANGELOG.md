@@ -17,6 +17,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - **worktree** — Real-git integration tests for pool acquire/release, warmup, stale cleanup, linked-worktree wiring, and error paths; package coverage is now 87.2%.
 - **bootstrap** — Option and server-assembly tests covering module, middleware, resource, prompt, audit, safety-tier, and final serve delegation paths; package coverage is now 95.2%.
 - **device** — Linux provider tests with deterministic filesystem, ioctl, netlink, MIDI, evdev, and Grid serial fixtures; package coverage is now 88.4%.
+- **fossil/** — Initial typed integration package for `fossil-mcp`: scan/scaffolding/clones wrappers, normalized finding categories, SARIF workflow, and binary-backed integration coverage.
+
+### Changed
+
+- **ROADMAP.md** — crosspollinate fossil suggestion converted into explicit execution-status and tranche items with acceptance/abort criteria instead of doc-only guidance.
 
 ## [v0.6.0] - 2026-05-10
 

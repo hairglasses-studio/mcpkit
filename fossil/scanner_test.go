@@ -105,6 +105,27 @@ func TestScanReportParsesFindings(t *testing.T) {
 	}
 }
 
+func TestDetectDeadCodeParsesFindings(t *testing.T) {
+	fake := writeFakeFossil(t)
+	s := NewScanner(ScannerConfig{
+		Dir:       ".",
+		FossilBin: fake,
+		Timeout:   2 * time.Second,
+	})
+	t.Setenv("FOSSIL_TEST_STDOUT", `[{"rule_id":"DEAD-dead function","title":"unusedOne","description":"never called","severity":"info","confidence":"certain","location":{"file":"main.go","line_start":5,"line_end":5,"column_start":0,"column_end":0},"tags":[],"related_locations":[]}]`)
+
+	findings, err := s.DetectDeadCode(context.Background(), DeadCodeOptions{MinConfidence: "certain"})
+	if err != nil {
+		t.Fatalf("DetectDeadCode() error = %v", err)
+	}
+	if len(findings) != 1 {
+		t.Fatalf("len(findings)=%d, want 1", len(findings))
+	}
+	if findings[0].Category() != CategoryDeadCode {
+		t.Fatalf("Category=%q, want %q", findings[0].Category(), CategoryDeadCode)
+	}
+}
+
 func TestDetectClonesParsesGroups(t *testing.T) {
 	fake := writeFakeFossil(t)
 	s := NewScanner(ScannerConfig{
@@ -147,6 +168,28 @@ func TestDetectScaffoldingParsesFindings(t *testing.T) {
 	}
 }
 
+func TestCheckParsesFailureJSONFromStderr(t *testing.T) {
+	fake := writeFakeFossil(t)
+	s := NewScanner(ScannerConfig{
+		Dir:       ".",
+		FossilBin: fake,
+		Timeout:   2 * time.Second,
+	})
+	t.Setenv("FOSSIL_TEST_STDERR", "banner\n{\"dead_code_count\":2,\"clone_count\":0,\"scaffolding_count\":0,\"findings\":[],\"violations\":[{\"category\":\"dead_code\",\"threshold\":0,\"actual\":2,\"message\":\"too many\"}],\"passed\":false,\"diff_scope\":null}\nError: analysis error")
+	t.Setenv("FOSSIL_TEST_EXITCODE", "1")
+
+	report, err := s.Check(context.Background(), CheckOptions{MaxDeadCode: 0})
+	if err != nil {
+		t.Fatalf("Check() error = %v", err)
+	}
+	if report.Passed {
+		t.Fatal("expected failed report")
+	}
+	if len(report.Violations) != 1 || report.Violations[0].Category != "dead_code" {
+		t.Fatalf("unexpected violations: %+v", report.Violations)
+	}
+}
+
 func writeFakeFossil(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
@@ -156,6 +199,10 @@ set -euo pipefail
 if [[ "${FOSSIL_TEST_FAIL:-0}" == "1" ]]; then
   echo "simulated failure" >&2
   exit 7
+fi
+if [[ -n "${FOSSIL_TEST_STDERR:-}" ]]; then
+  printf '%s' "${FOSSIL_TEST_STDERR}" >&2
+  exit "${FOSSIL_TEST_EXITCODE:-1}"
 fi
 if [[ -n "${FOSSIL_TEST_STDOUT:-}" ]]; then
   printf '%s' "${FOSSIL_TEST_STDOUT}"

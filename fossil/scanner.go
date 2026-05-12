@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -111,6 +112,52 @@ func (s *Scanner) run(ctx context.Context, subcommand string, format ScanFormat,
 	}
 
 	return stdout.Bytes(), nil
+}
+
+func (s *Scanner) runCheck(ctx context.Context, extraArgs ...string) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(ctx, s.cfg.Timeout)
+	defer cancel()
+
+	args := []string{"check", s.cfg.Dir, "--format", string(FormatJSON)}
+	args = append(args, extraArgs...)
+	cmd := s.runCmd(ctx, s.cfg.FossilBin, args...)
+	if s.cfg.NoUpdateCheck {
+		cmd.Env = append(os.Environ(), "FOSSIL_NO_UPDATE_CHECK=1")
+	}
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
+	if err == nil {
+		if stdout.Len() == 0 {
+			return nil, fmt.Errorf("fossil check produced empty output")
+		}
+		return stdout.Bytes(), nil
+	}
+
+	combined := stderr.String()
+	jsonBytes := extractJSONObject(combined)
+	if len(jsonBytes) > 0 {
+		return jsonBytes, nil
+	}
+
+	msg := strings.TrimSpace(combined)
+	if msg != "" {
+		return nil, fmt.Errorf("fossil check failed: %w: %s", err, msg)
+	}
+	return nil, fmt.Errorf("fossil check failed: %w", err)
+}
+
+var trailingJSONObjectRE = regexp.MustCompile(`(?s)(\{.*\})`)
+
+func extractJSONObject(text string) []byte {
+	match := trailingJSONObjectRE.FindStringSubmatch(text)
+	if len(match) < 2 {
+		return nil
+	}
+	return []byte(strings.TrimSpace(match[1]))
 }
 
 func validFormat(format ScanFormat) bool {
