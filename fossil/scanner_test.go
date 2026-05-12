@@ -126,6 +126,27 @@ func TestDetectClonesParsesGroups(t *testing.T) {
 	}
 }
 
+func TestDetectScaffoldingParsesFindings(t *testing.T) {
+	fake := writeFakeFossil(t)
+	s := NewScanner(ScannerConfig{
+		Dir:       ".",
+		FossilBin: fake,
+		Timeout:   2 * time.Second,
+	})
+	t.Setenv("FOSSIL_TEST_STDOUT", `[{"rule_id":"SCAFFOLD-placeholder","title":"// TODO: implement real logic","description":"Scaffolding: placeholder","severity":"info","confidence":"high","location":{"file":"main.go","line_start":4,"line_end":4,"column_start":0,"column_end":0},"tags":[],"related_locations":[]}]`)
+
+	findings, err := s.DetectScaffolding(context.Background(), ScaffoldingOptions{IncludeTODOs: true})
+	if err != nil {
+		t.Fatalf("DetectScaffolding() error = %v", err)
+	}
+	if len(findings) != 1 {
+		t.Fatalf("len(findings)=%d, want 1", len(findings))
+	}
+	if findings[0].Category() != CategoryScaffolding {
+		t.Fatalf("Category=%q, want %q", findings[0].Category(), CategoryScaffolding)
+	}
+}
+
 func writeFakeFossil(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
