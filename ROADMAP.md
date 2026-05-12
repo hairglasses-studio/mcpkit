@@ -541,6 +541,7 @@ See the pattern doc for the full `# Adoption checklist`, `# Anti-patterns`, and 
 - [x] Examples landed showing downstream usage in consumers.
 - [x] Wave A adoption landed in `mapitall` and `shopp`; `github-runner-mcp` is now recorded as a policy-driven skip.
 - [x] Wave B adoption landed in `runmylife`, `secretstudios-mcp`, and `hg-mcp`.
+- [x] Wave C adoption landed in `ralphglasses` and `docs`.
 - [x] Investigated inspect/blast-radius support: unsupported in installed `fossil-mcp 0.1.8` CLI, so no typed contract shipped yet.
 
 ### Next executable tranches
@@ -550,5 +551,5 @@ See the pattern doc for the full `# Adoption checklist`, `# Anti-patterns`, and 
    - **Acceptance:** revisit only when a future fossil release exposes a stable machine-readable contract.
 2. **Consumer-side dependency extraction**
    - **Acceptance:** begin replacing direct `mcpkit` runtime dependencies only after fossil-backed audit surfaces are embedded where needed.
-3. **Wave C / broader fleet rollout**
-   - **Acceptance:** apply the same repo-local MCP + roadmap-status pattern only where repo lifecycle policy allows new adoption work.
+3. **Broader fleet rollout after Wave C**
+   - **Acceptance:** apply the same repo-local MCP + roadmap-status pattern only where repo lifecycle policy allows new adoption work, and treat mirror/projection repos separately when `.mcp.json` ownership is ambiguous.
