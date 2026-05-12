@@ -50,16 +50,23 @@ func NewScanner(cfg ...ScannerConfig) *Scanner {
 		runCmd: exec.CommandContext,
 	}
 	if len(cfg) > 0 {
-		s.cfg = cfg[0]
-		if s.cfg.Dir == "" {
-			s.cfg.Dir = "."
+		overrides := cfg[0]
+		if overrides.Dir != "" {
+			s.cfg.Dir = overrides.Dir
 		}
-		if s.cfg.FossilBin == "" {
-			s.cfg.FossilBin = "fossil-mcp"
+		if overrides.FossilBin != "" {
+			s.cfg.FossilBin = overrides.FossilBin
 		}
-		if s.cfg.Timeout == 0 {
-			s.cfg.Timeout = 5 * time.Minute
+		if overrides.Timeout != 0 {
+			s.cfg.Timeout = overrides.Timeout
 		}
+		if !overrides.NoUpdateCheck {
+			// Preserve the documented default of true unless callers
+			// explicitly construct a scanner that wants to override the env
+			// behavior through a custom command runner.
+			overrides.NoUpdateCheck = s.cfg.NoUpdateCheck
+		}
+		s.cfg.NoUpdateCheck = overrides.NoUpdateCheck
 	}
 	return s
 }
@@ -70,10 +77,19 @@ func (s *Scanner) Scan(ctx context.Context, format ScanFormat) ([]byte, error) {
 		return nil, fmt.Errorf("invalid fossil scan format %q", format)
 	}
 
+	return s.run(ctx, "scan", format)
+}
+
+func (s *Scanner) run(ctx context.Context, subcommand string, format ScanFormat, extraArgs ...string) ([]byte, error) {
+	if !validFormat(format) {
+		return nil, fmt.Errorf("invalid fossil scan format %q", format)
+	}
+
 	ctx, cancel := context.WithTimeout(ctx, s.cfg.Timeout)
 	defer cancel()
 
-	args := []string{"scan", s.cfg.Dir, "--format", string(format)}
+	args := []string{subcommand, s.cfg.Dir, "--format", string(format)}
+	args = append(args, extraArgs...)
 	cmd := s.runCmd(ctx, s.cfg.FossilBin, args...)
 	if s.cfg.NoUpdateCheck {
 		cmd.Env = append(os.Environ(), "FOSSIL_NO_UPDATE_CHECK=1")
@@ -91,7 +107,7 @@ func (s *Scanner) Scan(ctx context.Context, format ScanFormat) ([]byte, error) {
 		return nil, fmt.Errorf("fossil scan failed: %w", err)
 	}
 	if stdout.Len() == 0 {
-		return nil, fmt.Errorf("fossil scan produced empty output")
+		return nil, fmt.Errorf("fossil %s produced empty output", subcommand)
 	}
 
 	return stdout.Bytes(), nil
