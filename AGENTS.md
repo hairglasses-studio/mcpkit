@@ -64,6 +64,7 @@ make check-dual          # Full check + official SDK build
 | `feedback` | User feedback collection, anonymous telemetry, opt-in usage tracking | `registry`, `handler` |
 | `frontdoor` | Discovery-first starter: `tool_catalog`, `tool_search`, `tool_schema`, `server_health` mounted on any `ToolRegistry` via `frontdoor.New(reg, opts...)` | `registry`, `handler`, `health` |
 | `cmd` | CLI helpers for server publishing, configuration, management | `discovery`, `registry` |
+| `fossil` | Typed wrappers around `fossil-mcp` scan/clones JSON for dead-code, scaffolding, and duplication workflows | none |
 
 ## Key Conventions
 

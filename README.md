@@ -42,6 +42,7 @@ Built on [github.com/mark3labs/mcp-go](https://github.com/mark3labs/mcp-go), mcp
 - **MCP-A2A bridge** — bidirectional MCP/A2A protocol bridge: expose MCP tools as A2A skills and consume A2A agents as MCP tools (`bridge/a2a`) ([docs](bridge/a2a/README.md))
 - **Multi-protocol gateway** — single HTTP endpoint serving MCP, A2A, and OpenAI function calling via automatic protocol detection and canonical translation (`gateway/multi`) ([docs](gateway/multi/README.md))
 - **Feedback and telemetry collection** — structured in-server feedback plus opt-in anonymous usage/error aggregation and dashboard JSON (`feedback`)
+- **Fossil analysis integration** — typed wrappers for `fossil-mcp` scan/clones output plus informational SARIF upload workflow for dead-code and duplication audits (`fossil`)
 
 ## Quick Start
 
@@ -151,6 +152,7 @@ Migrating from Python FastMCP? Use **[docs/fastmcp-migration-guide.md](docs/fast
 | `a2a` | Lightweight A2A client/server types, task lifecycle, push notification webhooks, and MCP delegation tool | `registry`, `handler` |
 | `bridge/a2a` | Bidirectional MCP/A2A bridge: tool-to-skill translation, agent card generation, bridge executor, remote agent consumer | `registry`, `handler` |
 | `gateway/multi` | Multi-protocol HTTP gateway: MCP, A2A, and OpenAI adapters with auto-detection and canonical translation | `registry` |
+| `fossil` | Typed wrappers around `fossil-mcp` scan/clones JSON for dead-code, scaffolding, and duplication workflows | none |
 
 ## Dependency Layers
 
