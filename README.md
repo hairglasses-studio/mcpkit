@@ -109,6 +109,40 @@ Moving from direct `mcp-go` usage toward the official Go SDK? Use **[docs/sdk-mi
 
 Migrating from Python FastMCP? Use **[docs/fastmcp-migration-guide.md](docs/fastmcp-migration-guide.md)** for decorator-to-`ToolModule` translations covering tools, resources, prompts, and tests.
 
+## Fossil Integration
+
+Use `mcpkit/fossil` when you want typed Go contracts around `fossil-mcp` instead of parsing CLI JSON by hand.
+
+```go
+scanner := fossil.NewScanner(fossil.ScannerConfig{
+    Dir: ".",
+})
+
+report, err := scanner.ScanReport(ctx)
+if err != nil {
+    return err
+}
+
+dead := report.FindingsByCategory(fossil.CategoryDeadCode)
+clones, err := scanner.DetectClones(ctx, fossil.CloneOptions{MinLines: 6})
+if err != nil {
+    return err
+}
+
+check, err := scanner.Check(ctx, fossil.CheckOptions{
+    MaxDeadCode:    10,
+    MaxClones:      5,
+    MaxScaffolding: 0,
+})
+if err != nil {
+    return err
+}
+
+fmt.Println(len(dead), len(clones), check.Passed)
+```
+
+The wrapper currently covers `scan`, `dead-code`, `clones`, `scaffolding`, and `check`, with integration tests against the installed `fossil-mcp` binary.
+
 ## Package Map
 
 | Package | Purpose | Internal Deps |
