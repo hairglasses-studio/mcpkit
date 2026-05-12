@@ -1,0 +1,42 @@
+name: Fossil scan (informational)
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  fossil-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install fossil-mcp
+        run: cargo install fossil-mcp --locked
+
+      - name: Run fossil scan to SARIF (informational)
+        env:
+          FOSSIL_NO_UPDATE_CHECK: "1"
+        run: |
+          fossil-mcp scan . --format sarif --output fossil.sarif
+
+      - name: Upload SARIF artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fossil-sarif
+          path: fossil.sarif
+          if-no-files-found: error
+
+      - name: Upload SARIF to code scanning
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: fossil.sarif
+          category: fossil-mcp
