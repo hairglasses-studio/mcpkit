@@ -1,3 +1,10 @@
 {
-  "mcpServers": {}
+  "mcpServers": {
+    "fossil": {
+      "command": "fossil-mcp",
+      "env": {
+        "FOSSIL_NO_UPDATE_CHECK": "1"
+      }
+    }
+  }
 }
