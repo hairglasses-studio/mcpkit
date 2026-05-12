@@ -74,6 +74,58 @@ func TestScanRejectsInvalidFormat(t *testing.T) {
 	}
 }
 
+func TestScannerDefaultsPersistAcrossPartialConfig(t *testing.T) {
+	s := NewScanner(ScannerConfig{Dir: "/tmp/example"})
+	if s.cfg.Dir != "/tmp/example" {
+		t.Fatalf("Dir=%q, want /tmp/example", s.cfg.Dir)
+	}
+	if !s.cfg.NoUpdateCheck {
+		t.Fatal("NoUpdateCheck default should persist when partial config is provided")
+	}
+}
+
+func TestScanReportParsesFindings(t *testing.T) {
+	fake := writeFakeFossil(t)
+	s := NewScanner(ScannerConfig{
+		Dir:       ".",
+		FossilBin: fake,
+		Timeout:   2 * time.Second,
+	})
+	t.Setenv("FOSSIL_TEST_STDOUT", `[{"rule_id":"DEAD-dead function","title":"unusedOne","description":"never called","severity":"info","confidence":"low","location":{"file":"main.go","line_start":5,"line_end":5,"column_start":0,"column_end":0},"tags":[],"related_locations":[]}]`)
+
+	report, err := s.ScanReport(context.Background())
+	if err != nil {
+		t.Fatalf("ScanReport() error = %v", err)
+	}
+	if len(report.Findings) != 1 {
+		t.Fatalf("len(Findings)=%d, want 1", len(report.Findings))
+	}
+	if report.Findings[0].Category() != CategoryDeadCode {
+		t.Fatalf("Category=%q, want %q", report.Findings[0].Category(), CategoryDeadCode)
+	}
+}
+
+func TestDetectClonesParsesGroups(t *testing.T) {
+	fake := writeFakeFossil(t)
+	s := NewScanner(ScannerConfig{
+		Dir:       ".",
+		FossilBin: fake,
+		Timeout:   2 * time.Second,
+	})
+	t.Setenv("FOSSIL_TEST_STDOUT", `[{"clone_type":"Type3","instances":[{"file":"main.go","start_line":5,"end_line":13,"start_byte":0,"end_byte":0,"function_name":"cloneA"},{"file":"main.go","start_line":14,"end_line":22,"start_byte":0,"end_byte":0,"function_name":"cloneB"}],"similarity":1.0,"hash":null}]`)
+
+	groups, err := s.DetectClones(context.Background(), CloneOptions{MinLines: 3})
+	if err != nil {
+		t.Fatalf("DetectClones() error = %v", err)
+	}
+	if len(groups) != 1 {
+		t.Fatalf("len(groups)=%d, want 1", len(groups))
+	}
+	if got := groups[0].Instances[0].FunctionName; got != "cloneA" {
+		t.Fatalf("FunctionName=%q, want cloneA", got)
+	}
+}
+
 func writeFakeFossil(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
@@ -83,6 +135,10 @@ set -euo pipefail
 if [[ "${FOSSIL_TEST_FAIL:-0}" == "1" ]]; then
   echo "simulated failure" >&2
   exit 7
+fi
+if [[ -n "${FOSSIL_TEST_STDOUT:-}" ]]; then
+  printf '%s' "${FOSSIL_TEST_STDOUT}"
+  exit 0
 fi
 echo "env:${FOSSIL_NO_UPDATE_CHECK:-0}"
 echo "args:$*"
