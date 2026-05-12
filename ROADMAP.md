@@ -534,24 +534,21 @@ See the pattern doc for the full `# Adoption checklist`, `# Anti-patterns`, and 
 
 - [x] Workspace + repo MCP wiring landed (`.mcp.json` + `FOSSIL_NO_UPDATE_CHECK=1`).
 - [x] Local fossil installation verified (`fossil-mcp 0.1.8` on PATH).
-- [x] `mcpkit/fossil` wrapper package landed for `scan`, `dead-code`, `clones`, and `scaffolding`.
+- [x] `mcpkit/fossil` wrapper package landed for `scan`, `dead-code`, `clones`, `scaffolding`, and `check`.
 - [x] CI informational SARIF workflow landed (`.github/workflows/fossil-scan.yml`).
 - [x] Real binary-backed integration test landed for the wrapper package.
-- [ ] Add typed `check` contract with calibrated exit semantics (0 = pass, 1 = threshold violation).
-- [ ] Add examples showing downstream usage in consumer repos.
-- [ ] Start Wave A repo adoption (`mapitall`, `shopp`), then record any skips/exceptions.
+- [x] Typed `check` contract landed with calibrated exit semantics (0 = pass, 1 = threshold violation).
+- [x] Examples landed showing downstream usage in consumers.
+- [x] Wave A adoption landed in `mapitall` and `shopp`; `github-runner-mcp` is now recorded as a policy-driven skip.
+- [x] Wave B adoption landed in `runmylife`, `secretstudios-mcp`, and `hg-mcp`.
+- [x] Investigated inspect/blast-radius support: unsupported in installed `fossil-mcp 0.1.8` CLI, so no typed contract shipped yet.
 
 ### Next executable tranches
 
-1. **Typed `check` wrapper**
-   - **Command contract:** `fossil-mcp check <dir> --format json [threshold flags]`
-   - **Acceptance:** parse JSON even when fossil exits `1` on threshold violation; preserve `violations[]`, `passed`, and count fields.
-   - **Abort criteria:** stop if the installed fossil version changes the output shape or stops emitting machine-readable JSON on failure.
-2. **Wave A proof in one active repo**
-   - **Target:** land fossil MCP config or adoption wiring in one approved consumer repo before broad rollout.
-   - **Acceptance:** repo-local MCP surface remains valid and existing server entries still work.
-   - **Abort criteria:** skip repos whose roadmap/lifecycle policy forbids new adoption work.
-3. **Examples + rollout docs**
-   - **Acceptance:** `README.md` or package examples show how a consumer uses the typed wrapper rather than parsing raw CLI output.
-4. **Wave A expansion**
-   - **Targets:** `mapitall`, `shopp`; record `github-runner-mcp` as a policy-driven skip unless explicitly re-authorized.
+1. **Inspect / blast-radius revisit**
+   - **Current state:** unsupported in installed `fossil-mcp 0.1.8` CLI.
+   - **Acceptance:** revisit only when a future fossil release exposes a stable machine-readable contract.
+2. **Consumer-side dependency extraction**
+   - **Acceptance:** begin replacing direct `mcpkit` runtime dependencies only after fossil-backed audit surfaces are embedded where needed.
+3. **Wave C / broader fleet rollout**
+   - **Acceptance:** apply the same repo-local MCP + roadmap-status pattern only where repo lifecycle policy allows new adoption work.
