@@ -143,6 +143,10 @@ fmt.Println(len(dead), len(clones), check.Passed)
 
 The wrapper currently covers `scan`, `dead-code`, `clones`, `scaffolding`, and `check`, with integration tests against the installed `fossil-mcp` binary.
 
+`fossil-mcp 0.1.8` does **not** expose an `inspect` / `blast-radius` CLI command, so `mcpkit/fossil` deliberately does not ship a typed contract for that surface yet. Add it only after a future fossil release exposes a stable machine-readable contract.
+
+The rollout pattern is now proven in consumer repos: Wave A landed in `mapitall` and `shopp`, Wave B landed in `runmylife`, `secretstudios-mcp`, and `hg-mcp`, and lifecycle-restricted repos like `github-runner-mcp` are recorded as explicit skips instead of receiving silent config drift.
+
 ## Package Map
 
 | Package | Purpose | Internal Deps |
