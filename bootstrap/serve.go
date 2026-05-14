@@ -61,6 +61,7 @@ func Serve(cfg ServerConfig, opts ...Option) error {
 	serverOpts := []server.ServerOption{
 		server.WithToolCapabilities(true),
 		server.WithRecovery(),
+		server.WithStrictInputSchemaDefault(),
 	}
 	if o.resourceRegistry != nil {
 		serverOpts = append(serverOpts, server.WithResourceCapabilities(false, true))
