@@ -2,6 +2,7 @@ package worktree
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -245,6 +246,319 @@ func TestResolveRepoRootAndWorktreeGitDir(t *testing.T) {
 	}
 	if got, err := resolveWorktreeGitDir(inline); err != nil || got != filepath.Join(inline, ".git") {
 		t.Fatalf("resolveWorktreeGitDir(inline) = %q, %v", got, err)
+	}
+}
+
+func TestPreWarmCreatesWorktrees(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	repo := initGitRepo(t)
+	pool := NewPool(4)
+	t.Cleanup(pool.Close)
+
+	created, err := pool.PreWarm(ctx, repo, 3)
+	if err != nil {
+		t.Fatalf("PreWarm() error = %v", err)
+	}
+	if created != 3 {
+		t.Fatalf("PreWarm() created = %d, want 3", created)
+	}
+
+	// Verify worktrees exist on disk.
+	rp, err := pool.getOrCreateRepoPool(ctx, repo)
+	if err != nil {
+		t.Fatalf("repo pool: %v", err)
+	}
+	rp.mu.Lock()
+	idle := len(rp.idle)
+	var paths []string
+	for _, e := range rp.idle {
+		paths = append(paths, e.Path)
+	}
+	rp.mu.Unlock()
+
+	if idle != 3 {
+		t.Fatalf("idle count = %d, want 3", idle)
+	}
+	for _, p := range paths {
+		if !pathExists(p) {
+			t.Fatalf("pre-warmed worktree does not exist: %s", p)
+		}
+	}
+}
+
+func TestPreWarmRespectsPoolSize(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	repo := initGitRepo(t)
+	pool := NewPool(2)
+	t.Cleanup(pool.Close)
+
+	created, err := pool.PreWarm(ctx, repo, 5)
+	if err != nil {
+		t.Fatalf("PreWarm() error = %v", err)
+	}
+	if created != 2 {
+		t.Fatalf("PreWarm() created = %d, want 2 (pool max)", created)
+	}
+
+	// Second PreWarm should be a no-op.
+	created2, err := pool.PreWarm(ctx, repo, 5)
+	if err != nil {
+		t.Fatalf("PreWarm() second call error = %v", err)
+	}
+	if created2 != 0 {
+		t.Fatalf("PreWarm() second call created = %d, want 0", created2)
+	}
+}
+
+func TestPreWarmOnClosedPool(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	repo := initGitRepo(t)
+	pool := NewPool(2)
+	pool.Close()
+
+	if _, err := pool.PreWarm(ctx, repo, 1); err == nil {
+		t.Fatal("PreWarm() on closed pool succeeded")
+	}
+}
+
+func TestAcquireReturnsPreWarmedWorktree(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	repo := initGitRepo(t)
+	pool := NewPool(4)
+	t.Cleanup(pool.Close)
+
+	created, err := pool.PreWarm(ctx, repo, 2)
+	if err != nil {
+		t.Fatalf("PreWarm() error = %v", err)
+	}
+	if created != 2 {
+		t.Fatalf("PreWarm() created = %d, want 2", created)
+	}
+
+	// Acquire should return a pre-warmed worktree (LIFO).
+	rp, _ := pool.getOrCreateRepoPool(ctx, repo)
+	rp.mu.Lock()
+	expectedPath := rp.idle[len(rp.idle)-1].Path
+	rp.mu.Unlock()
+
+	wtPath, _, err := pool.Acquire(ctx, repo)
+	if err != nil {
+		t.Fatalf("Acquire() error = %v", err)
+	}
+	if wtPath != expectedPath {
+		t.Fatalf("Acquire() path = %q, want pre-warmed %q", wtPath, expectedPath)
+	}
+
+	// Pool should have 1 idle left.
+	if got := pool.Size(ctx, repo); got != 1 {
+		t.Fatalf("Size() = %d after one acquire, want 1", got)
+	}
+}
+
+func TestAcquireOnDemandWhenPoolEmpty(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	repo := initGitRepo(t)
+	pool := NewPool(4)
+	t.Cleanup(pool.Close)
+
+	// Don't pre-warm — acquire should create on-demand.
+	if got := pool.Size(ctx, repo); got != 0 {
+		t.Fatalf("Size() = %d before any warm, want 0", got)
+	}
+
+	wtPath, branch, err := pool.Acquire(ctx, repo)
+	if err != nil {
+		t.Fatalf("Acquire() error = %v", err)
+	}
+	if wtPath == "" || branch == "" {
+		t.Fatalf("Acquire() returned empty path=%q branch=%q", wtPath, branch)
+	}
+	if !pathExists(wtPath) {
+		t.Fatalf("on-demand worktree does not exist: %s", wtPath)
+	}
+}
+
+func TestReleaseReturnsToPool(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	repo := initGitRepo(t)
+	pool := NewPool(4)
+	t.Cleanup(pool.Close)
+
+	wtPath, _, err := pool.Acquire(ctx, repo)
+	if err != nil {
+		t.Fatalf("Acquire() error = %v", err)
+	}
+
+	if got := pool.Size(ctx, repo); got != 0 {
+		t.Fatalf("Size() = %d after acquire, want 0", got)
+	}
+
+	pool.Release(ctx, repo, wtPath)
+
+	if got := pool.Size(ctx, repo); got != 1 {
+		t.Fatalf("Size() = %d after release, want 1", got)
+	}
+}
+
+func TestConcurrentAcquireRelease(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	repo := initGitRepo(t)
+	pool := NewPool(8)
+	t.Cleanup(pool.Close)
+
+	// Pre-warm 4 worktrees.
+	created, err := pool.PreWarm(ctx, repo, 4)
+	if err != nil {
+		t.Fatalf("PreWarm() error = %v", err)
+	}
+	if created != 4 {
+		t.Fatalf("PreWarm() created = %d, want 4", created)
+	}
+
+	// Launch 8 goroutines that acquire and release.
+	const goroutines = 8
+	errCh := make(chan error, goroutines)
+
+	for i := 0; i < goroutines; i++ {
+		go func() {
+			wt, _, err := pool.Acquire(ctx, repo)
+			if err != nil {
+				errCh <- fmt.Errorf("Acquire: %w", err)
+				return
+			}
+			// Simulate brief work.
+			time.Sleep(5 * time.Millisecond)
+			pool.Release(ctx, repo, wt)
+			errCh <- nil
+		}()
+	}
+
+	for i := 0; i < goroutines; i++ {
+		if err := <-errCh; err != nil {
+			t.Fatalf("concurrent goroutine failed: %v", err)
+		}
+	}
+
+	// All should have been returned; pool should have idle worktrees.
+	idle := pool.Size(ctx, repo)
+	if idle == 0 {
+		t.Fatal("Size() = 0 after all releases, expected some idle worktrees")
+	}
+}
+
+func TestDrainRemovesAvailableWorktrees(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	repo := initGitRepo(t)
+	pool := NewPool(4)
+	t.Cleanup(pool.Close)
+
+	created, err := pool.PreWarm(ctx, repo, 3)
+	if err != nil {
+		t.Fatalf("PreWarm() error = %v", err)
+	}
+	if created != 3 {
+		t.Fatalf("PreWarm() created = %d, want 3", created)
+	}
+
+	// Collect paths for existence check after drain.
+	rp, _ := pool.getOrCreateRepoPool(ctx, repo)
+	rp.mu.Lock()
+	var paths []string
+	for _, e := range rp.idle {
+		paths = append(paths, e.Path)
+	}
+	rp.mu.Unlock()
+
+	pool.Drain(ctx, repo)
+
+	if got := pool.Size(ctx, repo); got != 0 {
+		t.Fatalf("Size() after Drain = %d, want 0", got)
+	}
+
+	// Verify worktrees are removed from disk.
+	for _, p := range paths {
+		if pathExists(p) {
+			t.Fatalf("drained worktree still exists: %s", p)
+		}
+	}
+
+	// Pool is still open — can PreWarm again.
+	created2, err := pool.PreWarm(ctx, repo, 1)
+	if err != nil {
+		t.Fatalf("PreWarm() after Drain error = %v", err)
+	}
+	if created2 != 1 {
+		t.Fatalf("PreWarm() after Drain created = %d, want 1", created2)
+	}
+}
+
+func TestSizeReturnsCorrectCounts(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	repo := initGitRepo(t)
+	pool := NewPool(4)
+	t.Cleanup(pool.Close)
+
+	// Before any warming.
+	if got := pool.Size(ctx, repo); got != 0 {
+		t.Fatalf("Size() empty pool = %d, want 0", got)
+	}
+
+	// After warming.
+	pool.PreWarm(ctx, repo, 2)
+	if got := pool.Size(ctx, repo); got != 2 {
+		t.Fatalf("Size() after warm = %d, want 2", got)
+	}
+
+	// After acquire.
+	pool.Acquire(ctx, repo)
+	if got := pool.Size(ctx, repo); got != 1 {
+		t.Fatalf("Size() after acquire = %d, want 1", got)
+	}
+
+	// Closed pool.
+	pool.Close()
+	if got := pool.Size(ctx, repo); got != 0 {
+		t.Fatalf("Size() closed pool = %d, want 0", got)
+	}
+}
+
+func TestAllStats(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	repo := initGitRepo(t)
+	pool := NewPool(4)
+	t.Cleanup(pool.Close)
+
+	pool.PreWarm(ctx, repo, 2)
+
+	stats := pool.AllStats()
+	if len(stats) != 1 {
+		t.Fatalf("AllStats() len = %d, want 1", len(stats))
+	}
+	if stats[0].IdleCount != 2 {
+		t.Fatalf("AllStats()[0].IdleCount = %d, want 2", stats[0].IdleCount)
+	}
+	if stats[0].PoolSize != 4 {
+		t.Fatalf("AllStats()[0].PoolSize = %d, want 4", stats[0].PoolSize)
 	}
 }
 

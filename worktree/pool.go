@@ -245,6 +245,121 @@ func (wp *WorktreePool) Close() {
 	}
 }
 
+// PreWarm pre-creates worktrees for the given repo, returning how many were
+// actually created. Unlike Warm (which returns only an error), this variant
+// reports the creation count so callers can log pool fill progress.
+func (wp *WorktreePool) PreWarm(ctx context.Context, repoPath string, count int) (int, error) {
+	if wp.closed.Load() {
+		return 0, fmt.Errorf("worktree pool is closed")
+	}
+
+	rp, err := wp.getOrCreateRepoPool(ctx, repoPath)
+	if err != nil {
+		return 0, err
+	}
+
+	rp.mu.Lock()
+	existing := len(rp.idle)
+	rp.mu.Unlock()
+
+	need := count - existing
+	if need <= 0 {
+		return 0, nil
+	}
+	if existing+need > wp.poolSize {
+		need = wp.poolSize - existing
+	}
+	if need <= 0 {
+		return 0, nil
+	}
+
+	var created int
+	for i := 0; i < need; i++ {
+		if ctx.Err() != nil {
+			break
+		}
+		path, branch, err := wp.createFreshWorktree(ctx, rp.repoRoot)
+		if err != nil {
+			slog.Warn("prewarm: failed to create worktree", "repo", rp.repoRoot, "error", err)
+			continue
+		}
+
+		rp.mu.Lock()
+		if len(rp.idle) < wp.poolSize {
+			rp.idle = append(rp.idle, poolEntry{Path: path, Branch: branch, CreatedAt: time.Now()})
+			created++
+		} else {
+			wp.destroyWorktree(rp.repoRoot, path)
+		}
+		rp.mu.Unlock()
+	}
+
+	slog.Info("pre-warmed worktree pool", "repo", rp.repoRoot, "created", created, "total_idle", existing+created)
+	return created, nil
+}
+
+// Size returns the number of idle (available) worktrees for the given repo.
+// Returns 0 if the repo has no pool entries or the pool is closed.
+func (wp *WorktreePool) Size(ctx context.Context, repoPath string) int {
+	if wp.closed.Load() {
+		return 0
+	}
+
+	rp, err := wp.getOrCreateRepoPool(ctx, repoPath)
+	if err != nil {
+		return 0
+	}
+
+	rp.mu.Lock()
+	n := len(rp.idle)
+	rp.mu.Unlock()
+	return n
+}
+
+// Drain removes all idle worktrees for the given repo without closing the pool.
+// Unlike Close(), the pool remains open for future Acquire/PreWarm calls.
+func (wp *WorktreePool) Drain(ctx context.Context, repoPath string) {
+	if wp.closed.Load() {
+		return
+	}
+
+	rp, err := wp.getOrCreateRepoPool(ctx, repoPath)
+	if err != nil {
+		return
+	}
+
+	rp.mu.Lock()
+	entries := rp.idle
+	rp.idle = make([]poolEntry, 0, wp.poolSize)
+	rp.mu.Unlock()
+
+	for _, e := range entries {
+		wp.destroyWorktree(rp.repoRoot, e.Path)
+	}
+
+	slog.Info("drained worktree pool", "repo", rp.repoRoot, "removed", len(entries))
+}
+
+// AllStats returns pool statistics for every repo that has an active pool.
+func (wp *WorktreePool) AllStats() []Stats {
+	wp.mu.Lock()
+	reposCopy := make(map[string]*repoPool, len(wp.repos))
+	maps.Copy(reposCopy, wp.repos)
+	wp.mu.Unlock()
+
+	stats := make([]Stats, 0, len(reposCopy))
+	for _, rp := range reposCopy {
+		rp.mu.Lock()
+		stats = append(stats, Stats{
+			RepoPath:  rp.repoRoot,
+			IdleCount: len(rp.idle),
+			PoolSize:  wp.poolSize,
+		})
+		rp.mu.Unlock()
+	}
+	return stats
+}
+
 func (wp *WorktreePool) getOrCreateRepoPool(ctx context.Context, repoPath string) (*repoPool, error) {
 	root, err := resolveRepoRoot(ctx, repoPath)
 	if err != nil {
