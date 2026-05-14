@@ -108,7 +108,7 @@ func TestSocketSession_ClientCapabilities(t *testing.T) {
 	}
 
 	cc := mcp.ClientCapabilities{
-		Sampling: &struct{}{},
+		Sampling: &mcp.SamplingCapability{},
 	}
 	ss.SetClientCapabilities(cc)
 	got := ss.GetClientCapabilities()
