@@ -2,6 +2,10 @@
 
 > Canonical instructions: AGENTS.md
 
+> **COMPATIBILITY-ONLY.** Active mcpkit framework work has moved into
+> `ralphglasses` as internal components. Keep this repo limited to compatibility
+> reference, historical docs, and narrow redirect fixes.
+
 Use this file as the canonical instruction surface for Codex-first repo guidance. [CLAUDE.md](CLAUDE.md) and [GEMINI.md](GEMINI.md) are compatibility mirrors.
 
 MCP toolkit for building production-grade MCP servers. Built on `github.com/mark3labs/mcp-go`.
