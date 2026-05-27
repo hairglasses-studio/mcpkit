@@ -6,17 +6,5 @@
       "GEMINI.md"
     ]
   },
-  "mcp": {
-    "allowed": [
-      "fossil"
-    ]
-  },
-  "mcpServers": {
-    "fossil": {
-      "command": "fossil-mcp",
-      "env": {
-        "FOSSIL_NO_UPDATE_CHECK": "1"
-      }
-    }
-  }
+  "mcpServers": {}
 }
