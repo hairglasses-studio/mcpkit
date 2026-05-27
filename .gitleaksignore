@@ -1,0 +1,8 @@
+5ef515d952f81dff8aeac95fb8ef523857d7e4ad:registry/metadata.go:generic-api-key:3
+f0231d2a0c50115717c1c31878ad22f283892837:sanitize/patterns_test.go:generic-api-key:36
+9a2a61c08687c6e4208ab018e65ddf64bc7e1efd:secrets/sanitize_test.go:generic-api-key:153
+9a2a61c08687c6e4208ab018e65ddf64bc7e1efd:secrets/sanitize_test.go:generic-api-key:169
+registry/metadata.go:generic-api-key:3
+sanitize/patterns_test.go:generic-api-key:36
+secrets/sanitize_test.go:generic-api-key:153
+secrets/sanitize_test.go:generic-api-key:169
