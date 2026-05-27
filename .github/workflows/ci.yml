@@ -27,7 +27,8 @@ jobs:
 
   official-sdk:
     name: Official SDK build tag
-    runs-on: ubuntu-latest
+    runs-on:
+      group: Internal-Arch
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -38,7 +39,8 @@ jobs:
 
   benchmark-regression:
     name: Benchmark regression guard
-    runs-on: ubuntu-latest
+    runs-on:
+      group: Internal-Arch
     if: github.event_name == 'pull_request'
     steps:
       - name: Checkout PR head
