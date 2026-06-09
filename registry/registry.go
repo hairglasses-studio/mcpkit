@@ -65,6 +65,10 @@ type ToolDefinition struct {
 	// PreFetchKeywords are search terms that trigger automatic pre-fetching
 	// of this tool when they appear in the current task context.
 	PreFetchKeywords []string
+	// Title is an optional human-readable title override. When set, it takes
+	// precedence over the auto-generated title derived from the tool name.
+	// If empty, ApplyMCPAnnotations generates a title from the tool name.
+	Title string
 }
 
 // ToolModule is the interface that tool modules implement.

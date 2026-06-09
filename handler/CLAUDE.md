@@ -1,25 +1,13 @@
-# handler
+# Agent Instructions
 
-Helpers for building MCP tool handlers. Depends only on `registry`.
+This repo uses [AGENTS.md](AGENTS.md) as the canonical instruction file. Read it before making changes.
 
-## Key Patterns
+## Notes
 
-- **TypedHandler**: `handler.TypedHandler[In, Out](name, desc, fn)` — auto-generates input/output schemas from Go structs via `jsonschema` tags
-- **Param extraction (optional)**: `GetStringParam`, `GetIntParam`, `GetBoolParam`, `GetFloatParam`, `GetStringArrayParam`, `HasParam` — all nil-safe, return zero/default on missing
-- **Param extraction (required)**: `RequireStringParam(req, name) (string, *CallToolResult)` and `RequireIntParam(req, name) (int, *CallToolResult)` — return a pre-built error result when the param is missing/empty/invalid. Prefer these over manual `if value == "" { return ErrorResult(...) }` blocks; downstream MCP servers (hg-mcp, jellyfin-mcp-deluxe, shielddd) have ~hundreds of those copy-pasted today and should migrate.
-- **Result builders**: `TextResult`, `JSONResult`, `ErrorResult`, `CodedErrorResult`, `ActionableErrorResult`, `StructuredResult`
-- **Content helpers**: `content.go` — image/audio/resource content builders with MIME detection
-- **Elicitation**: `ElicitForm(msg, schema)`, `ElicitURL(msg, id, url)`, `ElicitFormSchema(fields...)` — builds MCP elicitation params
+- Use [AGENTS.md](AGENTS.md) for build, test, architecture, and repo-specific conventions.
+- Keep `CLAUDE.md`, `GEMINI.md`, and `.github/copilot-instructions.md` as thin compatibility mirrors.
+- Add specific notes here only when they cannot live in [AGENTS.md](AGENTS.md).
 
-## Struct Tags for TypedHandler
+## Summary
 
-```go
-type Input struct {
-    Query string `json:"query" jsonschema:"required,description=Search query"`
-    Limit int    `json:"limit,omitempty" jsonschema:"description=Max results"`
-}
-```
-
-## Error Code Constants
-
-`ErrClientInit`, `ErrInvalidParam`, `ErrTimeout`, `ErrNotFound`, `ErrAPIError`, `ErrPermission` — defined in `result.go`
+> Canonical instructions: AGENTS.md

@@ -39,6 +39,40 @@ func (d *DynamicRegistry) notify() {
 	}
 }
 
+// Notify triggers all registered change notifiers without modifying the tool
+// set. Use this to signal clients after manually updating deferred flags via
+// SetDeferred so that tools/list_changed notifications are emitted correctly.
+func (d *DynamicRegistry) Notify() { d.notify() }
+
+// LoadGroup undefers all named tools and re-registers them on the MCP server
+// with their full schemas. It then calls Notify so the client receives a
+// tools/list_changed notification and can re-fetch the updated tool list.
+//
+// This is the primary mechanism behind dotfiles_load_tool_group: call it once
+// with a group's tool names and an MCPServer reference to make that group's
+// schemas visible to Claude without a server restart.
+func (d *DynamicRegistry) LoadGroup(s *MCPServer, toolNames []string) int {
+	loaded := 0
+	for _, name := range toolNames {
+		if !d.IsDeferred(name) {
+			continue // already eager — skip
+		}
+		d.SetDeferred(name, false)
+		td, ok := d.GetTool(name)
+		if !ok {
+			continue
+		}
+		annotated := ApplyToolMetadata(td, d.config.ToolNamePrefix, false)
+		wrapped := d.wrapHandler(name, td)
+		AddToolToServer(s, annotated.Tool, wrapped)
+		loaded++
+	}
+	if loaded > 0 {
+		d.notify()
+	}
+	return loaded
+}
+
 // AddTool registers a single tool at runtime and notifies listeners.
 func (d *DynamicRegistry) AddTool(td ToolDefinition) {
 	d.mu.Lock()

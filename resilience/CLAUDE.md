@@ -1,13 +1,13 @@
-# resilience
+# Agent Instructions
 
-Fault-tolerance primitives. Depends only on `registry`.
+This repo uses [AGENTS.md](AGENTS.md) as the canonical instruction file. Read it before making changes.
 
-## Components
+## Notes
 
-- **CircuitBreaker** (`circuit.go`): states Closed→Open→HalfOpen, configurable thresholds/timeouts, `CircuitBreakerRegistry` for per-service instances
-- **RateLimiter** (`ratelimit.go`): token bucket with `Wait(ctx)`, `RateLimitRegistry` for per-service instances
-- **CacheEntry[T]** (`cache.go`): generic TTL cache with `GetOrFetch(ctx, fetchFn)`, serialized concurrent fetches
-- **ErrorRecovery** (`error_recovery.go`): 12-Factor Agent Factor 9 — catches tool errors, classifies them (TIMEOUT/NETWORK/RATE_LIMITED/PERMISSION/NOT_FOUND/CIRCUIT_OPEN/CANCELLED/TRANSIENT), formats compact LLM-readable messages with recovery hints, auto-retries with configurable `ShouldRetry`/`MaxRetries`/`RetryDelay`, escalation callback when retries exhausted. Always returns `(*CallToolResult, nil)` — never `(nil, error)`.
-- **Middleware** (`middleware.go`): `RateLimitMiddleware(reg)` and `CircuitBreakerMiddleware(reg)` — both no-op if tool has no `CircuitBreakerGroup`
+- Use [AGENTS.md](AGENTS.md) for build, test, architecture, and repo-specific conventions.
+- Keep `CLAUDE.md`, `GEMINI.md`, and `.github/copilot-instructions.md` as thin compatibility mirrors.
+- Add specific notes here only when they cannot live in [AGENTS.md](AGENTS.md).
 
-All types use `sync.RWMutex` for thread safety.
+## Summary
+
+> Canonical instructions: AGENTS.md

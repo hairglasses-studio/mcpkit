@@ -27,8 +27,13 @@ func InferIsWrite(name string) bool {
 
 // ApplyMCPAnnotations applies MCP 2025 annotations based on tool metadata.
 // The prefix is stripped from tool names when generating human-readable titles.
+// If td.Title is set, it is used directly instead of the auto-generated title.
 func ApplyMCPAnnotations(td ToolDefinition, prefix string) ToolDefinition {
-	td.Tool.Annotations.Title = toolNameToTitle(td.Tool.Name, prefix)
+	if td.Title != "" {
+		td.Tool.Annotations.Title = td.Title
+	} else {
+		td.Tool.Annotations.Title = toolNameToTitle(td.Tool.Name, prefix)
+	}
 
 	readOnly := !td.IsWrite
 

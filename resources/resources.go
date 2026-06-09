@@ -32,6 +32,12 @@ type ResourceDefinition struct {
 	Tags     []string
 	// CacheTTL is how long clients should cache this resource. Zero means no caching hint.
 	CacheTTL time.Duration
+	// Audience declares the intended consumers of this resource per the MCP spec.
+	// Common values: "assistant", "user". Empty means no annotation.
+	Audience []string
+	// Priority is a hint for the relative importance of this resource (0.0–1.0).
+	// Higher values indicate higher priority. Zero means no annotation.
+	Priority float64
 }
 
 // TemplateDefinition represents a resource template with metadata.
