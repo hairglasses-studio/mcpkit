@@ -217,6 +217,13 @@ func SetToolDeferLoading(tool *Tool, deferred bool) {
 	_ = deferred
 }
 
+// SetToolTitle sets the top-level Tool.Title field when the SDK supports it.
+func SetToolTitle(tool *Tool, title string) {
+	if tool.Title == "" {
+		tool.Title = title
+	}
+}
+
 // ExtractTextContent extracts the text from a Content value if it is a TextContent.
 func ExtractTextContent(c Content) (string, bool) {
 	tc, ok := c.(*mcp.TextContent)

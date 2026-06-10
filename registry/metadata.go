@@ -1,9 +1,12 @@
 package registry
 
-const anthropicMaxResultSizeMetaKey = "anthropic/maxResultSizeChars"
+const (
+	anthropicMaxResultSizeMetaKey = "anthropic/maxResultSizeChars"
+	anthropicAlwaysLoadMetaKey    = "anthropic/alwaysLoad"
+)
 
 // ApplyToolMetadata applies annotations plus any descriptor-level metadata such
-// as output schema, max-result hints, and defer-loading flags.
+// as output schema, max-result hints, always-load flags, and defer-loading flags.
 func ApplyToolMetadata(td ToolDefinition, prefix string, forceDeferred bool) ToolDefinition {
 	td = ApplyMCPAnnotations(td, prefix)
 
@@ -12,6 +15,9 @@ func ApplyToolMetadata(td ToolDefinition, prefix string, forceDeferred bool) Too
 	}
 	if td.MaxResultChars > 0 {
 		SetToolMetaField(&td.Tool, anthropicMaxResultSizeMetaKey, td.MaxResultChars)
+	}
+	if td.AlwaysLoad {
+		SetToolMetaField(&td.Tool, anthropicAlwaysLoadMetaKey, true)
 	}
 
 	SetToolDeferLoading(&td.Tool, forceDeferred || td.DeferLoading)

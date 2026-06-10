@@ -204,6 +204,15 @@ func SetToolDeferLoading(tool *Tool, deferred bool) {
 	tool.DeferLoading = deferred
 }
 
+// SetToolTitle sets the top-level Tool.Title field when the SDK supports it.
+// In mcp-go v0.54.1+ this is a first-class field. For older SDK versions that
+// lack the field, this is a no-op (handled by the SDK-specific compat file).
+func SetToolTitle(tool *Tool, title string) {
+	if tool.Title == "" {
+		tool.Title = title
+	}
+}
+
 // Task status constants re-exported for convenience.
 const (
 	TaskStatusWorking       = mcp.TaskStatusWorking

@@ -65,6 +65,11 @@ type ToolDefinition struct {
 	// PreFetchKeywords are search terms that trigger automatic pre-fetching
 	// of this tool when they appear in the current task context.
 	PreFetchKeywords []string
+	// AlwaysLoad marks this tool so that it is always included in the LLM
+	// context even when deferred tool loading is active. Setting this to
+	// true causes ApplyToolMetadata to inject the
+	// "anthropic/alwaysLoad" = true field into the tool's _meta object.
+	AlwaysLoad bool
 }
 
 // ToolModule is the interface that tool modules implement.

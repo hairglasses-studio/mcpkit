@@ -76,6 +76,7 @@ func (m *Module) catalogTool() registry.ToolDefinition {
 	)
 	td.Category = CategoryDiscovery
 	td.Tags = []string{"catalog", "discovery", "frontdoor"}
+	td.AlwaysLoad = true
 	return td
 }
 
@@ -132,6 +133,7 @@ func (m *Module) searchTool() registry.ToolDefinition {
 	)
 	td.Category = CategoryDiscovery
 	td.Tags = []string{"search", "discovery", "frontdoor"}
+	td.AlwaysLoad = true
 	return td
 }
 
@@ -174,6 +176,7 @@ func (m *Module) schemaTool() registry.ToolDefinition {
 	)
 	td.Category = CategoryDiscovery
 	td.Tags = []string{"schema", "discovery", "frontdoor"}
+	td.AlwaysLoad = true
 	return td
 }
 
@@ -214,5 +217,6 @@ func (m *Module) healthTool() registry.ToolDefinition {
 	)
 	td.Category = CategoryDiscovery
 	td.Tags = []string{"health", "discovery", "frontdoor"}
+	td.AlwaysLoad = true
 	return td
 }
