@@ -38,7 +38,7 @@ import type { ToolExecutor } from '../tool/executor.js'
  * These values are constant across every `run` / `stream` call.
  */
 export interface RunnerOptions {
-  /** LLM model identifier, e.g. `'gpt-5.4'`. */
+  /** LLM model identifier, e.g. `'gpt-5.5'`. */
   readonly model: string
   /** Optional system prompt prepended to every conversation. */
   readonly systemPrompt?: string
@@ -129,7 +129,7 @@ const ZERO_USAGE: TokenUsage = { input_tokens: 0, output_tokens: 0 }
  * @example
  * ```ts
  * const runner = new AgentRunner(adapter, registry, executor, {
- *   model: 'gpt-5.4',
+ *   model: 'gpt-5.5',
  *   maxTurns: 10,
  * })
  * const result = await runner.run(messages)

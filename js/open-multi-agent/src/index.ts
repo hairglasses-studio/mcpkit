@@ -11,9 +11,9 @@
  *
  * ### Single agent
  * ```ts
- * const orchestrator = new OpenMultiAgent({ defaultModel: 'gpt-5.4' })
+ * const orchestrator = new OpenMultiAgent({ defaultModel: 'gpt-5.5' })
  * const result = await orchestrator.runAgent(
- *   { name: 'assistant', model: 'gpt-5.4' },
+ *   { name: 'assistant', model: 'gpt-5.5' },
  *   'Explain monads in one paragraph.',
  * )
  * console.log(result.output)
@@ -25,8 +25,8 @@
  * const team = orchestrator.createTeam('writers', {
  *   name: 'writers',
  *   agents: [
- *     { name: 'researcher', model: 'gpt-5.4', systemPrompt: 'You research topics thoroughly.' },
- *     { name: 'writer',     model: 'gpt-5.4', systemPrompt: 'You write clear documentation.' },
+ *     { name: 'researcher', model: 'gpt-5.5', systemPrompt: 'You research topics thoroughly.' },
+ *     { name: 'writer',     model: 'gpt-5.5', systemPrompt: 'You write clear documentation.' },
  *   ],
  *   sharedMemory: true,
  * })

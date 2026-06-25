@@ -13,23 +13,21 @@ func TestNormalizeModelName(t *testing.T) {
 	}{
 		// Exact match
 		{"exact claude-opus-4-6", "claude-opus-4-6", "claude-opus-4-6"},
-		{"exact gpt-4o", "gpt-4o", "gpt-4o"},
-		{"exact gemini-2.5-flash", "gemini-2.5-flash", "gemini-2.5-flash"},
+		{"exact gpt-5.5", "gpt-5.5", "gpt-5.5"},
+		{"exact gemini-3.1-pro", "gemini-3.1-pro", "gemini-3.1-pro"},
 
 		// Alias match
 		{"alias opus", "opus", "claude-opus-4-6"},
 		{"alias sonnet", "sonnet", "claude-sonnet-4-6"},
-		{"alias haiku", "haiku", "claude-haiku-4-5"},
-		{"alias gpt4o", "gpt4o", "gpt-4o"},
 		{"alias o1-preview", "o1-preview", "o1"},
-		{"alias gemini-flash", "gemini-flash", "gemini-2.5-flash"},
+		{"alias gemini-pro", "gemini-pro", "gemini-3.1-pro"},
 		{"alias dated claude", "claude-opus-4-6-20260401", "claude-opus-4-6"},
 
 		// Prefix match
 		{"prefix claude-opus-4-6-something", "claude-opus-4-6-custom", "claude-opus-4-6"},
 
 		// Case insensitivity
-		{"uppercase", "GPT-4O", "gpt-4o"},
+		{"uppercase", "GPT-5.5", "gpt-5.5"},
 		{"mixed case", "Claude-Opus-4-6", "claude-opus-4-6"},
 
 		// Empty
@@ -65,11 +63,11 @@ func TestModelCost(t *testing.T) {
 			want:         15.0 + 7.5, // 15 * 1 + 75 * 0.1
 		},
 		{
-			name:         "gpt-4o via alias",
-			model:        "gpt4o",
+			name:         "gpt-5.5",
+			model:        "gpt-5.5",
 			inputTokens:  500_000,
 			outputTokens: 500_000,
-			want:         2.50*0.5 + 10.0*0.5, // 1.25 + 5.0
+			want:         2.50*0.5 + 15.0*0.5, // 1.25 + 7.5
 		},
 		{
 			name:         "unknown model returns 0",
@@ -102,10 +100,9 @@ func TestDefaultPricingCompleteness(t *testing.T) {
 	required := []string{
 		"claude-opus-4-6",
 		"claude-sonnet-4-6",
-		"claude-haiku-4-5",
-		"gpt-4o",
-		"gemini-2.5-flash",
-		"gemini-2.5-pro",
+		"claude-sonnet-4-6",
+		"gpt-5.5",
+		"gemini-3.1-pro",
 		"o3-mini",
 		"codex-mini-latest",
 	}

@@ -24,7 +24,7 @@
  *
  * const adapter = new OpenAIAdapter()
  * const response = await adapter.chat(messages, {
- *   model: 'gpt-5.4',
+ *   model: 'gpt-5.5',
  *   maxTokens: 1024,
  * })
  * ```

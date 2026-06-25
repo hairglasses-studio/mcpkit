@@ -136,7 +136,7 @@ function buildCustomAgent(
 
 const researcherConfig: AgentConfig = {
   name: 'researcher',
-  model: 'gpt-5.4',
+  model: 'gpt-5.5',
   provider: 'openai',
   systemPrompt: `You are a financial data researcher.
 Use the get_exchange_rate tool to fetch current rates between the currency pairs you are given.
@@ -148,7 +148,7 @@ Return the raw rates as a JSON object keyed by pair, e.g. { "USD/EUR": 0.91, "US
 
 const analystConfig: AgentConfig = {
   name: 'analyst',
-  model: 'gpt-5.4',
+  model: 'gpt-5.5',
   provider: 'openai',
   systemPrompt: `You are a foreign exchange analyst.
 You receive exchange rate data and produce a short briefing.

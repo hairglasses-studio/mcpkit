@@ -11,7 +11,7 @@ func TestCostPolicy_EstimateCost(t *testing.T) {
 
 	cp := NewCostPolicy(
 		WithModelPricing(ModelPricing{
-			Model:             "gpt-4",
+			Model:             "gpt-5.5",
 			InputPer1KTokens:  0.03,
 			OutputPer1KTokens: 0.06,
 		}),
@@ -20,7 +20,7 @@ func TestCostPolicy_EstimateCost(t *testing.T) {
 	// 1000 input tokens at $0.03/1K = $0.03
 	// 500 output tokens at $0.06/1K = $0.03
 	// total = $0.06
-	cost := cp.EstimateCost("gpt-4", 1000, 500)
+	cost := cp.EstimateCost("gpt-5.5", 1000, 500)
 	if cost < 0.059 || cost > 0.061 {
 		t.Errorf("expected cost ~0.06, got %f", cost)
 	}
@@ -41,7 +41,7 @@ func TestCostPolicy_EstimateCost_EmptyModel(t *testing.T) {
 
 	cp := NewCostPolicy(
 		WithModelPricing(ModelPricing{
-			Model:            "gpt-4",
+			Model:            "gpt-5.5",
 			InputPer1KTokens: 0.03,
 		}),
 	)

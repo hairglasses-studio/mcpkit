@@ -13,7 +13,7 @@
  * ```ts
  * const agent = new Agent({
  *   name: 'researcher',
- *   model: 'gpt-5.4',
+ *   model: 'gpt-5.5',
  *   systemPrompt: 'You are a rigorous research assistant.',
  *   tools: ['web_search', 'read_file'],
  * })

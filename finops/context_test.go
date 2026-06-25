@@ -147,7 +147,7 @@ func TestWithTokenUsage_Overwrite(t *testing.T) {
 	t.Parallel()
 
 	parent := WithTokenUsage(context.Background(), TokenUsage{InputTokens: 10})
-	child := WithTokenUsage(parent, TokenUsage{InputTokens: 99, Model: "gpt-4"})
+	child := WithTokenUsage(parent, TokenUsage{InputTokens: 99, Model: "gpt-5.5"})
 
 	got, ok := TokenUsageFromContext(child)
 	if !ok {
@@ -156,8 +156,8 @@ func TestWithTokenUsage_Overwrite(t *testing.T) {
 	if got.InputTokens != 99 {
 		t.Errorf("expected InputTokens=99 from child, got %d", got.InputTokens)
 	}
-	if got.Model != "gpt-4" {
-		t.Errorf("expected Model=gpt-4 from child, got %q", got.Model)
+	if got.Model != "gpt-5.5" {
+		t.Errorf("expected Model=gpt-5.5 from child, got %q", got.Model)
 	}
 
 	// Parent context should be unchanged.

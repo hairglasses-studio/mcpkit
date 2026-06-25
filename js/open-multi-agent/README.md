@@ -24,13 +24,13 @@ Set `OPENAI_API_KEY` in your environment.
 ```typescript
 import { OpenMultiAgent } from '@jackchen_me/open-multi-agent'
 
-const orchestrator = new OpenMultiAgent({ defaultModel: 'gpt-5.4' })
+const orchestrator = new OpenMultiAgent({ defaultModel: 'gpt-5.5' })
 
 // One agent, one task
 const result = await orchestrator.runAgent(
   {
     name: 'coder',
-    model: 'gpt-5.4',
+    model: 'gpt-5.5',
     tools: ['bash', 'file_write'],
   },
   'Write a TypeScript function that reverses a string, save it to /tmp/reverse.ts, and run it.',
@@ -49,27 +49,27 @@ import type { AgentConfig } from '@jackchen_me/open-multi-agent'
 
 const architect: AgentConfig = {
   name: 'architect',
-  model: 'gpt-5.4',
+  model: 'gpt-5.5',
   systemPrompt: 'You design clean API contracts and file structures.',
   tools: ['file_write'],
 }
 
 const developer: AgentConfig = {
   name: 'developer',
-  model: 'gpt-5.4',
+  model: 'gpt-5.5',
   systemPrompt: 'You implement what the architect designs.',
   tools: ['bash', 'file_read', 'file_write', 'file_edit'],
 }
 
 const reviewer: AgentConfig = {
   name: 'reviewer',
-  model: 'gpt-5.4',
+  model: 'gpt-5.5',
   systemPrompt: 'You review code for correctness and clarity.',
   tools: ['file_read', 'grep'],
 }
 
 const orchestrator = new OpenMultiAgent({
-  defaultModel: 'gpt-5.4',
+  defaultModel: 'gpt-5.5',
   onProgress: (event) => console.log(event.type, event.agent ?? event.task ?? ''),
 })
 
@@ -147,7 +147,7 @@ registry.register(searchTool)
 
 const executor = new ToolExecutor(registry)
 const agent = new Agent(
-  { name: 'researcher', model: 'gpt-5.4', tools: ['web_search'] },
+  { name: 'researcher', model: 'gpt-5.5', tools: ['web_search'] },
   registry,
   executor,
 )
@@ -163,7 +163,7 @@ const result = await agent.run('Find the three most recent TypeScript releases.'
 ```typescript
 const strategist: AgentConfig = {
   name: 'strategist',
-  model: 'gpt-5.4',
+  model: 'gpt-5.5',
   provider: 'openai',
   systemPrompt: 'You plan high-level approaches.',
   tools: ['file_write'],
@@ -171,7 +171,7 @@ const strategist: AgentConfig = {
 
 const implementer: AgentConfig = {
   name: 'implementer',
-  model: 'gpt-5.4',
+  model: 'gpt-5.5',
   provider: 'openai',
   systemPrompt: 'You implement plans as working code.',
   tools: ['bash', 'file_read', 'file_write'],
@@ -199,7 +199,7 @@ registerBuiltInTools(registry)
 const executor = new ToolExecutor(registry)
 
 const agent = new Agent(
-  { name: 'writer', model: 'gpt-5.4', maxTurns: 3 },
+  { name: 'writer', model: 'gpt-5.5', maxTurns: 3 },
   registry,
   executor,
 )

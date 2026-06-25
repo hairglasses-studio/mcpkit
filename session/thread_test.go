@@ -184,7 +184,7 @@ func TestThreadFork(t *testing.T) {
 
 	// Metadata is deep-copied.
 	forkedEvents := forked.Replay()
-	forkedEvents[0].Metadata["model"] = "haiku"
+	forkedEvents[0].Metadata["model"] = "sonnet"
 	originalEvents := th.Replay()
 	if originalEvents[0].Metadata["model"] != "opus" {
 		t.Fatal("fork metadata mutation leaked to original")

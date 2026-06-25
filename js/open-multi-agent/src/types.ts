@@ -340,7 +340,7 @@ export interface LLMStreamOptions extends LLMChatOptions {}
  * @example
  * ```ts
  * const adapter: LLMAdapter = createAdapter('openai')
- * const response = await adapter.chat(messages, { model: 'gpt-5.4' })
+ * const response = await adapter.chat(messages, { model: 'gpt-5.5' })
  * ```
  */
 export interface LLMAdapter {
