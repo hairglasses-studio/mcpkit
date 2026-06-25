@@ -379,7 +379,7 @@ func (r *MultiCycleRunner) runOneCycle(ctx context.Context, cycleNum int, specFi
 // estimateDollarCost converts a UsageSummary to dollar cost using a blended rate.
 // Since the loop uses Opus for plan+implement (the most expensive phases),
 // we use Opus pricing as the conservative upper bound — the actual spend
-// will be lower when haiku handles verify/reflect/report/schedule phases.
+// will be lower when lower-cost Sonnet phases handle verify/reflect/report/schedule phases.
 func estimateDollarCost(us finops.UsageSummary, profile rdcycle.BudgetProfile) float64 {
 	if len(profile.ModelPricing) == 0 {
 		return 0

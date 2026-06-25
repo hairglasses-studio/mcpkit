@@ -17,7 +17,7 @@ type BudgetProfile struct {
 	DailyDollarCap  float64               `json:"daily_dollar_cap"`
 	TokenBudget     int                   `json:"token_budget"`
 	MaxTokensPerReq int                   `json:"max_tokens_per_req"`
-	ModelPricing    []finops.ModelPricing  `json:"model_pricing"`
+	ModelPricing    []finops.ModelPricing `json:"model_pricing"`
 }
 
 // PersonalProfile returns a conservative budget for Claude Max subscription use.
@@ -33,7 +33,6 @@ func PersonalProfile() BudgetProfile {
 		ModelPricing: []finops.ModelPricing{
 			{Model: "claude-opus-4-6", InputPer1KTokens: 0.015, OutputPer1KTokens: 0.075},
 			{Model: "claude-sonnet-4-6", InputPer1KTokens: 0.003, OutputPer1KTokens: 0.015},
-			{Model: "claude-haiku-4-5", InputPer1KTokens: 0.0008, OutputPer1KTokens: 0.004},
 		},
 	}
 }
@@ -51,7 +50,6 @@ func WorkAPIProfile() BudgetProfile {
 		ModelPricing: []finops.ModelPricing{
 			{Model: "claude-opus-4-6", InputPer1KTokens: 0.015, OutputPer1KTokens: 0.075},
 			{Model: "claude-sonnet-4-6", InputPer1KTokens: 0.003, OutputPer1KTokens: 0.015},
-			{Model: "claude-haiku-4-5", InputPer1KTokens: 0.0008, OutputPer1KTokens: 0.004},
 		},
 	}
 }

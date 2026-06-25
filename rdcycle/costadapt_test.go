@@ -58,8 +58,8 @@ func TestCostAdapter_AheadOfPace(t *testing.T) {
 	if adj.MaxTokens != 1024 {
 		t.Errorf("MaxTokens = %d, want 1024", adj.MaxTokens)
 	}
-	if adj.ModelHint != "claude-haiku-4-5-20251001" {
-		t.Errorf("ModelHint = %q, want haiku", adj.ModelHint)
+	if adj.ModelHint != "claude-sonnet-4-6" {
+		t.Errorf("ModelHint = %q, want claude-sonnet-4-6", adj.ModelHint)
 	}
 	if adj.Warning == "" {
 		t.Error("expected non-empty warning")
@@ -145,8 +145,8 @@ func TestCombineSelectors_AdapterOverrides(t *testing.T) {
 	base := func(iter int, ids []string) string { return "sonnet" }
 	combined := CombineSelectors(base, ca, tracker)
 	result := combined(10, nil)
-	if result != "claude-haiku-4-5-20251001" {
-		t.Errorf("expected haiku override, got %q", result)
+	if result != "claude-sonnet-4-6" {
+		t.Errorf("expected sonnet override, got %q", result)
 	}
 }
 

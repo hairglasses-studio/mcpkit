@@ -89,7 +89,7 @@ func ExamplePersonalProfile() {
 	// dollar budget: $5/cycle
 	// daily cap:     $20/day
 	// max iterations: 50
-	// model tiers: 3
+	// model tiers: 2
 	// tracker ready: true
 	// cost policy ready: true
 	// windowed tracker ready: true

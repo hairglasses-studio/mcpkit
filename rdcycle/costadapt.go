@@ -34,7 +34,7 @@ func NewCostAdapter(totalBudget int64, maxIterations int) *CostAdapter {
 	return &CostAdapter{
 		TotalBudget:      totalBudget,
 		MaxIterations:    maxIterations,
-		FallbackModel:    "claude-haiku-4-5-20251001",
+		FallbackModel:    "claude-sonnet-4-6",
 		ReducedMaxTokens: 1024,
 	}
 }

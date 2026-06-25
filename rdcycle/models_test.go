@@ -19,15 +19,15 @@ func TestModelTierConfig_Selector_TaskOverride(t *testing.T) {
 		Default: "claude-opus-4-6",
 		TaskOverrides: map[string]string{
 			"verify": "claude-sonnet-4-6",
-			"scan":   "claude-haiku-4-5",
+			"scan":   "claude-sonnet-4-6",
 		},
 	}
 	sel := cfg.Selector()
 
 	// No tasks completed — first uncompleted is "scan", which has override.
 	model := sel(1, nil)
-	if model != "claude-haiku-4-5" {
-		t.Errorf("model = %q, want claude-haiku-4-5", model)
+	if model != "claude-sonnet-4-6" {
+		t.Errorf("model = %q, want claude-sonnet-4-6", model)
 	}
 
 	// scan completed — next is "plan", no override → default.

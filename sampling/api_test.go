@@ -164,14 +164,14 @@ func TestAPISamplingClient_CreateMessage_ModelFromMetadata(t *testing.T) {
 	}
 
 	msgs := []SamplingMessage{TextMessage("user", "test")}
-	req := CompletionRequest(msgs, WithModel("claude-3-5-haiku"))
+	req := CompletionRequest(msgs, WithModel("claude-sonnet-4-6"))
 
 	_, err := client.CreateMessage(context.Background(), req)
 	if err != nil {
 		t.Fatalf("CreateMessage: %v", err)
 	}
-	if receivedModel != "claude-3-5-haiku" {
-		t.Errorf("expected model claude-3-5-haiku, got %q", receivedModel)
+	if receivedModel != "claude-sonnet-4-6" {
+		t.Errorf("expected model claude-sonnet-4-6, got %q", receivedModel)
 	}
 }
 
