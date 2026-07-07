@@ -17,8 +17,10 @@ func TestNormalizeModelName(t *testing.T) {
 		{"exact gemini-3.1-pro", "gemini-3.1-pro", "gemini-3.1-pro"},
 
 		// Alias match
-		{"alias opus", "opus", "claude-opus-4-6"},
-		{"alias sonnet", "sonnet", "claude-sonnet-4-6"},
+		{"alias opus", "opus", "claude-opus-4-8"},
+		{"alias sonnet", "sonnet", "claude-sonnet-5"},
+		{"alias haiku", "haiku", "claude-haiku-4-5"},
+		{"alias fable", "fable", "claude-fable-5"},
 		{"alias o1-preview", "o1-preview", "o1"},
 		{"alias gemini-pro", "gemini-pro", "gemini-3.1-pro"},
 		{"alias dated claude", "claude-opus-4-6-20260401", "claude-opus-4-6"},
@@ -60,14 +62,14 @@ func TestModelCost(t *testing.T) {
 			model:        "claude-opus-4-6",
 			inputTokens:  1_000_000,
 			outputTokens: 100_000,
-			want:         15.0 + 7.5, // 15 * 1 + 75 * 0.1
+			want:         5.0 + 2.5, // 5 * 1 + 25 * 0.1
 		},
 		{
 			name:         "gpt-5.5",
 			model:        "gpt-5.5",
 			inputTokens:  500_000,
 			outputTokens: 500_000,
-			want:         2.50*0.5 + 15.0*0.5, // 1.25 + 7.5
+			want:         5.0*0.5 + 30.0*0.5, // 2.5 + 15.0
 		},
 		{
 			name:         "unknown model returns 0",
@@ -98,9 +100,14 @@ func TestModelCost(t *testing.T) {
 
 func TestDefaultPricingCompleteness(t *testing.T) {
 	required := []string{
+		"claude-fable-5",
+		"claude-mythos-5",
+		"claude-opus-4-8",
+		"claude-opus-4-7",
 		"claude-opus-4-6",
+		"claude-sonnet-5",
 		"claude-sonnet-4-6",
-		"claude-sonnet-4-6",
+		"claude-haiku-4-5",
 		"gpt-5.5",
 		"gemini-3.1-pro",
 		"o3-mini",
