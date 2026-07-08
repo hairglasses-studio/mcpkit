@@ -1,8 +1,11 @@
 # mcpkit
 
-> **Compatibility-only:** active mcpkit framework work now lives in
-> `ralphglasses` as internal components. This standalone repo is retained for
-> historical reference, compatibility, and redirects.
+> A production-grade Go framework for building Model Context Protocol (MCP)
+> servers: typed handlers, a middleware chain, resilience (circuit breakers,
+> rate limiting, caching), auth (JWT/JWKS, OAuth2.1, DPoP, workload identity),
+> multi-transport (stdio/HTTP/WebSocket/Unix), gateway aggregation, and
+> multi-agent orchestration. Consumed as a dependency across a fleet of
+> production MCP servers.
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/hairglasses-studio/mcpkit.svg)](https://pkg.go.dev/github.com/hairglasses-studio/mcpkit)
 [![Go Report Card](https://goreportcard.com/badge/github.com/hairglasses-studio/mcpkit)](https://goreportcard.com/report/github.com/hairglasses-studio/mcpkit)

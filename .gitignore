@@ -69,3 +69,7 @@ stateless-http
 
 # Build artifacts
 .codex/bin/
+
+# accidentally-committed build binaries (stripped from history 2026-07-08)
+/pagination
+/smoke-matrix

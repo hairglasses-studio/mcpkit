@@ -2,9 +2,9 @@
 
 > Canonical instructions: AGENTS.md
 
-> **COMPATIBILITY-ONLY.** Active mcpkit framework work has moved into
-> `ralphglasses` as internal components. Keep this repo limited to compatibility
-> reference, historical docs, and narrow redirect fixes.
+> mcpkit is the canonical, actively-maintained Go framework for building MCP
+> servers. It is the source of truth for the framework and is consumed as a
+> dependency by multiple production MCP server repos.
 
 Use this file as the canonical instruction surface for Codex-first repo guidance. [CLAUDE.md](CLAUDE.md) and [GEMINI.md](GEMINI.md) are compatibility mirrors.
 
