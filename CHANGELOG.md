@@ -12,16 +12,39 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [v0.7.0] - 2026-07-08
+
+42 commits since v0.6.0 (2026-05-10), starting at commit `4bac7bb` ("docs(migration): add consumer pin status section"). All work is additive (no breaking API changes); minor bump appropriate. Fleet consumers can `go get -u github.com/hairglasses-studio/mcpkit@v0.7.0` cleanly.
+
 ### Added
 
-- **worktree** — Real-git integration tests for pool acquire/release, warmup, stale cleanup, linked-worktree wiring, and error paths; package coverage is now 87.2%.
-- **bootstrap** — Option and server-assembly tests covering module, middleware, resource, prompt, audit, safety-tier, and final serve delegation paths; package coverage is now 95.2%.
-- **device** — Linux provider tests with deterministic filesystem, ioctl, netlink, MIDI, evdev, and Grid serial fixtures; package coverage is now 88.4%.
-- **fossil/** — Initial typed integration package for `fossil-mcp`: scan/scaffolding/clones wrappers, normalized finding categories, SARIF workflow, and binary-backed integration coverage.
+- **middleware/correlation** — Focused correlation-ID + `slog` middleware (C4).
+- **fossil/** — Full typed integration surface built out from the v0.6.0 initial package: scan wrapper, typed result contracts (`contracts.go`, `clones.go`), scaffolding wrapper, end-to-end integration test, `example_test.go`/`doc.go`, and the informational SARIF workflow; multi-wave rollout (Wave B, Wave C) with docs kept in sync.
+- **registry** — `AlwaysLoad` tool flag injects `_meta["anthropic/alwaysLoad"]=true` so discovery front-door tools survive deferred tool loading in Claude Code; `ApplyMCPAnnotations` now also populates the top-level `Tool.Title` field (preferred by MCP spec 2025-06-18) alongside `Annotations.Title`.
+- **worktree** — Pool pre-warming for fast session startup (`feat/scale`).
+- **benchmark** — Middleware overhead comparison vs raw `mcp-go`, plus a p99 benchmark CI guard.
+- **gateway/multi** — `example_test.go` demonstrating protocol detection.
+- **docs** — Observability guide, auth RFC compliance audit (D2+D3), SDK migration guide consumer-pin-status section (G1+G2), and a deferred-items audit findings doc (3 of 4 "deferred" features already shipped).
+- **worktree / bootstrap / device / a2a / embedding** — Expanded test coverage: worktree 0.0%→87.2%, bootstrap 44.2%→95.2%, device 41.3%→88.4%, a2a 69.1%→79.1% (B4 partial), embedding 71.0%→93.3% (B5).
 
 ### Changed
 
-- **ROADMAP.md** — crosspollinate fossil suggestion converted into explicit execution-status and tranche items with acceptance/abort criteria instead of doc-only guidance.
+- **mcp-go** upgraded v0.52.0 → v0.54.0.
+- **bootstrap** — `WithStrictInputSchemaDefault` added to bootstrap defaults (mcp-surface).
+- **finops** — `DefaultPricing` refreshed to current-gen models.
+- **Provider model policy** — rdcycle Claude fallback routed to Sonnet.
+- **CI** — fast PR lane added; workflows routed to local runners; gitleaks fixture fingerprints allowlisted; CI/cycle specs repaired.
+- **Provider surface cleanup** — stale Codex MCP block removed, cline projection removed, local Gemini fossil-mcp server config cleared, redundant `fossil-mcp` entry removed from `.mcp.json` (now workspace-scoped); mcpkit compatibility surfaces reconciled.
+- **ROADMAP.md** — crosspollinate fossil suggestion converted into explicit execution-status and tranche items with acceptance/abort criteria instead of doc-only guidance; coverage claims updated to track the test waves above.
+
+### Fixed
+
+- **README.md / AGENTS.md** — corrected the positioning banner, which had been factually backwards (described mcpkit as a compatibility shim; it is the canonical, actively-maintained MCP-server framework consumed as a dependency across the fleet).
+- Removed 2 accidentally-committed Go binaries (`examples/pagination`, `tools/smoke-matrix`) and gitignored the pattern so it can't recur.
+
+### Internal
+
+- State/unification roadmap checkpoints recorded alongside the above waves.
 
 ## [v0.6.0] - 2026-05-10
 
