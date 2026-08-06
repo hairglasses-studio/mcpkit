@@ -173,6 +173,13 @@ func (cb *CircuitBreaker) recordSuccess() {
 		cb.successes++
 		if cb.successes >= cb.config.SuccessThreshold {
 			cb.transition(CircuitClosed)
+		} else if cb.halfOpenCalls > 0 {
+			// Release this trial's permit so the next probe can run.
+			// Without this, SuccessThreshold > HalfOpenMaxCalls latches the
+			// breaker in half-open rejecting every call forever: no further
+			// call can execute, so neither the success path (close) nor the
+			// failure path (re-open) is ever reachable again.
+			cb.halfOpenCalls--
 		}
 	}
 }

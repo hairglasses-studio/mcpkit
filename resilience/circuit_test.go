@@ -233,3 +233,42 @@ func TestCircuitBreaker_OnCircuitOpenNotCalledForClose(t *testing.T) {
 		t.Errorf("OnCircuitOpen called %d times, want 0", openCalls)
 	}
 }
+
+// Regression: with SuccessThreshold > HalfOpenMaxCalls (the shipped defaults:
+// 2 > 1), the breaker used to latch in half-open after one successful probe —
+// halfOpenCalls stayed maxed, so no further call could execute and neither the
+// close nor re-open transition was ever reachable again. Observed live
+// 2026-08-06: a per-category "opnsense" breaker stayed stuck rejecting every
+// call for 20+ minutes with zero new failures.
+func TestCircuitBreakerHalfOpenRecoversWithDefaults(t *testing.T) {
+	cfg := DefaultCircuitBreakerConfig()
+	cfg.FailureThreshold = 1
+	cfg.Timeout = 10 * time.Millisecond
+	cb := NewCircuitBreaker("test", cfg, nil)
+	ctx := context.Background()
+
+	if err := cb.Execute(ctx, func(context.Context) error { return errors.New("boom") }); err == nil {
+		t.Fatal("expected failure")
+	}
+	if got := cb.State(); got != CircuitOpen {
+		t.Fatalf("state = %v, want open", got)
+	}
+
+	time.Sleep(20 * time.Millisecond)
+
+	// SuccessThreshold successful probes must close the breaker without any
+	// additional Timeout waits between them: each success releases its
+	// half-open permit for the next probe.
+	for i := 0; i < cfg.SuccessThreshold; i++ {
+		if err := cb.Execute(ctx, func(context.Context) error { return nil }); err != nil {
+			t.Fatalf("probe %d rejected: %v (breaker latched in half-open)", i+1, err)
+		}
+	}
+	if got := cb.State(); got != CircuitClosed {
+		t.Fatalf("state after %d successful probes = %v, want closed", cfg.SuccessThreshold, got)
+	}
+
+	if err := cb.Execute(ctx, func(context.Context) error { return nil }); err != nil {
+		t.Fatalf("call after recovery rejected: %v", err)
+	}
+}
