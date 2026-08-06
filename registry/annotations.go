@@ -39,23 +39,29 @@ func ApplyMCPAnnotations(td ToolDefinition, prefix string) ToolDefinition {
 	destructive := false
 	if td.IsWrite {
 		nameLower := strings.ToLower(td.Tool.Name)
-		for _, suffix := range []string{"_delete", "_remove", "_reset", "_purge", "_clear", "_flush", "_destroy"} {
+		for _, suffix := range []string{"_delete", "_remove", "_reset", "_purge", "_clear", "_flush", "_destroy", "_restart", "_expire"} {
 			if strings.HasSuffix(nameLower, suffix) {
 				destructive = true
 				break
 			}
 		}
 	}
+	if td.DestructiveOverride != nil {
+		destructive = *td.DestructiveOverride
+	}
 
 	idempotent := !td.IsWrite
 	if td.IsWrite {
 		nameLower := strings.ToLower(td.Tool.Name)
-		for _, suffix := range []string{"_set", "_update", "_sync", "_enable", "_disable", "_assign"} {
+		for _, suffix := range []string{"_set", "_update", "_sync", "_enable", "_disable", "_assign", "_restart"} {
 			if strings.HasSuffix(nameLower, suffix) {
 				idempotent = true
 				break
 			}
 		}
+	}
+	if td.IdempotentOverride != nil {
+		idempotent = *td.IdempotentOverride
 	}
 
 	openWorld := true

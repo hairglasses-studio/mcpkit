@@ -70,6 +70,29 @@ type ToolDefinition struct {
 	// true causes ApplyToolMetadata to inject the
 	// "anthropic/alwaysLoad" = true field into the tool's _meta object.
 	AlwaysLoad bool
+	// SkipRequiresUserInteraction opts a write tool (IsWrite: true) out of
+	// the automatic "anthropic/requiresUserInteraction" = true _meta field
+	// that ApplyToolMetadata otherwise injects for every write tool. Not
+	// used by any tool definition today — reserved for a write tool that
+	// has its own equivalent consent mechanism and would otherwise double
+	// -prompt the user. Has no effect on read-only tools.
+	SkipRequiresUserInteraction bool
+	// DestructiveOverride, when non-nil, replaces ApplyMCPAnnotations'
+	// suffix-derived DestructiveHint for this tool. Use for a write tool
+	// whose destructiveness the generic "_delete/_remove/_reset/_purge/
+	// _clear/_flush/_destroy/_restart/_expire" suffix heuristic gets wrong
+	// in either direction (e.g. a "_sync" tool that actually overwrites
+	// destination state, or a "_reset" tool that is actually a safe
+	// re-initialize-to-defaults). Has no effect on read-only tools, whose
+	// DestructiveHint is always false.
+	DestructiveOverride *bool
+	// IdempotentOverride, when non-nil, replaces ApplyMCPAnnotations'
+	// derived IdempotentHint for this tool (default: true for read-only
+	// tools, suffix-derived for write tools). Use for a write tool the
+	// suffix heuristic gets wrong, e.g. a "_create" that is actually
+	// upsert-safe, or a "_restart" whose target does not tolerate a
+	// redundant call the same as a single call.
+	IdempotentOverride *bool
 }
 
 // ToolModule is the interface that tool modules implement.

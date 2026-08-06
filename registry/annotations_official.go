@@ -29,13 +29,13 @@ func InferIsWrite(name string) bool {
 // The prefix is stripped from tool names when generating human-readable titles.
 func ApplyMCPAnnotations(td ToolDefinition, prefix string) ToolDefinition {
 	td.Tool.Annotations = &ToolAnnotation{
-		Title:    toolNameToTitle(td.Tool.Name, prefix),
+		Title:        toolNameToTitle(td.Tool.Name, prefix),
 		ReadOnlyHint: !td.IsWrite,
 	}
 
 	if td.IsWrite {
 		nameLower := strings.ToLower(td.Tool.Name)
-		for _, suffix := range []string{"_delete", "_remove", "_reset", "_purge", "_clear", "_flush", "_destroy"} {
+		for _, suffix := range []string{"_delete", "_remove", "_reset", "_purge", "_clear", "_flush", "_destroy", "_restart", "_expire"} {
 			if strings.HasSuffix(nameLower, suffix) {
 				destructive := true
 				td.Tool.Annotations.DestructiveHint = &destructive
@@ -43,7 +43,7 @@ func ApplyMCPAnnotations(td ToolDefinition, prefix string) ToolDefinition {
 			}
 		}
 
-		for _, suffix := range []string{"_set", "_update", "_sync", "_enable", "_disable", "_assign"} {
+		for _, suffix := range []string{"_set", "_update", "_sync", "_enable", "_disable", "_assign", "_restart"} {
 			if strings.HasSuffix(nameLower, suffix) {
 				td.Tool.Annotations.IdempotentHint = true
 				break
@@ -51,6 +51,13 @@ func ApplyMCPAnnotations(td ToolDefinition, prefix string) ToolDefinition {
 		}
 	} else {
 		td.Tool.Annotations.IdempotentHint = true
+	}
+
+	if td.DestructiveOverride != nil {
+		td.Tool.Annotations.DestructiveHint = td.DestructiveOverride
+	}
+	if td.IdempotentOverride != nil {
+		td.Tool.Annotations.IdempotentHint = *td.IdempotentOverride
 	}
 
 	openWorld := true

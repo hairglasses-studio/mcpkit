@@ -151,6 +151,8 @@ func TestApplyMCPAnnotations_WriteTool_Destructive(t *testing.T) {
 		"myapp_items_purge",
 		"myapp_items_clear",
 		"myapp_items_flush",
+		"myapp_service_restart",
+		"myapp_device_expire",
 	}
 
 	for _, name := range destructiveCases {
@@ -163,6 +165,50 @@ func TestApplyMCPAnnotations_WriteTool_Destructive(t *testing.T) {
 	}
 }
 
+// TestApplyMCPAnnotations_DestructiveOverride verifies the per-tool DestructiveOverride
+// field takes precedence over the suffix heuristic in both directions.
+func TestApplyMCPAnnotations_DestructiveOverride(t *testing.T) {
+	trueVal, falseVal := true, false
+
+	// A "_delete" tool would default to destructive=true; override to false.
+	td := ToolDefinition{
+		Tool:                Tool{Name: "myapp_items_delete"},
+		IsWrite:             true,
+		DestructiveOverride: &falseVal,
+	}
+	assertDestructiveHint(t, ApplyMCPAnnotations(td, "myapp_"), false)
+
+	// A "_sync" tool would default to destructive=false; override to true.
+	td = ToolDefinition{
+		Tool:                Tool{Name: "myapp_items_sync"},
+		IsWrite:             true,
+		DestructiveOverride: &trueVal,
+	}
+	assertDestructiveHint(t, ApplyMCPAnnotations(td, "myapp_"), true)
+}
+
+// TestApplyMCPAnnotations_IdempotentOverride verifies the per-tool IdempotentOverride
+// field takes precedence over the suffix/read-only heuristic in both directions.
+func TestApplyMCPAnnotations_IdempotentOverride(t *testing.T) {
+	trueVal, falseVal := true, false
+
+	// A read-only tool defaults to idempotent=true; override to false.
+	td := ToolDefinition{
+		Tool:               Tool{Name: "myapp_items_list"},
+		IsWrite:            false,
+		IdempotentOverride: &falseVal,
+	}
+	assertIdempotentHint(t, ApplyMCPAnnotations(td, "myapp_"), false)
+
+	// A "_create" write tool defaults to idempotent=false; override to true.
+	td = ToolDefinition{
+		Tool:               Tool{Name: "myapp_items_create"},
+		IsWrite:            true,
+		IdempotentOverride: &trueVal,
+	}
+	assertIdempotentHint(t, ApplyMCPAnnotations(td, "myapp_"), true)
+}
+
 // TestApplyMCPAnnotations_WriteTool_Idempotent verifies annotations for idempotent write tools.
 func TestApplyMCPAnnotations_WriteTool_Idempotent(t *testing.T) {
 	idempotentCases := []string{
@@ -172,6 +218,7 @@ func TestApplyMCPAnnotations_WriteTool_Idempotent(t *testing.T) {
 		"myapp_feature_enable",
 		"myapp_feature_disable",
 		"myapp_user_assign",
+		"myapp_service_restart",
 	}
 
 	for _, name := range idempotentCases {
