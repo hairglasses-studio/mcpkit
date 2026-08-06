@@ -1,6 +1,10 @@
 // Package a2a implements a bidirectional bridge between MCP (Model Context Protocol)
 // tool registries and the A2A (Agent-to-Agent) Protocol v1.0.
 //
+// Status: designated primary A2A implementation — see secretstudios-mcp
+// docs/mcpkit-a2a-stack-reconciliation-2026-08-06.md. The homegrown mcpkit/a2a
+// package is frozen; new A2A work targets this package.
+//
 // The bridge enables mcpkit-based MCP servers to participate in A2A agent networks.
 // MCP tools are exposed as A2A skills, allowing remote A2A clients to discover and
 // invoke deterministic tool handlers. Conversely, A2A agents can be consumed as MCP

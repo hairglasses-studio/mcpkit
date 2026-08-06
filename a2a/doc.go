@@ -1,5 +1,9 @@
 // Package a2a implements an A2A (Agent-to-Agent) Protocol v1.0 bridge for mcpkit.
 //
+// Status: FROZEN pending reconciliation — see secretstudios-mcp
+// docs/mcpkit-a2a-stack-reconciliation-2026-08-06.md; new A2A work targets
+// bridge/a2a.
+//
 // The A2A protocol (https://github.com/a2aproject/A2A) enables vendor-agnostic
 // communication between AI agents. This package bridges MCP tool calls with A2A
 // task delegation, allowing mcpkit-based servers to both send tasks to and
