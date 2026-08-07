@@ -1,8 +1,10 @@
 // Command genskillsurface reads the shared skills-spec JSON and emits
-// per-provider skill surface files for downstream repos. It renders
-// Claude, Codex, and Gemini projections from a single source of truth
-// so the canonical skill catalog drives every provider's skill surface
-// instead of hand-maintained per-provider files.
+// skill surface files for downstream repos. Today it renders the CLAUDE
+// projection only — generateOutputs writes no Codex or Gemini paths, despite
+// this doc's original claim to the contrary (doc corrected 2026-08-07;
+// Codex/Gemini projections remain unimplemented, tracked as a candidate
+// follow-up rather than an existing feature). The canonical skill catalog is
+// still the single source of truth for what IS rendered.
 package main
 
 import (

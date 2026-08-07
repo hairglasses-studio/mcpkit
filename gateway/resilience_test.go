@@ -184,6 +184,79 @@ func TestUpstreamResilience_CircuitStateEmpty(t *testing.T) {
 	}
 }
 
+func TestUpstreamResilience_ResponseCache(t *testing.T) {
+	calls := 0
+	handler := func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		calls++
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: fmt.Sprintf("call-%d", calls)}},
+		}, nil
+	}
+
+	ur := newUpstreamResilience("test", UpstreamPolicy{
+		ResponseCache: &ResponseCacheConfig{TTL: time.Hour, MaxEntries: 10},
+	})
+	if ur == nil || ur.cache == nil {
+		t.Fatal("expected non-nil response cache")
+	}
+	wrapped := ur.wrapHandler("test", handler)
+
+	req := mcp.CallToolRequest{}
+	req.Params.Name = "sometool"
+	req.Params.Arguments = map[string]any{"x": 1}
+
+	result1, err := wrapped(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Same tool + same args: should hit the cache, not call the handler again.
+	result2, err := wrapped(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if calls != 1 {
+		t.Fatalf("expected 1 upstream call (second served from cache), got %d", calls)
+	}
+	if result1.Content[0].(mcp.TextContent).Text != result2.Content[0].(mcp.TextContent).Text {
+		t.Fatal("expected cached result to match original")
+	}
+
+	// Different args: must not hit the same cache entry.
+	req2 := mcp.CallToolRequest{}
+	req2.Params.Name = "sometool"
+	req2.Params.Arguments = map[string]any{"x": 2}
+	if _, err := wrapped(context.Background(), req2); err != nil {
+		t.Fatal(err)
+	}
+	if calls != 2 {
+		t.Fatalf("expected 2 upstream calls (different args bypass cache), got %d", calls)
+	}
+}
+
+func TestUpstreamResilience_ResponseCacheSkipsErrors(t *testing.T) {
+	calls := 0
+	handler := func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		calls++
+		return &mcp.CallToolResult{IsError: true, Content: []mcp.Content{mcp.TextContent{Type: "text", Text: "boom"}}}, nil
+	}
+
+	ur := newUpstreamResilience("test", UpstreamPolicy{
+		ResponseCache: &ResponseCacheConfig{TTL: time.Hour, MaxEntries: 10},
+	})
+	wrapped := ur.wrapHandler("test", handler)
+
+	req := mcp.CallToolRequest{}
+	req.Params.Name = "sometool"
+
+	wrapped(context.Background(), req)
+	wrapped(context.Background(), req)
+
+	if calls != 2 {
+		t.Fatalf("expected error results to never be cached (2 calls), got %d", calls)
+	}
+}
+
 func TestUpstreamPolicy_InUpstreamConfig(t *testing.T) {
 	cfg := UpstreamConfig{
 		Name: "test",

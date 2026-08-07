@@ -226,7 +226,15 @@ Model routing happens above the MCP layer (the MCP server doesn't pick models). 
 
 - Cache keyed on exact input (tool name + arguments hash)
 - Highest hit rate for deterministic tools (lookups, calculations)
-- mcpkit's `resilience.Cache` already implements this with TTL
+- **Correction (2026-08-06):** at the time this research was written
+  (March 2026), per-input exact caching was *not* implemented —
+  `resilience.CacheEntry` (then `resilience.Cache`) was a single-slot
+  keyless TTL cache, so a second call with different arguments returned
+  the first call's cached value until TTL expiry. That gap is closed by
+  `resilience.KeyedCache[T]` plus `resilience.CacheKey` (tool name +
+  sha256 of canonicalized argument JSON), wired opt-in into
+  `gateway.UpstreamPolicy.ResponseCache`. See §10's "Response caching for
+  idempotent tools" recommendation, which this implements.
 - Zero false positives
 
 ### Semantic Caching

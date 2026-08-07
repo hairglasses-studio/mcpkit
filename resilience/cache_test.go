@@ -157,3 +157,176 @@ func TestConcurrentGetOrFetch(t *testing.T) {
 		t.Fatalf("expected 1 fetch (singleflight), got %d", n)
 	}
 }
+
+func TestKeyedCacheDifferentArgsDifferentEntries(t *testing.T) {
+	c := NewKeyedCache[string](time.Hour, 10)
+	calls := atomic.Int32{}
+
+	fetch := func(want string) func(context.Context) (string, error) {
+		return func(ctx context.Context) (string, error) {
+			calls.Add(1)
+			return want, nil
+		}
+	}
+
+	keyA := CacheKey("mytool", map[string]any{"x": 1})
+	keyB := CacheKey("mytool", map[string]any{"x": 2})
+	if keyA == keyB {
+		t.Fatalf("expected distinct keys for distinct args, got %q for both", keyA)
+	}
+
+	v, err := c.GetOrFetch(context.Background(), keyA, fetch("a"))
+	if err != nil || v != "a" {
+		t.Fatalf("got (%q, %v), want (a, nil)", v, err)
+	}
+
+	v, err = c.GetOrFetch(context.Background(), keyB, fetch("b"))
+	if err != nil || v != "b" {
+		t.Fatalf("got (%q, %v), want (b, nil)", v, err)
+	}
+
+	// Re-fetching keyA must still return "a" (not clobbered by keyB's fetch)
+	// and must not have called fetchFn again.
+	v, err = c.GetOrFetch(context.Background(), keyA, fetch("should-not-be-called"))
+	if err != nil || v != "a" {
+		t.Fatalf("got (%q, %v), want (a, nil)", v, err)
+	}
+
+	if n := calls.Load(); n != 2 {
+		t.Fatalf("expected 2 fetch calls (one per distinct key), got %d", n)
+	}
+	if n := c.Len(); n != 2 {
+		t.Fatalf("expected 2 entries, got %d", n)
+	}
+}
+
+func TestKeyedCacheTTLExpiry(t *testing.T) {
+	c := NewKeyedCache[int](10*time.Millisecond, 10)
+	calls := atomic.Int32{}
+
+	fetch := func(ctx context.Context) (int, error) {
+		n := calls.Add(1)
+		return int(n), nil
+	}
+
+	v, _ := c.GetOrFetch(context.Background(), "k", fetch)
+	if v != 1 {
+		t.Fatalf("got %d, want 1", v)
+	}
+
+	time.Sleep(15 * time.Millisecond)
+
+	v, _ = c.GetOrFetch(context.Background(), "k", fetch)
+	if v != 2 {
+		t.Fatalf("got %d, want 2 after TTL expiry", v)
+	}
+}
+
+func TestKeyedCacheEvictionBound(t *testing.T) {
+	c := NewKeyedCache[int](time.Hour, 3)
+
+	for i := 0; i < 5; i++ {
+		key := string(rune('a' + i))
+		c.GetOrFetch(context.Background(), key, func(ctx context.Context) (int, error) {
+			return i, nil
+		})
+	}
+
+	if n := c.Len(); n != 3 {
+		t.Fatalf("expected cache bounded to 3 entries, got %d", n)
+	}
+
+	// The two oldest keys ("a", "b") should have been evicted; the three
+	// most recent ("c", "d", "e") should still be cached (no re-fetch).
+	calls := atomic.Int32{}
+	for _, key := range []string{"c", "d", "e"} {
+		c.GetOrFetch(context.Background(), key, func(ctx context.Context) (int, error) {
+			calls.Add(1)
+			return -1, nil
+		})
+	}
+	if n := calls.Load(); n != 0 {
+		t.Fatalf("expected recently-used entries to survive eviction, got %d re-fetches", n)
+	}
+
+	// The evicted keys should trigger a fresh fetch.
+	refetches := atomic.Int32{}
+	for _, key := range []string{"a", "b"} {
+		c.GetOrFetch(context.Background(), key, func(ctx context.Context) (int, error) {
+			refetches.Add(1)
+			return -1, nil
+		})
+	}
+	if n := refetches.Load(); n != 2 {
+		t.Fatalf("expected both evicted keys to trigger a re-fetch, got %d", n)
+	}
+}
+
+func TestKeyedCacheLRUTouchOnGet(t *testing.T) {
+	c := NewKeyedCache[int](time.Hour, 2)
+
+	c.GetOrFetch(context.Background(), "a", func(ctx context.Context) (int, error) { return 1, nil })
+	c.GetOrFetch(context.Background(), "b", func(ctx context.Context) (int, error) { return 2, nil })
+
+	// Touch "a" so "b" becomes the least-recently-used entry.
+	c.GetOrFetch(context.Background(), "a", func(ctx context.Context) (int, error) {
+		t.Fatal("should not be called; a is still fresh")
+		return 0, nil
+	})
+
+	// Inserting "c" should evict "b" (LRU), not "a".
+	c.GetOrFetch(context.Background(), "c", func(ctx context.Context) (int, error) { return 3, nil })
+
+	calls := atomic.Int32{}
+	c.GetOrFetch(context.Background(), "a", func(ctx context.Context) (int, error) {
+		calls.Add(1)
+		return -1, nil
+	})
+	if calls.Load() != 0 {
+		t.Fatal("expected a to survive eviction (recently touched)")
+	}
+
+	refetch := atomic.Int32{}
+	c.GetOrFetch(context.Background(), "b", func(ctx context.Context) (int, error) {
+		refetch.Add(1)
+		return -1, nil
+	})
+	if refetch.Load() != 1 {
+		t.Fatal("expected b to have been evicted (least recently used)")
+	}
+}
+
+func TestCacheKeyCanonicalizationStability(t *testing.T) {
+	a := map[string]any{"z": 1, "a": 2, "m": map[string]any{"y": 1, "b": 2}}
+	b := map[string]any{"a": 2, "m": map[string]any{"b": 2, "y": 1}, "z": 1}
+
+	keyA := CacheKey("tool", a)
+	keyB := CacheKey("tool", b)
+	if keyA != keyB {
+		t.Fatalf("expected key-order-independent hashing, got %q != %q", keyA, keyB)
+	}
+
+	// A genuinely different value must still produce a different key.
+	c := map[string]any{"a": 2, "m": map[string]any{"b": 2, "y": 1}, "z": 999}
+	if CacheKey("tool", c) == keyA {
+		t.Fatal("expected different values to produce different keys")
+	}
+}
+
+func TestKeyedCacheInvalidate(t *testing.T) {
+	c := NewKeyedCache[string](time.Hour, 10)
+	calls := atomic.Int32{}
+
+	fetch := func(ctx context.Context) (string, error) {
+		calls.Add(1)
+		return "data", nil
+	}
+
+	c.GetOrFetch(context.Background(), "k", fetch)
+	c.Invalidate("k")
+	c.GetOrFetch(context.Background(), "k", fetch)
+
+	if n := calls.Load(); n != 2 {
+		t.Fatalf("expected 2 fetches after invalidation, got %d", n)
+	}
+}
