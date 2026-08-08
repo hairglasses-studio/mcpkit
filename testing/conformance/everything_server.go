@@ -17,39 +17,19 @@ import (
 	"github.com/hairglasses-studio/mcpkit/resources"
 )
 
-// ---------------------------------------------------------------------------
-// Tiny 1x1 red PNG (base64), used by getTinyImage and prompts-get-with-image.
-// ---------------------------------------------------------------------------
-
-const tinyImageBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=="
-
-// tinyWAVBase64 is a minimal WAV file (44 bytes header + 1 sample) for audio conformance.
-const tinyWAVBase64 = "UklGRiYAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQIAAAAAAA=="
+// tinyImageBase64/tinyWAVBase64 moved to portable_tools.go (no build tag) —
+// pure string constants, shared by this file's mcp-go content construction
+// and both portable_*_official.go files' []byte-decoding equivalents.
 
 // ---------------------------------------------------------------------------
 // Tool input/output types
+//
+// EchoInput/EchoOutput/AddInput/AddOutput and the echo/add tool definitions
+// themselves moved to portable_tools.go (no build tag) — they only touch
+// handler.TypedHandler and registry's compat aliases, so PortableTools()
+// works unchanged under both official_sdk and mcp-go. Tools() below composes
+// them in via PortableTools() rather than redeclaring them here.
 // ---------------------------------------------------------------------------
-
-// EchoInput is the input for the echo tool.
-type EchoInput struct {
-	Message string `json:"message" jsonschema:"required,description=Message to echo back"`
-}
-
-// EchoOutput is the output for the echo tool.
-type EchoOutput struct {
-	Echo string `json:"echo"`
-}
-
-// AddInput is the input for the add tool.
-type AddInput struct {
-	A float64 `json:"a" jsonschema:"required,description=First number"`
-	B float64 `json:"b" jsonschema:"required,description=Second number"`
-}
-
-// AddOutput is the output for the add tool.
-type AddOutput struct {
-	Result float64 `json:"result"`
-}
 
 // LongRunningInput is the input for the longRunningOperation tool.
 type LongRunningInput struct {
@@ -89,22 +69,6 @@ func (m *ToolsModule) Description() string {
 
 // Tools returns all conformance tool definitions.
 func (m *ToolsModule) Tools() []registry.ToolDefinition {
-	echoTool := handler.TypedHandler[EchoInput, EchoOutput](
-		"echo",
-		"Echoes back the provided message. Used for basic tool call validation.",
-		func(_ context.Context, input EchoInput) (EchoOutput, error) {
-			return EchoOutput{Echo: input.Message}, nil
-		},
-	)
-
-	addTool := handler.TypedHandler[AddInput, AddOutput](
-		"add",
-		"Adds two numbers together. Used for numeric argument validation.",
-		func(_ context.Context, input AddInput) (AddOutput, error) {
-			return AddOutput{Result: input.A + input.B}, nil
-		},
-	)
-
 	// longRunningOperation: sends progress notifications, then returns.
 	longRunningTool := registry.ToolDefinition{
 		Tool: mcp.Tool{
@@ -769,9 +733,8 @@ func (m *ToolsModule) Tools() []registry.ToolDefinition {
 		},
 	}
 
-	return []registry.ToolDefinition{
-		echoTool,
-		addTool,
+	tools := append([]registry.ToolDefinition{}, PortableTools()...)
+	return append(tools,
 		longRunningTool,
 		sampleLLMTool,
 		getTinyImageTool,
@@ -790,7 +753,7 @@ func (m *ToolsModule) Tools() []registry.ToolDefinition {
 		testElicitation,
 		testElicitSEP1034,
 		testElicitSEP1330,
-	}
+	)
 }
 
 // ---------------------------------------------------------------------------
@@ -895,20 +858,6 @@ func (m *ResourcesModule) Templates() []resources.TemplateDefinition {
 			Category: "conformance",
 		},
 	}
-}
-
-// extractTemplateID extracts the {id} value from test://template/{id}/data.
-func extractTemplateID(uri string) string {
-	// URI format: test://template/123/data
-	const prefix = "test://template/"
-	const suffix = "/data"
-	if len(uri) > len(prefix)+len(suffix) {
-		inner := uri[len(prefix):]
-		if idx := len(inner) - len(suffix); idx > 0 {
-			return inner[:idx]
-		}
-	}
-	return "unknown"
 }
 
 // ---------------------------------------------------------------------------
@@ -1157,21 +1106,11 @@ func filterCompletions(options []string, prefix string) *mcp.Completion {
 
 // ---------------------------------------------------------------------------
 // Server builder
+//
+// ServerConfig/DefaultConfig moved to portable_tools.go (no build tag) — a
+// plain struct with no SDK dependency, shared by NewEverythingServer here
+// and NewPortableEverythingServer (portable_server.go).
 // ---------------------------------------------------------------------------
-
-// ServerConfig holds configuration for the everything-server.
-type ServerConfig struct {
-	Name    string
-	Version string
-}
-
-// DefaultConfig returns the default server configuration.
-func DefaultConfig() ServerConfig {
-	return ServerConfig{
-		Name:    "mcpkit-everything-server",
-		Version: "0.1.0",
-	}
-}
 
 // NewEverythingServer creates a fully-configured MCP server implementing all
 // testable capabilities for the MCP conformance suite.
