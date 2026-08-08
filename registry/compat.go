@@ -10,6 +10,7 @@
 package registry
 
 import (
+	"encoding/base64"
 	"errors"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -148,6 +149,127 @@ func OutputSchemaProperties(t Tool) (map[string]any, bool) {
 		return nil, false
 	}
 	return t.OutputSchema.Properties, true
+}
+
+// InputSchemaType returns schema.Type, or ("", false) if unset. mcp-go's
+// ToolInputSchema is a value struct; the official SDK's is `any` holding a
+// map[string]any — see compat_official.go's InputSchemaType for that side's
+// type assertion. Added for bridge/a2a's translator.go, which needs to
+// re-serialize an existing Tool's input schema (e.g. into an A2A skill
+// example) without knowing which SDK built it.
+func InputSchemaType(schema ToolInputSchema) (string, bool) {
+	if schema.Type == "" {
+		return "", false
+	}
+	return schema.Type, true
+}
+
+// InputSchemaProperties returns schema.Properties, or (nil, false) if
+// unset/empty. See compat_official.go's InputSchemaProperties.
+func InputSchemaProperties(schema ToolInputSchema) (map[string]any, bool) {
+	if len(schema.Properties) == 0 {
+		return nil, false
+	}
+	return schema.Properties, true
+}
+
+// InputSchemaRequired returns schema.Required, or (nil, false) if
+// unset/empty. See compat_official.go's InputSchemaRequired.
+func InputSchemaRequired(schema ToolInputSchema) ([]string, bool) {
+	if len(schema.Required) == 0 {
+		return nil, false
+	}
+	return schema.Required, true
+}
+
+// InputSchemaAdditionalProperties returns schema.AdditionalProperties, or
+// (nil, false) if unset. See compat_official.go's
+// InputSchemaAdditionalProperties.
+func InputSchemaAdditionalProperties(schema ToolInputSchema) (any, bool) {
+	if schema.AdditionalProperties == nil {
+		return nil, false
+	}
+	return schema.AdditionalProperties, true
+}
+
+// MakeToolInputSchema constructs a ToolInputSchema (object type) from a
+// properties map, a required-fields list, and an optional
+// additionalProperties value (pass nil to omit it). mcp-go's ToolInputSchema
+// is a typed struct; this builds one directly. See compat_official.go's
+// MakeToolInputSchema for the official SDK's map[string]any counterpart.
+// Added so consumer code that needs to hand-build a simple tool schema
+// (bridge/a2a's remote_agent.go: wrapping a remote A2A skill as an MCP
+// tool) doesn't need mcp-go's functional-option Tool builder
+// (mcp.NewTool/mcp.WithString/...), which has no compat-layer equivalent.
+func MakeToolInputSchema(properties map[string]any, required []string, additionalProperties any) ToolInputSchema {
+	return mcp.ToolInputSchema(mcp.ToolArgumentsSchema{
+		Type:                 "object",
+		Properties:           properties,
+		Required:             required,
+		AdditionalProperties: additionalProperties,
+	})
+}
+
+// ExtractImageContent returns the raw (already base64-decoded) image bytes
+// and MIME type if c is image content, or (nil, "", false) otherwise —
+// including when c is image content whose Data fails to base64-decode
+// (mcp-go's ImageContent.Data is a base64 string; decoding here means
+// callers never need to know that — see compat_official.go's
+// ExtractImageContent, where the official SDK's Data is already []byte).
+func ExtractImageContent(c Content) (data []byte, mimeType string, ok bool) {
+	ic, isImage := c.(mcp.ImageContent)
+	if !isImage {
+		return nil, "", false
+	}
+	raw, err := base64.StdEncoding.DecodeString(ic.Data)
+	if err != nil {
+		return nil, "", false
+	}
+	return raw, ic.MIMEType, true
+}
+
+// MakeImageContent constructs a Content value from raw image bytes and a
+// MIME type — the make-side counterpart to ExtractImageContent. mcp-go's
+// ImageContent.Data is a base64 string, so data is encoded here; the
+// official SDK's is already []byte (see compat_official.go's
+// MakeImageContent).
+func MakeImageContent(data []byte, mimeType string) Content {
+	return mcp.ImageContent{
+		Type:     "image",
+		Data:     base64.StdEncoding.EncodeToString(data),
+		MIMEType: mimeType,
+	}
+}
+
+// ExtractEmbeddedResource returns the wrapped resource value if c is
+// embedded-resource content, as an opaque any suitable for JSON marshaling
+// by the caller — the underlying resource-contents shape differs per SDK
+// (mcp-go: mcp.ResourceContents, an interface implemented by
+// TextResourceContents/BlobResourceContents; official: *mcp.ResourceContents,
+// a single struct — see compat_official.go's ExtractEmbeddedResource), so
+// this deliberately does not attempt to normalize it further than "the
+// thing the caller can json.Marshal".
+func ExtractEmbeddedResource(c Content) (resource any, ok bool) {
+	er, isEmbedded := c.(mcp.EmbeddedResource)
+	if !isEmbedded {
+		return nil, false
+	}
+	return er.Resource, true
+}
+
+// MakeEmbeddedResourceText constructs embedded-resource Content wrapping a
+// single text resource — the make-side counterpart to
+// ExtractEmbeddedResource, covering the common case (a text resource, not
+// binary) that consumer test fixtures need.
+func MakeEmbeddedResourceText(uri, mimeType, text string) Content {
+	return mcp.EmbeddedResource{
+		Type: "resource",
+		Resource: mcp.TextResourceContents{
+			URI:      uri,
+			MIMEType: mimeType,
+			Text:     text,
+		},
+	}
 }
 
 // MakeTextContent constructs a Content value containing text.

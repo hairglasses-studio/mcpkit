@@ -194,6 +194,152 @@ func OutputSchemaProperties(t Tool) (map[string]any, bool) {
 	return props, true
 }
 
+// InputSchemaType returns the "type" field of schema, or ("", false) if
+// schema isn't a map[string]any or has no non-empty "type" entry. See
+// compat.go's InputSchemaType for the mcp-go side.
+func InputSchemaType(schema ToolInputSchema) (string, bool) {
+	m, ok := schema.(map[string]any)
+	if !ok {
+		return "", false
+	}
+	typ, ok := m["type"].(string)
+	if !ok || typ == "" {
+		return "", false
+	}
+	return typ, true
+}
+
+// InputSchemaProperties returns the "properties" field of schema, or (nil,
+// false) if absent/empty. See compat.go's InputSchemaProperties.
+func InputSchemaProperties(schema ToolInputSchema) (map[string]any, bool) {
+	m, ok := schema.(map[string]any)
+	if !ok {
+		return nil, false
+	}
+	props, ok := m["properties"].(map[string]any)
+	if !ok || len(props) == 0 {
+		return nil, false
+	}
+	return props, true
+}
+
+// InputSchemaRequired returns the "required" field of schema as []string,
+// or (nil, false) if absent/empty. Accepts either []string or []any (the
+// shape produced by decoding a hand-built map vs one round-tripped through
+// JSON) since a caller may have constructed schema either way. See
+// compat.go's InputSchemaRequired.
+func InputSchemaRequired(schema ToolInputSchema) ([]string, bool) {
+	m, ok := schema.(map[string]any)
+	if !ok {
+		return nil, false
+	}
+	switch req := m["required"].(type) {
+	case []string:
+		if len(req) == 0 {
+			return nil, false
+		}
+		return req, true
+	case []any:
+		out := make([]string, 0, len(req))
+		for _, v := range req {
+			if s, ok := v.(string); ok {
+				out = append(out, s)
+			}
+		}
+		if len(out) == 0 {
+			return nil, false
+		}
+		return out, true
+	}
+	return nil, false
+}
+
+// InputSchemaAdditionalProperties returns the "additionalProperties" field
+// of schema, or (nil, false) if absent. See compat.go's
+// InputSchemaAdditionalProperties.
+func InputSchemaAdditionalProperties(schema ToolInputSchema) (any, bool) {
+	m, ok := schema.(map[string]any)
+	if !ok {
+		return nil, false
+	}
+	v, ok := m["additionalProperties"]
+	if !ok || v == nil {
+		return nil, false
+	}
+	return v, true
+}
+
+// MakeToolInputSchema constructs a ToolInputSchema (object type) from a
+// properties map, a required-fields list, and an optional
+// additionalProperties value (pass nil to omit it). The official SDK's
+// ToolInputSchema is `any`, holding a plain map[string]any here. See
+// compat.go's MakeToolInputSchema for the mcp-go side.
+func MakeToolInputSchema(properties map[string]any, required []string, additionalProperties any) ToolInputSchema {
+	schema := map[string]any{"type": "object"}
+	if len(properties) > 0 {
+		schema["properties"] = properties
+	}
+	if len(required) > 0 {
+		schema["required"] = required
+	}
+	if additionalProperties != nil {
+		schema["additionalProperties"] = additionalProperties
+	}
+	return schema
+}
+
+// ExtractImageContent returns the raw image bytes and MIME type if c is
+// image content, or (nil, "", false) otherwise. The official SDK's
+// ImageContent.Data is already []byte (mcp-go's is a base64 string that
+// compat.go's counterpart decodes — see that doc comment), so no decoding
+// is needed here.
+func ExtractImageContent(c Content) (data []byte, mimeType string, ok bool) {
+	ic, isImage := c.(*mcp.ImageContent)
+	if !isImage {
+		return nil, "", false
+	}
+	return ic.Data, ic.MIMEType, true
+}
+
+// MakeImageContent constructs a Content value from raw image bytes and a
+// MIME type — the make-side counterpart to ExtractImageContent. See
+// compat.go's MakeImageContent for the mcp-go side (which base64-encodes
+// data into a string field instead).
+func MakeImageContent(data []byte, mimeType string) Content {
+	return &mcp.ImageContent{
+		Data:     data,
+		MIMEType: mimeType,
+	}
+}
+
+// ExtractEmbeddedResource returns the wrapped resource value if c is
+// embedded-resource content, as an opaque any suitable for JSON marshaling
+// by the caller. The official SDK's EmbeddedResource.Resource is a single
+// *mcp.ResourceContents struct (mcp-go's is an interface — see compat.go's
+// ExtractEmbeddedResource), but this accessor deliberately returns it as
+// `any` on both sides so callers stay SDK-agnostic.
+func ExtractEmbeddedResource(c Content) (resource any, ok bool) {
+	er, isEmbedded := c.(*mcp.EmbeddedResource)
+	if !isEmbedded {
+		return nil, false
+	}
+	return er.Resource, true
+}
+
+// MakeEmbeddedResourceText constructs embedded-resource Content wrapping a
+// single text resource — the make-side counterpart to
+// ExtractEmbeddedResource, covering the common case (a text resource, not
+// binary) that consumer test fixtures need.
+func MakeEmbeddedResourceText(uri, mimeType, text string) Content {
+	return &mcp.EmbeddedResource{
+		Resource: &mcp.ResourceContents{
+			URI:      uri,
+			MIMEType: mimeType,
+			Text:     text,
+		},
+	}
+}
+
 // MakeTextContent constructs a Content value containing text.
 func MakeTextContent(text string) Content {
 	return &mcp.TextContent{Text: text}
