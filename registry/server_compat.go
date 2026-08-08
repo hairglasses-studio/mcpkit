@@ -9,6 +9,7 @@ package registry
 
 import (
 	"context"
+	"net/http"
 	"os"
 
 	"github.com/hairglasses-studio/mcpkit/transport"
@@ -79,4 +80,44 @@ func RemoveResourcesFromServer(s *MCPServer, uris ...string) {
 // RemovePromptsFromServer removes prompts from the MCP server by name.
 func RemovePromptsFromServer(s *MCPServer, names ...string) {
 	s.DeletePrompts(names...)
+}
+
+// NewMCPServerWithOptions creates an MCPServer from SDK-neutral ServerOptions
+// (see server_options.go). mcp-go honors every field: each maps onto a real
+// server.ServerOption, called unconditionally (mirroring how consumers like
+// secretstudios-mcp's main.go already call server.WithResourceCapabilities/
+// server.WithPromptCapabilities unconditionally, passing false when a
+// sub-capability isn't wanted rather than omitting the call).
+func NewMCPServerWithOptions(name, version string, opts ServerOptions) *MCPServer {
+	serverOpts := []server.ServerOption{
+		server.WithToolCapabilities(opts.ToolCapabilities),
+		server.WithPromptCapabilities(opts.PromptCapabilities),
+	}
+	if opts.ResourceCapabilities {
+		serverOpts = append(serverOpts, server.WithResourceCapabilities(opts.ResourceSubscribe, opts.ResourceListChanged))
+	}
+	if opts.StrictInputSchemas {
+		serverOpts = append(serverOpts, server.WithStrictInputSchemaDefault())
+	}
+	if opts.Recovery {
+		serverOpts = append(serverOpts, server.WithRecovery())
+	}
+	if opts.Instructions != "" {
+		serverOpts = append(serverOpts, server.WithInstructions(opts.Instructions))
+	}
+	return server.NewMCPServer(name, version, serverOpts...)
+}
+
+// NewStreamableHTTPHandler wraps a single MCPServer in a streamable-HTTP
+// http.Handler from SDK-neutral HTTPServerOptions (see server_options.go).
+// mcp-go bakes EndpointPath into the transport itself via
+// server.WithEndpointPath; see HTTPServerOptions's doc comment for how this
+// differs on the official_sdk build.
+func NewStreamableHTTPHandler(s *MCPServer, opts HTTPServerOptions) http.Handler {
+	var httpOpts []server.StreamableHTTPOption
+	if opts.EndpointPath != "" {
+		httpOpts = append(httpOpts, server.WithEndpointPath(opts.EndpointPath))
+	}
+	httpOpts = append(httpOpts, server.WithStateLess(opts.Stateless))
+	return server.NewStreamableHTTPServer(s, httpOpts...)
 }

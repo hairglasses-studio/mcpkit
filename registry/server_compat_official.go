@@ -5,6 +5,7 @@ package registry
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -74,4 +75,48 @@ func RemoveResourcesFromServer(s *MCPServer, uris ...string) {
 // RemovePromptsFromServer removes prompts from the MCP server by name.
 func RemovePromptsFromServer(s *MCPServer, names ...string) {
 	s.RemovePrompts(names...)
+}
+
+// NewMCPServerWithOptions creates an MCPServer from SDK-neutral ServerOptions
+// (see server_options.go). Instructions and the Tool/Resource/Prompt
+// capability flags are honored via mcp.ServerOptions.Capabilities (an
+// explicit override of go-sdk's own default auto-inference from
+// added tools/resources/prompts). StrictInputSchemas and Recovery have no
+// go-sdk v1.7.0 equivalent and are documented no-ops here — see
+// server_options.go's field-level doc comments.
+func NewMCPServerWithOptions(name, version string, opts ServerOptions) *MCPServer {
+	caps := &mcp.ServerCapabilities{
+		Tools:   &mcp.ToolCapabilities{ListChanged: opts.ToolCapabilities},
+		Prompts: &mcp.PromptCapabilities{ListChanged: opts.PromptCapabilities},
+	}
+	if opts.ResourceCapabilities {
+		caps.Resources = &mcp.ResourceCapabilities{
+			Subscribe:   opts.ResourceSubscribe,
+			ListChanged: opts.ResourceListChanged,
+		}
+	}
+	return mcp.NewServer(&mcp.Implementation{
+		Name:    name,
+		Version: version,
+	}, &mcp.ServerOptions{
+		Instructions: opts.Instructions,
+		Capabilities: caps,
+	})
+}
+
+// NewStreamableHTTPHandler wraps a single MCPServer in a streamable-HTTP
+// http.Handler from SDK-neutral HTTPServerOptions (see server_options.go).
+// go-sdk's mcp.NewStreamableHTTPHandler takes a per-request server-provider
+// function rather than a fixed server; this always returns s, matching the
+// single-server usage this compat pair targets (secretstudios-mcp's
+// buildHTTPHandler). HTTPServerOptions.EndpointPath is a documented no-op
+// here — go-sdk's handler has no internal path concept; mount the returned
+// handler at that path via your own mux, same as the caller already does for
+// the mcp-go build.
+func NewStreamableHTTPHandler(s *MCPServer, opts HTTPServerOptions) http.Handler {
+	return mcp.NewStreamableHTTPHandler(func(*http.Request) *MCPServer {
+		return s
+	}, &mcp.StreamableHTTPOptions{
+		Stateless: opts.Stateless,
+	})
 }
