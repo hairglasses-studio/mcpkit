@@ -19,13 +19,22 @@ OFFICIAL_SDK_BUILD_PACKAGES := \
 	./sampling \
 	./resources \
 	./prompts \
-	./feedback
+	./feedback \
+	./testing/conformance
 
-# `prompts` is deliberately absent below (unlike its sibling `resources`,
-# which was ported 2026-08-07): prompts/notify_test.go is untagged and
-# depends on DynamicRegistry, which has no official_sdk port. Same class of
-# gap `resources_test.go`/`notify_test.go` had before this fix — flagged as
-# a follow-up, not fixed here (out of scope for the uri_middleware lane).
+# `prompts` was previously excluded from this list: prompts/notify_test.go
+# was untagged, using DynamicRegistry (which has no official_sdk port)
+# directly, and would have broken the moment anyone ran `go test -tags
+# official_sdk ./prompts`. Fixed 2026-08-08 (P52.6 round 2) by tagging
+# notify_test.go `!official_sdk` — the DynamicRegistry gap itself is
+# unchanged (`go test -tags official_sdk ./prompts` reports "[no test
+# files]", an honest gap, not a build failure) but the package is safe to
+# list here again. `testing/conformance` was entirely !official_sdk-tagged
+# before the same round ported its tools/resources/prompts-lifecycle subset
+# (NewPortableEverythingServer, portable_*.go) — 13 real tests now run under
+# official_sdk (portable_server_test.go); sampling/elicitation/logging/
+# completions stay !official_sdk-only (NewEverythingServer,
+# everything_server.go — see doc.go for why).
 OFFICIAL_SDK_TEST_PACKAGES := \
 	./registry \
 	./handler \
@@ -35,7 +44,9 @@ OFFICIAL_SDK_TEST_PACKAGES := \
 	./health \
 	./sampling \
 	./resources \
-	./feedback
+	./prompts \
+	./feedback \
+	./testing/conformance
 
 BENCH_PACKAGES ?= ./mcptest ./testing/benchmark
 BENCH_FLAGS ?= -bench=. -benchmem -run '^$$'
