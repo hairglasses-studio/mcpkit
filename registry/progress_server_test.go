@@ -121,6 +121,45 @@ func TestServerProgressMiddleware_NoReporterWithNilToken(t *testing.T) {
 	}
 }
 
+func TestNewServerProgressReporterFromRequest_ExtractsToken(t *testing.T) {
+	t.Parallel()
+	s := NewMCPServer("test", "0.0.1")
+
+	req := CallToolRequest{}
+	req.Params.Meta = &mcp.Meta{ProgressToken: "req-token"}
+
+	r := NewServerProgressReporterFromRequest(s, req, 25.0)
+	if r == nil {
+		t.Fatal("NewServerProgressReporterFromRequest returned nil")
+	}
+	if r.token != mcp.ProgressToken("req-token") {
+		t.Errorf("token = %v, want req-token", r.token)
+	}
+	if r.total != 25.0 {
+		t.Errorf("total = %v, want 25.0", r.total)
+	}
+	if r.server != s {
+		t.Error("server reference not stored correctly")
+	}
+}
+
+func TestNewServerProgressReporterFromRequest_NoToken(t *testing.T) {
+	t.Parallel()
+	s := NewMCPServer("test", "0.0.1")
+
+	// No Meta set — no token present, mirroring
+	// TestServerProgressMiddleware_NoReporterWithoutToken's request shape.
+	req := CallToolRequest{}
+
+	r := NewServerProgressReporterFromRequest(s, req, 0)
+	if r == nil {
+		t.Fatal("NewServerProgressReporterFromRequest returned nil")
+	}
+	if r.token != nil {
+		t.Errorf("token = %v, want nil", r.token)
+	}
+}
+
 func TestServerProgressReporter_ReportParams(t *testing.T) {
 	t.Parallel()
 	// Verify the params map is built correctly (indirectly, by checking no panic
