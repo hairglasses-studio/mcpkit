@@ -26,7 +26,9 @@ OFFICIAL_SDK_BUILD_PACKAGES := \
 	./observability \
 	./discovery \
 	./sanitize \
-	./resilience
+	./resilience \
+	./a2a \
+	./bridge/a2a
 
 # `prompts` was previously excluded from this list: prompts/notify_test.go
 # was untagged, using DynamicRegistry (which has no official_sdk port)
@@ -69,7 +71,27 @@ OFFICIAL_SDK_BUILD_PACKAGES := \
 # compat_official.go (same pattern as ExtractTextContent/ToolMetaField) and
 # rewriting Provider.InjectMeta/ExtractMeta (renamed InjectResultMeta/
 # ExtractRequestMeta — neither was called outside this package) to go
-# through them instead of touching the SDK-specific shape directly.
+# through them instead of touching the SDK-specific shape directly. `a2a` and
+# `bridge/a2a` (2026-08-08, P52.6/P52.7 round 8): `a2a` was already fully
+# portable with zero changes (never imported mcp-go directly — the A2A
+# protocol layer works entirely through registry-neutral types) and simply
+# had never been added to these lists before; its real ~90-test suite
+# (client/server/interceptors/push-config/TCK) now runs under official_sdk
+# too. `bridge/a2a` was a genuine port (flip1's build attempt found ~10
+# compile-error classes): raw mcp.Tool/mcp.TextContent/mcp.ImageContent/
+# mcp.EmbeddedResource type assertions and ToolInputSchema.Type/Properties/
+# Required field access, none of which the official SDK's `any`-typed
+# schema or pointer-based content types support directly. Fixed by adding
+# ExtractImageContent/MakeImageContent, ExtractEmbeddedResource/
+# MakeEmbeddedResourceText, InputSchemaType/Properties/Required/
+# AdditionalProperties, and MakeToolInputSchema to registry/compat.go +
+# compat_official.go (same ExtractTextContent/OutputSchemaType pattern),
+# then rewriting translator.go/executor.go/remote_agent.go to go through
+# them instead of raw mcp-go construction — both source files dropped their
+# mcp-go import entirely as a result. One test (invalid-base64 image data)
+# stayed genuinely !official_sdk-only: the official SDK's ImageContent.Data
+# is already raw []byte, so "invalid base64" isn't an expressible scenario
+# there at all, not a missing compat feature.
 OFFICIAL_SDK_TEST_PACKAGES := \
 	./registry \
 	./handler \
@@ -87,7 +109,9 @@ OFFICIAL_SDK_TEST_PACKAGES := \
 	./observability \
 	./discovery \
 	./sanitize \
-	./resilience
+	./resilience \
+	./a2a \
+	./bridge/a2a
 
 BENCH_PACKAGES ?= ./mcptest ./testing/benchmark
 BENCH_FLAGS ?= -bench=. -benchmem -run '^$$'
