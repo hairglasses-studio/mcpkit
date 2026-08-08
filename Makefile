@@ -1,27 +1,40 @@
 .PHONY: build test vet lint check build-official test-official check-dual bench bench-guard rdloop-build rdloop-dry rdloop rdloop-12h rdloop-status skill-surface skill-surface-check smoke-matrix
 
+# NOTE: `gateway` is deliberately absent from both lists below. Every
+# substantive file in the package is `!official_sdk`-only (gateway.go,
+# upstream.go, dynamic.go, resilience.go, federation.go, session_affinity.go,
+# observability.go, affinity.go + their _test.go pairs) with no official_sdk
+# counterpart — under -tags official_sdk the package compiles to just doc.go
+# + errors.go and `go test` reports `[no test files]`. Listing it here was a
+# false-green: green build/test output for zero ported functionality and
+# zero tests (found 2026-08-07, P52.6). Re-add only once gateway actually has
+# an official_sdk implementation.
 OFFICIAL_SDK_BUILD_PACKAGES := \
 	./registry \
 	./handler \
 	./mcptest \
 	./transport \
 	./session \
-	./gateway \
 	./health \
 	./sampling \
 	./resources \
 	./prompts \
 	./feedback
 
+# `prompts` is deliberately absent below (unlike its sibling `resources`,
+# which was ported 2026-08-07): prompts/notify_test.go is untagged and
+# depends on DynamicRegistry, which has no official_sdk port. Same class of
+# gap `resources_test.go`/`notify_test.go` had before this fix — flagged as
+# a follow-up, not fixed here (out of scope for the uri_middleware lane).
 OFFICIAL_SDK_TEST_PACKAGES := \
 	./registry \
 	./handler \
 	./mcptest \
 	./transport \
 	./session \
-	./gateway \
 	./health \
 	./sampling \
+	./resources \
 	./feedback
 
 BENCH_PACKAGES ?= ./mcptest ./testing/benchmark
