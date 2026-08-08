@@ -72,6 +72,48 @@ func (tr *transport) readResource(ctx context.Context, t testing.TB, uri string)
 	return result, nil
 }
 
+func (tr *transport) listToolNames(ctx context.Context, t testing.TB) ([]string, error) {
+	t.Helper()
+
+	result, err := tr.session.ListTools(ctx, &mcp.ListToolsParams{})
+	if err != nil {
+		return nil, fmt.Errorf("ListTools: %w", err)
+	}
+	names := make([]string, 0, len(result.Tools))
+	for _, tl := range result.Tools {
+		names = append(names, tl.Name)
+	}
+	return names, nil
+}
+
+func (tr *transport) listResourceURIs(ctx context.Context, t testing.TB) ([]string, error) {
+	t.Helper()
+
+	result, err := tr.session.ListResources(ctx, &mcp.ListResourcesParams{})
+	if err != nil {
+		return nil, fmt.Errorf("ListResources: %w", err)
+	}
+	uris := make([]string, 0, len(result.Resources))
+	for _, r := range result.Resources {
+		uris = append(uris, r.URI)
+	}
+	return uris, nil
+}
+
+func (tr *transport) listPromptNames(ctx context.Context, t testing.TB) ([]string, error) {
+	t.Helper()
+
+	result, err := tr.session.ListPrompts(ctx, &mcp.ListPromptsParams{})
+	if err != nil {
+		return nil, fmt.Errorf("ListPrompts: %w", err)
+	}
+	names := make([]string, 0, len(result.Prompts))
+	for _, p := range result.Prompts {
+		names = append(names, p.Name)
+	}
+	return names, nil
+}
+
 func (tr *transport) getPrompt(ctx context.Context, t testing.TB, name string, args map[string]string) (*registry.GetPromptResult, error) {
 	t.Helper()
 

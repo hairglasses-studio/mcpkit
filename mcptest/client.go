@@ -50,6 +50,47 @@ func (c *Client) CallToolWithContext(ctx context.Context, name string, args map[
 	return result
 }
 
+// ListToolNames returns the names of every tool the server currently
+// advertises via tools/list. It fails the test on transport error.
+//
+// This (plus ListResourceURIs/ListPromptNames) exists because Client has no
+// full ListTools/ListResources/ListPrompts equivalent returning complete
+// schema objects — building one portably would require exposing each SDK's
+// list-result type through the compat layer, which no consumer has needed
+// yet. Callers that only need to assert on a name set (the common case —
+// "is tool X registered", "how many resources are there") should use these
+// instead of reaching for an SDK-specific client directly.
+func (c *Client) ListToolNames() []string {
+	c.t.Helper()
+	names, err := c.tr.listToolNames(context.Background(), c.t)
+	if err != nil {
+		c.t.Fatalf("ListToolNames: %v", err)
+	}
+	return names
+}
+
+// ListResourceURIs returns the URIs of every resource the server currently
+// advertises via resources/list. It fails the test on transport error.
+func (c *Client) ListResourceURIs() []string {
+	c.t.Helper()
+	uris, err := c.tr.listResourceURIs(context.Background(), c.t)
+	if err != nil {
+		c.t.Fatalf("ListResourceURIs: %v", err)
+	}
+	return uris
+}
+
+// ListPromptNames returns the names of every prompt the server currently
+// advertises via prompts/list. It fails the test on transport error.
+func (c *Client) ListPromptNames() []string {
+	c.t.Helper()
+	names, err := c.tr.listPromptNames(context.Background(), c.t)
+	if err != nil {
+		c.t.Fatalf("ListPromptNames: %v", err)
+	}
+	return names
+}
+
 // ReadResource reads a resource by URI.
 // It fails the test if the resource is not found or returns an error.
 func (c *Client) ReadResource(uri string) *registry.ReadResourceResult {
