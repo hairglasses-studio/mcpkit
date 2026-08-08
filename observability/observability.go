@@ -201,31 +201,28 @@ func (p *Provider) ExtractTraceContext(ctx context.Context, carrier map[string]s
 	return otel.GetTextMapPropagator().Extract(ctx, propagation.MapCarrier(carrier))
 }
 
-// InjectMeta injects the trace context from ctx into the provided MCP Meta object.
-func (p *Provider) InjectMeta(ctx context.Context, meta *registry.ToolMeta) {
-	if meta == nil {
+// InjectResultMeta injects the trace context from ctx into result's _meta
+// field. It goes through registry.SetResultMetaCarrier rather than touching
+// result.Meta directly because the underlying _meta shape is SDK-specific:
+// mcp-go's CallToolResult.Meta is a *mcp.Meta struct with an
+// AdditionalFields sub-field, while the official SDK's is a plain
+// map[string]any — see registry/compat.go and compat_official.go.
+func (p *Provider) InjectResultMeta(ctx context.Context, result *registry.CallToolResult) {
+	if result == nil {
 		return
-	}
-	if meta.AdditionalFields == nil {
-		meta.AdditionalFields = make(map[string]any)
 	}
 	carrier := make(map[string]string)
 	p.InjectTraceContext(ctx, carrier)
-	for k, v := range carrier {
-		meta.AdditionalFields[k] = v
-	}
+	registry.SetResultMetaCarrier(result, carrier)
 }
 
-// ExtractMeta extracts the trace context from the provided MCP Meta object into a new context.
-func (p *Provider) ExtractMeta(ctx context.Context, meta *registry.ToolMeta) context.Context {
-	if meta == nil || meta.AdditionalFields == nil {
+// ExtractRequestMeta extracts the trace context from req's _meta field into
+// a new context, via registry.RequestMetaCarrier (see InjectResultMeta for
+// why this doesn't read req.Params.Meta directly).
+func (p *Provider) ExtractRequestMeta(ctx context.Context, req registry.CallToolRequest) context.Context {
+	carrier := registry.RequestMetaCarrier(req)
+	if carrier == nil {
 		return ctx
-	}
-	carrier := make(map[string]string)
-	for k, v := range meta.AdditionalFields {
-		if s, ok := v.(string); ok {
-			carrier[k] = s
-		}
 	}
 	return p.ExtractTraceContext(ctx, carrier)
 }

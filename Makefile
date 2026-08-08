@@ -22,6 +22,8 @@ OFFICIAL_SDK_BUILD_PACKAGES := \
 	./feedback \
 	./testing/conformance \
 	./middleware/correlation \
+	./middleware/gate \
+	./observability \
 	./discovery \
 	./sanitize \
 	./resilience
@@ -51,7 +53,23 @@ OFFICIAL_SDK_BUILD_PACKAGES := \
 # likewise only touched registry compat aliases + stdlib. Untagging surfaced
 # a large pre-existing but dormant discovery test suite (marketplace/client/
 # publisher tests) that was already portable and is now exercised under
-# official_sdk too.
+# official_sdk too. `middleware/gate` (2026-08-08, fleet flip-order #1) was
+# gratuitously tagged — gate.go/doc.go only touch registry's compat aliases +
+# stdlib; gate_test.go's one raw `mcp.CallToolRequest{}` literal became
+# `registry.CallToolRequest{}` since the zero value compiles identically
+# under either SDK. `observability` (same round) was a real port, not a
+# tag removal: observability.go/middleware.go reached into
+# `*registry.ToolMeta` (result.Meta / request.Params.Meta) directly to
+# bridge OTel trace context through MCP `_meta` — a shape that is genuinely
+# SDK-specific (mcp-go's Meta is a `*mcp.Meta` struct with an
+# AdditionalFields sub-field; the official SDK's is a plain
+# `map[string]any`, and even CallToolResult.Meta's pointer-vs-value shape
+# differs). Fixed by adding a bounded `RequestMetaCarrier`/
+# `SetResultMetaCarrier` compat accessor pair to registry/compat.go +
+# compat_official.go (same pattern as ExtractTextContent/ToolMetaField) and
+# rewriting Provider.InjectMeta/ExtractMeta (renamed InjectResultMeta/
+# ExtractRequestMeta — neither was called outside this package) to go
+# through them instead of touching the SDK-specific shape directly.
 OFFICIAL_SDK_TEST_PACKAGES := \
 	./registry \
 	./handler \
@@ -65,6 +83,8 @@ OFFICIAL_SDK_TEST_PACKAGES := \
 	./feedback \
 	./testing/conformance \
 	./middleware/correlation \
+	./middleware/gate \
+	./observability \
 	./discovery \
 	./sanitize \
 	./resilience

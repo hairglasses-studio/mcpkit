@@ -29,7 +29,7 @@ func (p *Provider) Middleware() registry.Middleware {
 		}
 		return func(ctx context.Context, request registry.CallToolRequest) (*registry.CallToolResult, error) {
 			// Extract trace context from request _meta if available
-			ctx = p.ExtractMeta(ctx, request.Params.Meta)
+			ctx = p.ExtractRequestMeta(ctx, request)
 
 			ctx, span := p.StartSpan(ctx, name)
 			if span != nil {
@@ -49,12 +49,7 @@ func (p *Provider) Middleware() registry.Middleware {
 			p.RecordToolInvocation(ctx, name, category, time.Since(start), err)
 
 			// Inject trace context into result _meta for the caller
-			if result != nil {
-				if result.Meta == nil {
-					result.Meta = &registry.ToolMeta{}
-				}
-				p.InjectMeta(ctx, result.Meta)
-			}
+			p.InjectResultMeta(ctx, result)
 
 			// Bridge finops token usage onto the span when available.
 			// Prefer the holder (populated by inner finops middleware) over

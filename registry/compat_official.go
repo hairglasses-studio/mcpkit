@@ -314,6 +314,42 @@ func ToolMetaField(t Tool, key string) (any, bool) {
 	return v, ok
 }
 
+// RequestMetaCarrier returns req's _meta fields as a string-keyed carrier
+// suitable for OTel propagation.Extract (e.g. trace-context bridging in
+// observability.Provider), or nil if req carries no _meta / no string
+// values. The official SDK's CallToolRequest.Params.Meta is a plain
+// map[string]any (mcp-go's is a *mcp.Meta struct with an AdditionalFields
+// sub-field — see compat.go's RequestMetaCarrier), so this reads the map
+// directly.
+func RequestMetaCarrier(req CallToolRequest) map[string]string {
+	if req.Params == nil || req.Params.Meta == nil {
+		return nil
+	}
+	carrier := make(map[string]string, len(req.Params.Meta))
+	for k, v := range req.Params.Meta {
+		if s, ok := v.(string); ok {
+			carrier[k] = s
+		}
+	}
+	return carrier
+}
+
+// SetResultMetaCarrier merges carrier's key/value pairs into result's _meta
+// map, allocating it if necessary. No-op if result is nil or carrier is
+// empty. See compat.go's SetResultMetaCarrier for the mcp-go side's
+// AdditionalFields-sub-field counterpart.
+func SetResultMetaCarrier(result *CallToolResult, carrier map[string]string) {
+	if result == nil || len(carrier) == 0 {
+		return
+	}
+	if result.Meta == nil {
+		result.Meta = ToolMeta{}
+	}
+	for k, v := range carrier {
+		result.Meta[k] = v
+	}
+}
+
 // SetToolDeferLoading is a no-op for the official SDK until it exposes an
 // equivalent field on tool descriptors.
 func SetToolDeferLoading(tool *Tool, deferred bool) {
