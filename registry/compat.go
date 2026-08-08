@@ -74,6 +74,22 @@ var (
 	NewTextContent   = mcp.NewTextContent
 )
 
+// TemplateURI returns the raw URI template string from a ResourceTemplate.
+// mcp-go's ResourceTemplate.URITemplate is a parsed *mcp.URITemplate (a
+// uritemplate.Template wrapper with a .Raw() method), not a plain string —
+// unlike the official SDK's, which is (see compat_official.go's
+// TemplateURI). Consumer code that needs the template string for display or
+// sorting (e.g. secretstudios-mcp's internal/surface/server_catalog.go)
+// should go through this accessor instead of reaching into .URITemplate.Raw()
+// directly, which does not compile under official_sdk. Returns "" for a
+// zero-value/nil URITemplate.
+func TemplateURI(tpl ResourceTemplate) string {
+	if tpl.URITemplate == nil {
+		return ""
+	}
+	return tpl.URITemplate.Raw()
+}
+
 // MakePrompt constructs a Prompt with SDK-neutral PromptArgument values.
 // mcp-go's mcp.Prompt.Arguments is []mcp.PromptArgument — a value slice that
 // PromptArgument (aliased to mcp.PromptArgument) matches directly — so args

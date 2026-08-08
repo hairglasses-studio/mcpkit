@@ -103,6 +103,14 @@ func ExtractResourceText(result *ReadResourceResult) (string, bool) {
 	return result.Contents[0].Text, result.Contents[0].Text != ""
 }
 
+// TemplateURI returns the raw URI template string from a ResourceTemplate.
+// The official SDK's ResourceTemplate.URITemplate is already a plain string
+// (unlike mcp-go's parsed *mcp.URITemplate — see compat.go's TemplateURI),
+// so this just returns the field directly.
+func TemplateURI(tpl ResourceTemplate) string {
+	return tpl.URITemplate
+}
+
 // MakePrompt constructs a Prompt with SDK-neutral PromptArgument values. The
 // official SDK's mcp.Prompt.Arguments is []*mcp.PromptArgument — a pointer
 // slice, unlike mcp-go's value slice (see compat.go's MakePrompt) — so each
