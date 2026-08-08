@@ -103,14 +103,16 @@ func ExtractResourceText(result *ReadResourceResult) (string, bool) {
 	return result.Contents[0].Text, result.Contents[0].Text != ""
 }
 
-// ProgressTokenFromRequest always returns nil on the official_sdk build.
-// go-sdk v1.7.0 does not yet expose per-session progress notifications (see
-// ServerProgressReporter's doc comment in this file), so there is no
-// progress token to extract — an existing, already-accepted limitation, not
-// a new gap introduced by this accessor. See compat.go's ProgressTokenFromRequest
-// for the mcp-go side, which does extract a real token.
+// ProgressTokenFromRequest extracts the request's progress token, if any,
+// via CallToolParamsRaw.GetProgressToken() (mcp/protocol.go). go-sdk v1.7.0
+// does support per-session progress notifications end to end — see
+// progress_server_official.go — so unlike an earlier version of this
+// comment claimed, there is no SDK limitation here to work around.
 func ProgressTokenFromRequest(req CallToolRequest) any {
-	return nil
+	if req.Params == nil {
+		return nil
+	}
+	return req.Params.GetProgressToken()
 }
 
 // TemplateURI returns the raw URI template string from a ResourceTemplate.
