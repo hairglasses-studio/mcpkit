@@ -1,5 +1,3 @@
-//go:build !official_sdk
-
 package discovery
 
 import (
@@ -8,8 +6,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"github.com/mark3labs/mcp-go/mcp"
 
 	"github.com/hairglasses-studio/mcpkit/prompts"
 	"github.com/hairglasses-studio/mcpkit/registry"
@@ -34,8 +30,8 @@ type resourceModule struct {
 	templates []resources.TemplateDefinition
 }
 
-func (m *resourceModule) Name() string                          { return m.name }
-func (m *resourceModule) Description() string                  { return "test resource module" }
+func (m *resourceModule) Name() string                              { return m.name }
+func (m *resourceModule) Description() string                       { return "test resource module" }
 func (m *resourceModule) Resources() []resources.ResourceDefinition { return m.resources }
 func (m *resourceModule) Templates() []resources.TemplateDefinition { return m.templates }
 
@@ -45,8 +41,8 @@ type promptModule struct {
 	prompts []prompts.PromptDefinition
 }
 
-func (m *promptModule) Name() string                      { return m.name }
-func (m *promptModule) Description() string               { return "test prompt module" }
+func (m *promptModule) Name() string                        { return m.name }
+func (m *promptModule) Description() string                 { return "test prompt module" }
 func (m *promptModule) Prompts() []prompts.PromptDefinition { return m.prompts }
 
 // --- MetadataFromConfig tests ---
@@ -63,11 +59,11 @@ func TestMetadataFromConfig_AllRegistries(t *testing.T) {
 	resReg.RegisterModule(&resourceModule{
 		name: "res-mod",
 		resources: []resources.ResourceDefinition{
-			{Resource: mcp.NewResource("file:///config.json", "Config")},
-			{Resource: mcp.NewResource("file:///data.json", "Data")},
+			{Resource: registry.NewResource("file:///config.json", "Config")},
+			{Resource: registry.NewResource("file:///data.json", "Data")},
 		},
 		templates: []resources.TemplateDefinition{
-			{Template: mcp.NewResourceTemplate("user://{id}/profile", "User Profile")},
+			{Template: registry.NewResourceTemplate("user://{id}/profile", "User Profile")},
 		},
 	})
 
@@ -75,8 +71,8 @@ func TestMetadataFromConfig_AllRegistries(t *testing.T) {
 	promptReg.RegisterModule(&promptModule{
 		name: "prompt-mod",
 		prompts: []prompts.PromptDefinition{
-			{Prompt: mcp.NewPrompt("summarize", mcp.WithPromptDescription("Summarize text"))},
-			{Prompt: mcp.NewPrompt("review", mcp.WithPromptDescription("Review code"))},
+			{Prompt: registry.MakePrompt("summarize", "Summarize text")},
+			{Prompt: registry.MakePrompt("review", "Review code")},
 		},
 	})
 
@@ -212,7 +208,7 @@ func TestMetadataFromConfig_ResourceExtraction(t *testing.T) {
 		name: "docs",
 		resources: []resources.ResourceDefinition{
 			{
-				Resource: mcp.Resource{
+				Resource: registry.Resource{
 					URI:         "docs://changelog",
 					Name:        "Changelog",
 					Description: "Project changelog",
@@ -249,9 +245,7 @@ func TestMetadataFromConfig_PromptExtraction(t *testing.T) {
 		name: "assistants",
 		prompts: []prompts.PromptDefinition{
 			{
-				Prompt: mcp.NewPrompt("explain",
-					mcp.WithPromptDescription("Explain a concept"),
-				),
+				Prompt: registry.MakePrompt("explain", "Explain a concept"),
 			},
 		},
 	})

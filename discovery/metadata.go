@@ -1,5 +1,3 @@
-//go:build !official_sdk
-
 package discovery
 
 import (
@@ -104,14 +102,17 @@ func MetadataFromConfig(cfg MetadataConfig) ServerMetadata {
 			})
 		}
 
-		// Also extract template summaries.
+		// Also extract template summaries. registry.TemplateURI (not
+		// .URITemplate.Raw() directly) — mcp-go's ResourceTemplate.URITemplate
+		// is a parsed *mcp.URITemplate, the official SDK's is a plain string;
+		// see registry/compat.go's TemplateURI doc comment.
 		tdefs := cfg.Resources.GetAllTemplateDefinitions()
 		sort.Slice(tdefs, func(i, j int) bool {
-			return tdefs[i].Template.URITemplate.Raw() < tdefs[j].Template.URITemplate.Raw()
+			return registry.TemplateURI(tdefs[i].Template) < registry.TemplateURI(tdefs[j].Template)
 		})
 		for _, td := range tdefs {
 			resSummaries = append(resSummaries, ResourceSummary{
-				URITemplate: td.Template.URITemplate.Raw(),
+				URITemplate: registry.TemplateURI(td.Template),
 				Name:        td.Template.Name,
 				Description: td.Template.Description,
 			})

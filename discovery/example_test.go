@@ -1,5 +1,3 @@
-//go:build !official_sdk
-
 package discovery_test
 
 import (
@@ -159,6 +157,6 @@ type exampleModule struct {
 	tools []registry.ToolDefinition
 }
 
-func (m *exampleModule) Name() string                      { return "example" }
-func (m *exampleModule) Description() string               { return "example module" }
+func (m *exampleModule) Name() string                     { return "example" }
+func (m *exampleModule) Description() string              { return "example module" }
 func (m *exampleModule) Tools() []registry.ToolDefinition { return m.tools }
