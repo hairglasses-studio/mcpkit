@@ -2,6 +2,7 @@ package fleetinventory
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/hairglasses-studio/mcpkit/handler"
 	"github.com/hairglasses-studio/mcpkit/registry"
@@ -24,6 +25,22 @@ type reportInput struct {
 
 type reportOutput struct {
 	Markdown string `json:"markdown"`
+}
+
+type baselineOutput struct {
+	BaselineJSON string `json:"baseline_json"`
+}
+
+type checkInput struct {
+	Root          string   `json:"root" jsonschema:"required,description=Workspace root directory"`
+	Repos         []string `json:"repos,omitempty" jsonschema:"description=Repo names to scan. Omit for full workspace."`
+	BaselineJSON  string   `json:"baseline_json" jsonschema:"required,description=The committed baseline JSON (from fleet_inventory_baseline) to diff against"`
+	CompositeDrop float64  `json:"composite_drop,omitempty" jsonschema:"description=Allowed composite regression before failing (default 5.0)"`
+}
+
+type checkOutput struct {
+	Result CheckResult `json:"result"`
+	Report string      `json:"report"`
 }
 
 type module struct{}
@@ -81,5 +98,42 @@ func (m *module) Tools() []registry.ToolDefinition {
 	score.Category = "audit"
 	score.SearchTerms = []string{"quality score", "cleanup roadmap", "repo scoreboard", "namespace duplication"}
 
-	return []registry.ToolDefinition{scan, report, score}
+	baseline := handler.TypedHandler[reportInput, baselineOutput](
+		"fleet_inventory_baseline",
+		"Emit a committable baseline (compact per-repo composite / violation / security-finding / Tasks-conformance projection of a scored scan) for use with fleet_inventory_check as a CI gate.",
+		func(ctx context.Context, in reportInput) (baselineOutput, error) {
+			rep, err := Scan(ctx, in.Root, ScanOptions{Repos: in.Repos, Score: true})
+			if err != nil {
+				return baselineOutput{}, err
+			}
+			raw, err := BaselineFromReport(rep).Marshal()
+			if err != nil {
+				return baselineOutput{}, err
+			}
+			return baselineOutput{BaselineJSON: string(raw)}, nil
+		},
+	)
+	baseline.Category = "audit"
+	baseline.SearchTerms = []string{"baseline", "ci gate", "accepted state", "commit baseline"}
+
+	check := handler.TypedHandler[checkInput, checkOutput](
+		"fleet_inventory_check",
+		"CI gate: scan the workspace and diff against a committed baseline (from fleet_inventory_baseline). Fails (passed=false) when a repo's composite drops beyond the allowed delta, gains a baseline violation or security finding, or becomes Tasks-shape non-conformant. New repos are reported, not failed.",
+		func(ctx context.Context, in checkInput) (checkOutput, error) {
+			base, err := ParseBaseline([]byte(in.BaselineJSON))
+			if err != nil {
+				return checkOutput{}, fmt.Errorf("parse baseline: %w", err)
+			}
+			rep, err := Scan(ctx, in.Root, ScanOptions{Repos: in.Repos, Score: true})
+			if err != nil {
+				return checkOutput{}, err
+			}
+			res := Check(rep, base, in.CompositeDrop)
+			return checkOutput{Result: res, Report: RenderCheck(res)}, nil
+		},
+	)
+	check.Category = "audit"
+	check.SearchTerms = []string{"ci gate", "regression check", "fail on regression", "baseline diff"}
+
+	return []registry.ToolDefinition{scan, report, score, baseline, check}
 }
