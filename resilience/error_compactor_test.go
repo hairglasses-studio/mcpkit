@@ -1,18 +1,14 @@
-//go:build !official_sdk
-
 package resilience
 
 import (
 	"context"
 	"testing"
 
-	"github.com/mark3labs/mcp-go/mcp"
-
 	"github.com/hairglasses-studio/mcpkit/registry"
 )
 
 func compactorMakeReq() registry.CallToolRequest {
-	return mcp.CallToolRequest{}
+	return registry.CallToolRequest{}
 }
 
 func compactorErrorHandler(msg string) registry.ToolHandlerFunc {
