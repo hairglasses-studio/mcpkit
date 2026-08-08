@@ -1,0 +1,199 @@
+package fleetinventory
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+	"time"
+
+	"github.com/hairglasses-studio/mcpkit/surfaceinventory"
+)
+
+// RepoReport is the full inventory for one repo.
+type RepoReport struct {
+	Repo          string                     `json:"repo"`
+	Files         int                        `json:"files"`
+	Truncated     bool                       `json:"truncated,omitempty"`
+	WalkErrors    []string                   `json:"walk_errors,omitempty"`
+	Parity        ParityMetrics              `json:"parity"`
+	Surfaces      map[string]int             `json:"surface_counts"`
+	SurfaceDetail []surfaceinventory.Surface `json:"surface_detail,omitempty"`
+	ScanMillis    int64                      `json:"scan_millis"`
+}
+
+// Drift is the workspace-consistency section: disk vs manifest vs catalog.
+type Drift struct {
+	OnDiskOnly   []string `json:"on_disk_only,omitempty"`
+	ManifestOnly []string `json:"manifest_only,omitempty"`
+	CatalogOnly  []string `json:"catalog_only,omitempty"`
+	CatalogPath  string   `json:"catalog_path,omitempty"`
+	ManifestPath string   `json:"manifest_path,omitempty"`
+}
+
+// PlatformReport is the whole-fleet inventory.
+type PlatformReport struct {
+	GeneratedOn    string         `json:"generated_on"`
+	Root           string         `json:"root"`
+	Repos          []RepoReport   `json:"repos"`
+	SurfaceTotals  map[string]int `json:"surface_totals"`
+	ViolationCount int            `json:"violation_count"`
+	Drift          Drift          `json:"drift"`
+	TotalMillis    int64          `json:"total_millis"`
+}
+
+// ScanOptions configure a platform scan.
+type ScanOptions struct {
+	Repos           []string
+	IncludeSurfaces bool
+	Walk            WalkOptions
+	// Now supplies the report timestamp; defaults to time.Now (UTC).
+	Now func() time.Time
+}
+
+// Scan runs the full platform inventory: one bounded parallel walk per repo,
+// parity metrics + surface extraction from the walk products, plus drift.
+func Scan(ctx context.Context, root string, opts ScanOptions) (PlatformReport, error) {
+	now := opts.Now
+	if now == nil {
+		now = time.Now
+	}
+	start := now()
+
+	repos, err := surfaceinventory.WorkspaceRepos(root, opts.Repos)
+	if err != nil {
+		return PlatformReport{}, err
+	}
+
+	report := PlatformReport{
+		GeneratedOn:   start.UTC().Format(time.RFC3339),
+		Root:          root,
+		SurfaceTotals: map[string]int{},
+	}
+
+	indexes := walkAll(ctx, root, repos, opts.Walk)
+	for i := range indexes {
+		idx := &indexes[i]
+		repoStart := now()
+		parity := CollectParity(idx)
+		surfaces := surfaceinventory.ScanFiles(idx.Dir, idx.Repo, idx.Paths, nil)
+
+		rr := RepoReport{
+			Repo:       idx.Repo,
+			Files:      len(idx.Paths),
+			Truncated:  idx.Truncated,
+			WalkErrors: idx.WalkErrors,
+			Parity:     parity,
+			Surfaces:   surfaces.Counts,
+			ScanMillis: now().Sub(repoStart).Milliseconds(),
+		}
+		if opts.IncludeSurfaces {
+			rr.SurfaceDetail = surfaces.Surfaces
+		}
+		report.Repos = append(report.Repos, rr)
+		report.ViolationCount += len(parity.Violations)
+		for k, v := range surfaces.Counts {
+			report.SurfaceTotals[k] += v
+		}
+	}
+	sort.Slice(report.Repos, func(i, j int) bool { return report.Repos[i].Repo < report.Repos[j].Repo })
+
+	report.Drift = collectDrift(root, repos)
+	report.TotalMillis = now().Sub(start).Milliseconds()
+	return report, nil
+}
+
+// collectDrift compares repos on disk vs workspace/manifest.json vs the docs
+// repo catalog (when present). Missing files degrade to empty sections.
+func collectDrift(root string, manifestRepos []string) Drift {
+	drift := Drift{
+		ManifestPath: filepath.Join(root, "workspace", "manifest.json"),
+		CatalogPath:  filepath.Join(root, "docs", "inventory", "repo-catalog.json"),
+	}
+
+	onDisk := map[string]bool{}
+	if entries, err := os.ReadDir(root); err == nil {
+		for _, e := range entries {
+			if e.IsDir() && !strings.HasPrefix(e.Name(), ".") {
+				if _, err := os.Stat(filepath.Join(root, e.Name(), ".git")); err == nil {
+					onDisk[e.Name()] = true
+				}
+			}
+		}
+	}
+	inManifest := map[string]bool{}
+	for _, r := range manifestRepos {
+		inManifest[r] = true
+	}
+	inCatalog := map[string]bool{}
+	if raw, err := os.ReadFile(drift.CatalogPath); err == nil {
+		var cat struct {
+			Repos []struct {
+				Name string `json:"name"`
+			} `json:"repos"`
+		}
+		if json.Unmarshal(raw, &cat) == nil {
+			for _, r := range cat.Repos {
+				inCatalog[r.Name] = true
+			}
+		}
+	}
+
+	for name := range onDisk {
+		if !inManifest[name] {
+			drift.OnDiskOnly = append(drift.OnDiskOnly, name)
+		}
+	}
+	for name := range inManifest {
+		if !onDisk[name] {
+			drift.ManifestOnly = append(drift.ManifestOnly, name)
+		}
+	}
+	if len(inCatalog) > 0 {
+		for name := range inCatalog {
+			if !onDisk[name] && name != ".github" {
+				drift.CatalogOnly = append(drift.CatalogOnly, name)
+			}
+		}
+	}
+	sort.Strings(drift.OnDiskOnly)
+	sort.Strings(drift.ManifestOnly)
+	sort.Strings(drift.CatalogOnly)
+	return drift
+}
+
+// RenderMarkdown renders the platform report as a fleet summary table.
+func RenderMarkdown(rep PlatformReport) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "# Fleet Inventory\n\nGenerated: %s — root `%s` — %d repos in %dms\n\n",
+		rep.GeneratedOn, rep.Root, len(rep.Repos), rep.TotalMillis)
+
+	b.WriteString("| Repo | files | mcp tools | cli | http | canonical skills | violations |\n|---|---|---|---|---|---|---|\n")
+	for _, r := range rep.Repos {
+		fmt.Fprintf(&b, "| %s | %d | %d | %d | %d | %d | %s |\n",
+			r.Repo, r.Files,
+			r.Surfaces[surfaceinventory.KindMCPTool],
+			r.Surfaces[surfaceinventory.KindCLICommand],
+			r.Surfaces[surfaceinventory.KindHTTPRoute],
+			r.Parity.CanonicalSkills,
+			strings.Join(r.Parity.Violations, "; "))
+	}
+	fmt.Fprintf(&b, "\nTotal violations: %d\n", rep.ViolationCount)
+
+	if len(rep.Drift.OnDiskOnly)+len(rep.Drift.ManifestOnly)+len(rep.Drift.CatalogOnly) > 0 {
+		b.WriteString("\n## Drift\n\n")
+		if len(rep.Drift.OnDiskOnly) > 0 {
+			fmt.Fprintf(&b, "- On disk, not in manifest: %s\n", strings.Join(rep.Drift.OnDiskOnly, ", "))
+		}
+		if len(rep.Drift.ManifestOnly) > 0 {
+			fmt.Fprintf(&b, "- In manifest, missing on disk: %s\n", strings.Join(rep.Drift.ManifestOnly, ", "))
+		}
+		if len(rep.Drift.CatalogOnly) > 0 {
+			fmt.Fprintf(&b, "- In catalog, missing on disk: %s\n", strings.Join(rep.Drift.CatalogOnly, ", "))
+		}
+	}
+	return b.String()
+}

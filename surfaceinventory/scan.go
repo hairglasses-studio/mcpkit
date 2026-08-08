@@ -141,6 +141,35 @@ func ScanWorkspace(root string, repos []string, kinds []string) (Report, error) 
 	return report, nil
 }
 
+// ScanFiles extracts surfaces from the given repo-relative files (callers
+// that already hold a file listing avoid a second walk). Non-Go and _test.go
+// entries are skipped; parse failures are recorded per-file, never fatal.
+func ScanFiles(dir, name string, files []string, kindSet map[string]bool) RepoInventory {
+	inv := RepoInventory{Repo: name, Counts: map[string]int{}}
+	fset := token.NewFileSet()
+	for _, rel := range files {
+		if !strings.HasSuffix(rel, ".go") || strings.HasSuffix(rel, "_test.go") {
+			continue
+		}
+		path := filepath.Join(dir, filepath.FromSlash(rel))
+		file, err := parser.ParseFile(fset, path, nil, parser.SkipObjectResolution)
+		if err != nil {
+			inv.ParseErrors = append(inv.ParseErrors, fmt.Sprintf("%s: %v", rel, err))
+			continue
+		}
+		inv.FilesParsed++
+		for _, s := range extractFile(fset, file, rel) {
+			if kindSet != nil && !kindSet[s.Kind] {
+				continue
+			}
+			inv.Surfaces = append(inv.Surfaces, s)
+			inv.Counts[s.Kind]++
+		}
+	}
+	sortSurfaces(inv.Surfaces)
+	return inv
+}
+
 // ScanRepo walks one repo directory and extracts surfaces from every non-test
 // Go file. Parse failures are recorded per-file, never fatal.
 func ScanRepo(dir, name string, kindSet map[string]bool) RepoInventory {
@@ -175,8 +204,13 @@ func ScanRepo(dir, name string, kindSet map[string]bool) RepoInventory {
 		}
 		return nil
 	})
-	sort.Slice(inv.Surfaces, func(i, j int) bool {
-		a, b := inv.Surfaces[i], inv.Surfaces[j]
+	sortSurfaces(inv.Surfaces)
+	return inv
+}
+
+func sortSurfaces(surfaces []Surface) {
+	sort.Slice(surfaces, func(i, j int) bool {
+		a, b := surfaces[i], surfaces[j]
 		if a.Kind != b.Kind {
 			return a.Kind < b.Kind
 		}
@@ -185,7 +219,6 @@ func ScanRepo(dir, name string, kindSet map[string]bool) RepoInventory {
 		}
 		return a.File+strconv.Itoa(a.Line) < b.File+strconv.Itoa(b.Line)
 	})
-	return inv
 }
 
 func kindFilter(kinds []string) map[string]bool {

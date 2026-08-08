@@ -14,6 +14,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- **fleetinventory** — Fleet inventory platform: one bounded, parallel, pruned walk per repo (per-repo timeout, 500k-file cap, errors recorded never fatal) feeds provider-parity metrics (instruction files, retired mirrors, skills canonical/generated, MCP config sources incl. `[profiles.*]` detection), code-surface counts via `surfaceinventory.ScanFiles` (no second walk), baseline violations, and disk/manifest/catalog drift. Exposed as `fleet_inventory_scan` + `fleet_inventory_report`; build-tag-free under both SDKs. Live sweep: 32 repos in ~16s. The robust successor to the find-bound bash agent-parity audit.
+- **surfaceinventory** — `ScanFiles(dir, name, files, kinds)`: extract surfaces from a caller-supplied file listing, for callers that already walked the repo.
 - **surfaceinventory** — New fleet-wide static surface-inventory module: `surface_inventory_scan` + `surface_inventory_report` tools enumerate MCP tool/resource/prompt registrations across every fleet SDK idiom (mcpkit `handler.TypedHandler`, mcp-go `mcp.NewTool`, official-SDK `mcp.AddTool`/`&mcp.Tool{}` and slice-elided `ToolDef{}` literals), plus CLI subcommands (cobra/`flag.NewFlagSet`) and HTTP routes, via parse-only `go/ast` inspection (stdlib only, no type-checking). Workspace-manifest-driven repo discovery with `.git`-subdir fallback; per-file parse errors recorded, never fatal; build-tag-free (both SDKs). Closes the gap where every per-server `tool_catalog` could only introspect its own registry — first live sweep: 32 repos, 16.5k surfaces in ~6.5s.
 
 ## [v0.8.1] - 2026-08-08
