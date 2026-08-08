@@ -33,6 +33,7 @@ type (
 	// Resource types
 	Resource             = mcp.Resource
 	ResourceTemplate     = mcp.ResourceTemplate
+	ResourceContents     = mcp.ResourceContents
 	TextResourceContents = mcp.TextResourceContents
 	BlobResourceContents = mcp.BlobResourceContents
 	ReadResourceRequest  = mcp.ReadResourceRequest
