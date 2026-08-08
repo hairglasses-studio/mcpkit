@@ -12,6 +12,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- **surfaceinventory** — New fleet-wide static surface-inventory module: `surface_inventory_scan` + `surface_inventory_report` tools enumerate MCP tool/resource/prompt registrations across every fleet SDK idiom (mcpkit `handler.TypedHandler`, mcp-go `mcp.NewTool`, official-SDK `mcp.AddTool`/`&mcp.Tool{}` and slice-elided `ToolDef{}` literals), plus CLI subcommands (cobra/`flag.NewFlagSet`) and HTTP routes, via parse-only `go/ast` inspection (stdlib only, no type-checking). Workspace-manifest-driven repo discovery with `.git`-subdir fallback; per-file parse errors recorded, never fatal; build-tag-free (both SDKs). Closes the gap where every per-server `tool_catalog` could only introspect its own registry — first live sweep: 32 repos, 16.5k surfaces in ~6.5s.
+
 ## [v0.8.1] - 2026-08-08
 
 1 commit since v0.8.0, closing out the small-gaps batch that was meant to
