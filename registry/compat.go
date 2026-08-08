@@ -74,6 +74,18 @@ var (
 	NewTextContent   = mcp.NewTextContent
 )
 
+// MakePrompt constructs a Prompt with SDK-neutral PromptArgument values.
+// mcp-go's mcp.Prompt.Arguments is []mcp.PromptArgument — a value slice that
+// PromptArgument (aliased to mcp.PromptArgument) matches directly — so args
+// is assigned as-is. See compat_official.go's MakePrompt for the pointer-
+// slice counterpart this exists to paper over: consumer code that builds a
+// Prompt with `Arguments: args` from a `...PromptArgument` variadic (e.g.
+// secretstudios-mcp's internal/surface/prompts.go newPrompt helper) does not
+// compile under official_sdk without going through this constructor instead.
+func MakePrompt(name, description string, args ...PromptArgument) Prompt {
+	return mcp.Prompt{Name: name, Description: description, Arguments: args}
+}
+
 // MakeTextContent constructs a Content value containing text.
 // In mcp-go this is a value type; in the official SDK it would be a pointer.
 func MakeTextContent(text string) Content {

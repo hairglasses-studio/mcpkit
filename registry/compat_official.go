@@ -103,6 +103,21 @@ func ExtractResourceText(result *ReadResourceResult) (string, bool) {
 	return result.Contents[0].Text, result.Contents[0].Text != ""
 }
 
+// MakePrompt constructs a Prompt with SDK-neutral PromptArgument values. The
+// official SDK's mcp.Prompt.Arguments is []*mcp.PromptArgument — a pointer
+// slice, unlike mcp-go's value slice (see compat.go's MakePrompt) — so each
+// PromptArgument value is copied to its own address before assignment.
+// PromptArgument itself stays a value-type alias on both builds; only this
+// constructor's output shape differs.
+func MakePrompt(name, description string, args ...PromptArgument) Prompt {
+	arguments := make([]*mcp.PromptArgument, len(args))
+	for i := range args {
+		a := args[i]
+		arguments[i] = &a
+	}
+	return mcp.Prompt{Name: name, Description: description, Arguments: arguments}
+}
+
 // MakeTextContent constructs a Content value containing text.
 func MakeTextContent(text string) Content {
 	return &mcp.TextContent{Text: text}
