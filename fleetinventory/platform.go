@@ -23,6 +23,7 @@ type RepoReport struct {
 	Parity        ParityMetrics              `json:"parity"`
 	Surfaces      map[string]int             `json:"surface_counts"`
 	SurfaceDetail []surfaceinventory.Surface `json:"surface_detail,omitempty"`
+	MCPRuntime    MCPRuntime                 `json:"mcp_runtime"`
 	ScanMillis    int64                      `json:"scan_millis"`
 }
 
@@ -96,6 +97,7 @@ func Scan(ctx context.Context, root string, opts ScanOptions) (PlatformReport, e
 			WalkErrors: idx.WalkErrors,
 			Parity:     parity,
 			Surfaces:   surfaces.Counts,
+			MCPRuntime: detectMCPRuntime(idx.Dir),
 			ScanMillis: now().Sub(repoStart).Milliseconds(),
 		}
 		if opts.IncludeSurfaces || opts.Score {
@@ -220,8 +222,35 @@ func RenderMarkdown(rep PlatformReport) string {
 			fmt.Fprintf(&b, "- In catalog, missing on disk: %s\n", strings.Join(rep.Drift.CatalogOnly, ", "))
 		}
 	}
+	b.WriteString(renderMCPRuntime(rep))
 	if rep.Scoring != nil {
 		b.WriteString(RenderScoreMarkdown(*rep.Scoring))
+	}
+	return b.String()
+}
+
+// renderMCPRuntime summarizes the fleet's MCP SDK / spec-era distribution.
+func renderMCPRuntime(rep PlatformReport) string {
+	eraCounts := map[string]int{}
+	var mcpRepos []RepoReport
+	for _, r := range rep.Repos {
+		if r.MCPRuntime.SpecEra == EraNone {
+			continue
+		}
+		eraCounts[r.MCPRuntime.SpecEra]++
+		mcpRepos = append(mcpRepos, r)
+	}
+	if len(mcpRepos) == 0 {
+		return ""
+	}
+	var b strings.Builder
+	b.WriteString("\n## MCP runtime / spec era\n\n")
+	fmt.Fprintf(&b, "Fleet distribution: modern-capable %d, dual %d, legacy-only %d, via-mcpkit %d.\n\n",
+		eraCounts[EraModernCapable], eraCounts[EraDual], eraCounts[EraLegacyOnly], eraCounts[EraViaMcpkit])
+	b.WriteString("| Repo | spec era | MCP SDK(s) |\n|---|---|---|\n")
+	sort.Slice(mcpRepos, func(i, j int) bool { return mcpRepos[i].Repo < mcpRepos[j].Repo })
+	for _, r := range mcpRepos {
+		fmt.Fprintf(&b, "| %s | %s | %s |\n", r.Repo, r.MCPRuntime.SpecEra, strings.Join(r.MCPRuntime.SDKs, ", "))
 	}
 	return b.String()
 }
