@@ -92,13 +92,16 @@ func CollectParity(idx *FileIndex) ParityMetrics {
 	m.MCPServerCount = countMCPServers(filepath.Join(idx.Dir, ".mcp.json"))
 	m.CodexLocalProfiles = countCodexLocalProfiles(idx)
 
-	if m.GeminiMD > 0 {
+	// Violations track ROOT-level mirrors only (matching the fleet baseline
+	// retired_provider_mirror check); the any-depth counts above remain as
+	// metrics but nested hits in archives/vendored trees are not violations.
+	if idx.Has("GEMINI.md") {
 		m.Violations = append(m.Violations, "retired mirror present: GEMINI.md")
 	}
-	if m.CopilotInstructions > 0 {
+	if idx.Has(".github/copilot-instructions.md") {
 		m.Violations = append(m.Violations, "retired mirror present: .github/copilot-instructions.md")
 	}
-	if m.ClineRules > 0 {
+	if idx.Has(".clinerules") {
 		m.Violations = append(m.Violations, "retired mirror present: .clinerules")
 	}
 	if m.CodexLocalProfiles > 0 {

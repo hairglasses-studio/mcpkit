@@ -150,11 +150,18 @@ func collectDrift(root string, manifestRepos []string) Drift {
 	if raw, err := os.ReadFile(drift.CatalogPath); err == nil {
 		var cat struct {
 			Repos []struct {
-				Name string `json:"name"`
+				Name          string `json:"name"`
+				SourceOfTruth string `json:"source_of_truth"`
 			} `json:"repos"`
 		}
 		if json.Unmarshal(raw, &cat) == nil {
 			for _, r := range cat.Repos {
+				// Entries whose source of truth is nested inside another
+				// repo (absorbed/submodule) are deliberate pointers, not
+				// missing checkouts.
+				if strings.Contains(r.SourceOfTruth, "/") {
+					continue
+				}
 				inCatalog[r.Name] = true
 			}
 		}
