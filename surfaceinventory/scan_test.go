@@ -325,3 +325,25 @@ func TestScanPythonFastMCP(t *testing.T) {
 		t.Error("venv dir was scanned")
 	}
 }
+
+func TestNestedRepoSkipped(t *testing.T) {
+	root := t.TempDir()
+	writeRepo(t, root, "fixture", map[string]string{
+		"own.go":               "package x\n\nimport \"m/mcp\"\n\nfunc f() { _ = mcp.NewTool(\"own_tool\") }\n",
+		"oss/sub/.git":         "gitdir: ../../.git/modules/sub",
+		"oss/sub/vendored.go":  "package s\n\nimport \"m/mcp\"\n\nfunc f() { _ = mcp.NewTool(\"vendored_tool\") }\n",
+		"embedded/.git/HEAD":   "ref: refs/heads/main",
+		"embedded/embedded.go": "package e\n\nimport \"m/mcp\"\n\nfunc f() { _ = mcp.NewTool(\"embedded_tool\") }\n",
+	})
+	rep, err := ScanWorkspace(root, []string{"fixture"}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	inv := rep.Repos[0]
+	if inv.Counts[KindMCPTool] != 1 {
+		t.Fatalf("counts = %v, want only own_tool\n%+v", inv.Counts, inv.Surfaces)
+	}
+	if inv.Surfaces[0].Name != "own_tool" {
+		t.Errorf("surface = %+v", inv.Surfaces[0])
+	}
+}

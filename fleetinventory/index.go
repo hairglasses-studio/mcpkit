@@ -90,6 +90,13 @@ func WalkRepo(ctx context.Context, dir, name string, opts WalkOptions) FileIndex
 			if path != dir && (prunedDirs[base] || isHiddenPrunable(base)) {
 				return filepath.SkipDir
 			}
+			// Nested git checkouts (submodule gitlinks or embedded repos)
+			// are inventoried under their own fleet entry.
+			if path != dir {
+				if _, err := os.Stat(filepath.Join(path, ".git")); err == nil {
+					return filepath.SkipDir
+				}
+			}
 			return nil
 		}
 		if !d.Type().IsRegular() {

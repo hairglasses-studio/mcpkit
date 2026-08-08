@@ -71,6 +71,8 @@ var skipDirs = map[string]bool{
 	"venv":          true,
 	"site-packages": true,
 	"__pycache__":   true,
+	"examples":      true,
+	"_reference":    true,
 }
 
 type manifestFile struct {
@@ -198,12 +200,23 @@ func ScanRepo(dir, name string, kindSet map[string]bool) RepoInventory {
 			if path != dir && (strings.HasPrefix(base, ".") || skipDirs[base]) {
 				return filepath.SkipDir
 			}
+			if path != dir && isNestedRepo(path) {
+				return filepath.SkipDir
+			}
 			return nil
 		}
 		files = append(files, relPath(dir, path))
 		return nil
 	})
 	return ScanFiles(dir, name, files, kindSet)
+}
+
+// isNestedRepo reports whether dir is a nested git checkout (a submodule's
+// gitlink file or an embedded .git dir). Nested repos are inventoried under
+// their own fleet entry; counting them in the parent double-counts.
+func isNestedRepo(dir string) bool {
+	_, err := os.Stat(filepath.Join(dir, ".git"))
+	return err == nil
 }
 
 func sortSurfaces(surfaces []Surface) {
