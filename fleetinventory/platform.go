@@ -25,6 +25,7 @@ type RepoReport struct {
 	SurfaceDetail []surfaceinventory.Surface `json:"surface_detail,omitempty"`
 	MCPRuntime    MCPRuntime                 `json:"mcp_runtime"`
 	CCMeta        CCMetaProfile              `json:"cc_meta"`
+	VulnFindings  []VulnFinding              `json:"vuln_findings,omitempty"`
 	ScanMillis    int64                      `json:"scan_millis"`
 }
 
@@ -59,6 +60,10 @@ type ScanOptions struct {
 	// otherwise most dimensions silently degrade to violation-only scoring.
 	Score bool
 	Walk  WalkOptions
+	// VulnDBPath points at a cached Go vuln DB index/modules.json snapshot
+	// (see FetchVulnDBModules). When set and present, each repo's go.mod pins
+	// are matched against it into RepoReport.VulnFindings. Empty/absent → no-op.
+	VulnDBPath string
 	// Now supplies the report timestamp; defaults to time.Now (UTC).
 	Now func() time.Time
 }
@@ -83,6 +88,9 @@ func Scan(ctx context.Context, root string, opts ScanOptions) (PlatformReport, e
 		SurfaceTotals: map[string]int{},
 	}
 
+	vulnDB, vulnErr := LoadVulnDB(opts.VulnDBPath)
+	_ = vulnErr // a malformed/absent snapshot degrades to no findings, never fatal
+
 	indexes := walkAll(ctx, root, repos, opts.Walk)
 	for i := range indexes {
 		idx := &indexes[i]
@@ -104,6 +112,9 @@ func Scan(ctx context.Context, root string, opts ScanOptions) (PlatformReport, e
 		if rr.MCPRuntime.SpecEra != EraNone {
 			rr.MCPRuntime.TasksLegacyShape, rr.MCPRuntime.TasksEvidence = detectTasksShape(idx.Dir, idx.Paths)
 			rr.CCMeta = detectCCMeta(idx.Dir, idx.Paths)
+		}
+		if vulnDB != nil {
+			rr.VulnFindings = detectVulns(idx.Dir, vulnDB)
 		}
 		if opts.IncludeSurfaces || opts.Score {
 			rr.SurfaceDetail = surfaces.Surfaces
@@ -228,8 +239,34 @@ func RenderMarkdown(rep PlatformReport) string {
 		}
 	}
 	b.WriteString(renderMCPRuntime(rep))
+	b.WriteString(renderVulns(rep))
 	if rep.Scoring != nil {
 		b.WriteString(RenderScoreMarkdown(*rep.Scoring))
+	}
+	return b.String()
+}
+
+// renderVulns lists advisory dependency-vulnerability findings per repo.
+func renderVulns(rep PlatformReport) string {
+	type row struct {
+		repo string
+		f    VulnFinding
+	}
+	var rows []row
+	for _, r := range rep.Repos {
+		for _, f := range r.VulnFindings {
+			rows = append(rows, row{r.Repo, f})
+		}
+	}
+	if len(rows) == 0 {
+		return ""
+	}
+	var b strings.Builder
+	fmt.Fprintf(&b, "\n## Dependency vulnerabilities (advisory)\n\n%d version-presence match(es) against the Go vuln DB "+
+		"snapshot — advisory triage, NOT reachability (some may be unreachable; govulncheck is the precision lane).\n\n", len(rows))
+	b.WriteString("| Repo | module | pinned | vuln | fixed in |\n|---|---|---|---|---|\n")
+	for _, r := range rows {
+		fmt.Fprintf(&b, "| %s | %s | %s | %s | %s |\n", r.repo, r.f.Module, r.f.Version, r.f.ID, r.f.Fixed)
 	}
 	return b.String()
 }
