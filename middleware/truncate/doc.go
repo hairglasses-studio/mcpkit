@@ -1,5 +1,3 @@
-//go:build !official_sdk
-
 // Package truncate provides response-size-limiting middleware for mcpkit tool
 // invocations.
 //

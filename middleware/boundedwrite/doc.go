@@ -1,5 +1,3 @@
-//go:build !official_sdk
-
 // Package boundedwrite provides a Stripe-style confirmation middleware for MCP
 // tools with financial or destructive side effects.
 //
@@ -19,7 +17,7 @@
 // Declaring a tool as confirmation-required:
 //
 //	registry.ToolDefinition{
-//	    Tool: mcp.NewTool("payment_charge", ...),
+//	    Tool: registry.Tool{Name: "payment_charge", ...},
 //	    IsWrite: true,
 //	    Tags: []string{boundedwrite.ConfirmTag},
 //	}

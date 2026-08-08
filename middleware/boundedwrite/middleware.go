@@ -1,5 +1,3 @@
-//go:build !official_sdk
-
 package boundedwrite
 
 import (

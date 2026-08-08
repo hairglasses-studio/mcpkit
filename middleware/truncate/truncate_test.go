@@ -1,5 +1,3 @@
-//go:build !official_sdk
-
 package truncate
 
 import (
@@ -8,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/hairglasses-studio/mcpkit/registry"
-	"github.com/mark3labs/mcp-go/mcp"
 )
 
 // testHandler returns a handler that produces a simple text result.
@@ -21,7 +18,7 @@ func testHandler(text string) registry.ToolHandlerFunc {
 // testMultiContentHandler returns a handler producing multiple text content blocks.
 func testMultiContentHandler(texts ...string) registry.ToolHandlerFunc {
 	return func(_ context.Context, _ registry.CallToolRequest) (*registry.CallToolResult, error) {
-		content := make([]mcp.Content, len(texts))
+		content := make([]registry.Content, len(texts))
 		for i, t := range texts {
 			content[i] = registry.MakeTextContent(t)
 		}
@@ -38,11 +35,8 @@ func testErrorHandler(text string) registry.ToolHandlerFunc {
 
 // testReq builds a minimal CallToolRequest.
 func testReq() registry.CallToolRequest {
-	return registry.CallToolRequest{
-		Params: mcp.CallToolParams{
-			Name: "test_tool",
-		},
-	}
+	req, _ := registry.NewCallToolRequest("test_tool", nil)
+	return req
 }
 
 func TestSmallResponsePassesThrough(t *testing.T) {

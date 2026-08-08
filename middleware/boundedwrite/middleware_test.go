@@ -1,13 +1,9 @@
-//go:build !official_sdk
-
 package boundedwrite
 
 import (
 	"context"
 	"strings"
 	"testing"
-
-	"github.com/mark3labs/mcp-go/mcp"
 
 	"github.com/hairglasses-studio/mcpkit/registry"
 )
@@ -19,13 +15,12 @@ func okHandler(_ context.Context, _ registry.CallToolRequest) (*registry.CallToo
 }
 
 func makeReqWithArgs(args map[string]any) registry.CallToolRequest {
-	req := mcp.CallToolRequest{}
-	req.Params.Arguments = args
+	req, _ := registry.NewCallToolRequest("test_tool", args)
 	return req
 }
 
 func makeReqNoArgs() registry.CallToolRequest {
-	return mcp.CallToolRequest{}
+	return registry.CallToolRequest{}
 }
 
 func applyMiddleware(td registry.ToolDefinition) registry.ToolHandlerFunc {
@@ -44,7 +39,7 @@ func applyMiddleware(td registry.ToolDefinition) registry.ToolHandlerFunc {
 // are completely transparent — the middleware is a no-op.
 func TestNoConfirmRequired_PassesThrough(t *testing.T) {
 	td := registry.ToolDefinition{
-		Tool: mcp.NewTool("safe_read", mcp.WithDescription("Read something")),
+		Tool: registry.Tool{Name: "safe_read", Description: "Read something"},
 		Tags: []string{"read", "safe"},
 	}
 
@@ -66,7 +61,7 @@ func TestNoConfirmRequired_PassesThrough(t *testing.T) {
 // the middleware returns an error result with a human-readable prompt.
 func TestConfirmRequired_MissingParam_Rejects(t *testing.T) {
 	td := registry.ToolDefinition{
-		Tool: mcp.NewTool("payment_charge", mcp.WithDescription("Charge a payment card")),
+		Tool: registry.Tool{Name: "payment_charge", Description: "Charge a payment card"},
 		Tags: []string{ConfirmTag},
 	}
 
@@ -99,7 +94,7 @@ func TestConfirmRequired_MissingParam_Rejects(t *testing.T) {
 // causes the middleware to call the next handler.
 func TestConfirmRequired_ConfirmTrue_PassesThrough(t *testing.T) {
 	td := registry.ToolDefinition{
-		Tool: mcp.NewTool("payment_charge", mcp.WithDescription("Charge a payment card")),
+		Tool: registry.Tool{Name: "payment_charge", Description: "Charge a payment card"},
 		Tags: []string{ConfirmTag},
 	}
 
@@ -123,7 +118,7 @@ func TestConfirmRequired_ConfirmTrue_PassesThrough(t *testing.T) {
 // confirm=false is treated the same as absent.
 func TestConfirmRequired_ConfirmFalse_Rejects(t *testing.T) {
 	td := registry.ToolDefinition{
-		Tool: mcp.NewTool("delete_account", mcp.WithDescription("Permanently delete an account")),
+		Tool: registry.Tool{Name: "delete_account", Description: "Permanently delete an account"},
 		Tags: []string{ConfirmTag},
 	}
 
@@ -147,7 +142,7 @@ func TestConfirmRequired_ConfirmFalse_Rejects(t *testing.T) {
 // as no confirmation required.
 func TestConfirmRequired_EmptyTags_PassesThrough(t *testing.T) {
 	td := registry.ToolDefinition{
-		Tool: mcp.NewTool("info_get", mcp.WithDescription("Get some info")),
+		Tool: registry.Tool{Name: "info_get", Description: "Get some info"},
 		Tags: []string{},
 	}
 
@@ -166,7 +161,7 @@ func TestConfirmRequired_EmptyTags_PassesThrough(t *testing.T) {
 // don't trigger the confirmation gate.
 func TestConfirmRequired_OtherTagsOnly_PassesThrough(t *testing.T) {
 	td := registry.ToolDefinition{
-		Tool: mcp.NewTool("data_export", mcp.WithDescription("Export data")),
+		Tool: registry.Tool{Name: "data_export", Description: "Export data"},
 		Tags: []string{"export", "data", "write"},
 	}
 
@@ -186,7 +181,7 @@ func TestConfirmRequired_OtherTagsOnly_PassesThrough(t *testing.T) {
 func TestRejectionMessage_IncludesDescription(t *testing.T) {
 	desc := "Permanently delete all user data including billing history"
 	td := registry.ToolDefinition{
-		Tool: mcp.NewTool("nuke_account", mcp.WithDescription(desc)),
+		Tool: registry.Tool{Name: "nuke_account", Description: desc},
 		Tags: []string{ConfirmTag},
 	}
 
@@ -205,7 +200,7 @@ func TestRejectionMessage_IncludesDescription(t *testing.T) {
 // TestRequireConfirmation_AddsTag verifies the helper function adds ConfirmTag.
 func TestRequireConfirmation_AddsTag(t *testing.T) {
 	td := registry.ToolDefinition{
-		Tool: mcp.NewTool("charge", mcp.WithDescription("Charge")),
+		Tool: registry.Tool{Name: "charge", Description: "Charge"},
 		Tags: []string{"financial"},
 	}
 
@@ -229,7 +224,7 @@ func TestRequireConfirmation_AddsTag(t *testing.T) {
 // TestRequireConfirmation_Idempotent verifies the helper does not add duplicate tags.
 func TestRequireConfirmation_Idempotent(t *testing.T) {
 	td := registry.ToolDefinition{
-		Tool: mcp.NewTool("charge", mcp.WithDescription("Charge")),
+		Tool: registry.Tool{Name: "charge", Description: "Charge"},
 		Tags: []string{ConfirmTag},
 	}
 
@@ -249,7 +244,7 @@ func TestRequireConfirmation_Idempotent(t *testing.T) {
 // TestRequireConfirmation_NilTags verifies nil Tags slice is handled safely.
 func TestRequireConfirmation_NilTags(t *testing.T) {
 	td := registry.ToolDefinition{
-		Tool: mcp.NewTool("charge", mcp.WithDescription("Charge")),
+		Tool: registry.Tool{Name: "charge", Description: "Charge"},
 	}
 
 	out := RequireConfirmation(td)
