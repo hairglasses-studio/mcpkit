@@ -174,28 +174,8 @@ func ScanWorkspace(root string, repos []string, kinds []string) (Report, error) 
 func ScanFiles(dir, name string, files []string, kindSet map[string]bool) RepoInventory {
 	inv := RepoInventory{Repo: name, Counts: map[string]int{}}
 	fset := token.NewFileSet()
-	for _, rel := range files {
-		var surfaces []Surface
-		switch {
-		case strings.HasSuffix(rel, ".go") && !strings.HasSuffix(rel, "_test.go"):
-			path := filepath.Join(dir, filepath.FromSlash(rel))
-			file, err := parser.ParseFile(fset, path, nil, parser.SkipObjectResolution)
-			if err != nil {
-				inv.ParseErrors = append(inv.ParseErrors, fmt.Sprintf("%s: %v", rel, err))
-				continue
-			}
-			surfaces = extractFile(fset, file, rel)
-		case isScannablePython(rel):
-			path := filepath.Join(dir, filepath.FromSlash(rel))
-			var err error
-			surfaces, err = scanPythonFile(path, rel)
-			if err != nil {
-				inv.ParseErrors = append(inv.ParseErrors, fmt.Sprintf("%s: %v", rel, err))
-				continue
-			}
-		default:
-			continue
-		}
+
+	emit := func(surfaces []Surface) {
 		inv.FilesParsed++
 		for _, s := range surfaces {
 			if kindSet != nil && !kindSet[s.Kind] {
@@ -205,8 +185,62 @@ func ScanFiles(dir, name string, files []string, kindSet map[string]bool) RepoIn
 			inv.Counts[s.Kind]++
 		}
 	}
+
+	// Group .go files by package directory so a same-package struct index can
+	// resolve TypedHandler input types declared in a sibling file.
+	goByDir := map[string][]string{}
+	var pyFiles []string
+	for _, rel := range files {
+		switch {
+		case strings.HasSuffix(rel, ".go") && !strings.HasSuffix(rel, "_test.go"):
+			d := slashDir(rel)
+			goByDir[d] = append(goByDir[d], rel)
+		case isScannablePython(rel):
+			pyFiles = append(pyFiles, rel)
+		}
+	}
+
+	for _, group := range goByDir {
+		si := newStructIndex()
+		parsed := make(map[string]*ast.File, len(group))
+		for _, rel := range group {
+			path := filepath.Join(dir, filepath.FromSlash(rel))
+			file, err := parser.ParseFile(fset, path, nil, parser.SkipObjectResolution)
+			if err != nil {
+				inv.ParseErrors = append(inv.ParseErrors, fmt.Sprintf("%s: %v", rel, err))
+				continue
+			}
+			parsed[rel] = file
+			si.indexFile(file)
+		}
+		for _, rel := range group {
+			if file := parsed[rel]; file != nil {
+				emit(extractFile(fset, file, rel, si))
+			}
+		}
+	}
+
+	for _, rel := range pyFiles {
+		path := filepath.Join(dir, filepath.FromSlash(rel))
+		surfaces, err := scanPythonFile(path, rel)
+		if err != nil {
+			inv.ParseErrors = append(inv.ParseErrors, fmt.Sprintf("%s: %v", rel, err))
+			continue
+		}
+		emit(surfaces)
+	}
+
 	sortSurfaces(inv.Surfaces)
 	return inv
+}
+
+// slashDir returns the directory of a forward-slash relative path ("." for a
+// top-level file).
+func slashDir(rel string) string {
+	if i := strings.LastIndex(rel, "/"); i >= 0 {
+		return rel[:i]
+	}
+	return "."
 }
 
 // ScanRepo walks one repo directory and extracts surfaces from every non-test
@@ -273,8 +307,9 @@ func relPath(dir, path string) string {
 	return rel
 }
 
-// extractFile pulls every recognized surface out of one parsed file.
-func extractFile(fset *token.FileSet, file *ast.File, relFile string) []Surface {
+// extractFile pulls every recognized surface out of one parsed file. si is the
+// same-package struct index used to resolve TypedHandler input parameters.
+func extractFile(fset *token.FileSet, file *ast.File, relFile string, si *structIndex) []Surface {
 	var out []Surface
 	add := func(node ast.Node, kind, name, desc, pattern string, hasDesc bool, params []ToolParam) {
 		if name == "" {
@@ -288,7 +323,7 @@ func extractFile(fset *token.FileSet, file *ast.File, relFile string) []Surface 
 	ast.Inspect(file, func(n ast.Node) bool {
 		switch node := n.(type) {
 		case *ast.CallExpr:
-			extractCall(node, add)
+			extractCall(node, add, si)
 		case *ast.CompositeLit:
 			extractComposite(node, add)
 		}
@@ -299,14 +334,15 @@ func extractFile(fset *token.FileSet, file *ast.File, relFile string) []Surface 
 
 type addFunc func(node ast.Node, kind, name, desc, pattern string, hasDesc bool, params []ToolParam)
 
-func extractCall(call *ast.CallExpr, add addFunc) {
+func extractCall(call *ast.CallExpr, add addFunc, si *structIndex) {
 	callee := calleeName(call.Fun)
 	switch callee {
 	case "TypedHandler": // mcpkit: handler.TypedHandler[In, Out]("name", "desc", fn)
 		if len(call.Args) >= 2 {
 			// The 2nd arg is the description slot whether or not it's a literal.
-			// Params come from the In type struct (cross-file resolution) — not extracted.
-			add(call, KindMCPTool, stringLit(call.Args[0]), stringLit(call.Args[1]), "mcpkit.TypedHandler", true, nil)
+			// Params are resolved from the In type struct via the same-package index.
+			add(call, KindMCPTool, stringLit(call.Args[0]), stringLit(call.Args[1]), "mcpkit.TypedHandler", true,
+				resolveStructParams(call, si))
 		}
 	case "NewTool": // mcp-go: mcp.NewTool("name", mcp.WithDescription("desc"), mcp.WithString("p", ...), ...)
 		if len(call.Args) >= 1 {

@@ -441,3 +441,82 @@ func f() {
 		t.Errorf("limit param = %+v", l)
 	}
 }
+
+func TestTypedHandlerStructParams(t *testing.T) {
+	root := t.TempDir()
+	writeRepo(t, root, "fixture", map[string]string{
+		// TypedHandler call + In struct in the SAME file
+		"a/tool.go": `package a
+
+import "x/handler"
+
+type SearchInput struct {
+	Query string ` + "`json:\"query\" jsonschema:\"required,description=The search query\"`" + `
+	Mode  string ` + "`json:\"mode,omitempty\" jsonschema:\"description=Search mode,enum=fast,enum=deep\"`" + `
+	Limit int    ` + "`json:\"limit,omitempty\"`" + `
+	Internal string ` + "`json:\"-\"`" + `
+}
+
+func reg() {
+	_ = handler.TypedHandler[SearchInput, Out]("search", "Search.", nil)
+}
+`,
+		// TypedHandler In struct declared in a SIBLING file, same package/dir
+		"a/types.go": `package a
+
+type FetchInput struct {
+	ID string ` + "`json:\"id\" jsonschema:\"description=Record id\"`" + `
+}
+`,
+		"a/fetch.go": `package a
+
+import "x/handler"
+
+func reg2() { _ = handler.TypedHandler[FetchInput, Out]("fetch", "Fetch.", nil) }
+`,
+		// cross-package qualified In type -> must resolve to nil (skip)
+		"b/x.go": `package b
+
+import "x/handler"
+
+func reg() { _ = handler.TypedHandler[other.Thing, Out]("qual", "Q.", nil) }
+`,
+	})
+	rep, err := ScanWorkspace(root, []string{"fixture"}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	byName := map[string]Surface{}
+	for _, s := range rep.Repos[0].Surfaces {
+		byName[s.Name] = s
+	}
+
+	// search: same-file struct, 3 params (Internal skipped via json:"-")
+	search := byName["search"]
+	if len(search.Params) != 3 {
+		t.Fatalf("search params = %d, want 3: %+v", len(search.Params), search.Params)
+	}
+	p := map[string]ToolParam{}
+	for _, x := range search.Params {
+		p[x.Name] = x
+	}
+	if q := p["query"]; !q.HasDescription || !q.Required { // no omitempty + bare required
+		t.Errorf("query = %+v (want desc+required)", q)
+	}
+	if m := p["mode"]; !m.HasDescription || !m.HasEnum || m.Required { // omitempty -> not required, has enum
+		t.Errorf("mode = %+v (want desc+enum, not required)", m)
+	}
+	if l := p["limit"]; l.HasDescription || l.Required { // omitempty, no jsonschema -> no desc, not required
+		t.Errorf("limit = %+v (want no desc, not required)", l)
+	}
+
+	// fetch: sibling-file struct resolved
+	if f := byName["fetch"]; len(f.Params) != 1 || f.Params[0].Name != "id" || !f.Params[0].HasDescription {
+		t.Errorf("fetch sibling-file resolution failed: %+v", f.Params)
+	}
+
+	// qual: cross-package qualified type -> nil params (documented skip)
+	if q := byName["qual"]; q.Params != nil {
+		t.Errorf("qualified cross-package In should stay nil, got %+v", q.Params)
+	}
+}
