@@ -124,7 +124,7 @@ func BenchmarkToolDirect(b *testing.B, handler registry.ToolHandlerFunc, args ma
 // BenchmarkMiddlewareOverhead measures the cost of a single middleware layer.
 func BenchmarkMiddlewareOverhead(b *testing.B, middleware registry.Middleware, handler registry.ToolHandlerFunc, args map[string]any) {
 	td := registry.ToolDefinition{
-		Tool: registry.Tool{Name: "bench_tool"},
+		Tool: registry.Tool{Name: "bench_tool", Description: "Synthetic no-op tool used by mcptest benchmark helpers to measure middleware and dispatch overhead."},
 	}
 	wrapped := middleware("bench_tool", td, handler)
 

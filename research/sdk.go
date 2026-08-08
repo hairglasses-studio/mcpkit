@@ -1,4 +1,3 @@
-
 package research
 
 import (
@@ -37,26 +36,24 @@ type RepoStatus struct {
 }
 
 func (m *Module) sdkReleasesTool() registry.ToolDefinition {
-	desc := "Check GitHub releases for tracked MCP SDK repositories. " +
-		"Compares latest versions against mcpkit's current mcp-go dependency and provides upgrade advice." +
-		handler.FormatExamples([]handler.ToolExample{
-			{
-				Description: "Check all tracked repos",
-				Input:       map[string]any{},
-				Output:      "Release status for mcp-go, go-sdk, fastmcp, etc.",
-			},
-			{
-				Description: "Check specific repo with pre-releases",
-				Input:       map[string]any{"repos": []any{"mark3labs/mcp-go"}, "include_prerelease": true},
-				Output:      "mcp-go releases including pre-release versions",
-			},
-		})
-
-	return handler.TypedHandler[SDKInput, SDKOutput](
+	td := handler.TypedHandler[SDKInput, SDKOutput](
 		"research_sdk_releases",
-		desc,
+		"Check GitHub releases for tracked MCP SDK repositories and compare them against mcpkit's current mcp-go dependency for upgrade advice.",
 		m.handleSDK,
 	)
+	td.Tool.Description += handler.FormatExamples([]handler.ToolExample{
+		{
+			Description: "Check all tracked repos",
+			Input:       map[string]any{},
+			Output:      "Release status for mcp-go, go-sdk, fastmcp, etc.",
+		},
+		{
+			Description: "Check specific repo with pre-releases",
+			Input:       map[string]any{"repos": []any{"mark3labs/mcp-go"}, "include_prerelease": true},
+			Output:      "mcp-go releases including pre-release versions",
+		},
+	})
+	return td
 }
 
 func (m *Module) handleSDK(ctx context.Context, input SDKInput) (SDKOutput, error) {

@@ -48,26 +48,23 @@ type Assessment struct {
 }
 
 func (m *Module) assessTool() registry.ToolDefinition {
-	desc := "Assess findings from research tools with effort/impact/urgency scoring. " +
-		"Pure computation — no HTTP calls. Takes findings from spec, SDK, or ecosystem tools and produces " +
-		"prioritized assessments with recommendations." +
-		handler.FormatExamples([]handler.ToolExample{
-			{
-				Description: "Assess a spec gap",
-				Input: map[string]any{
-					"findings": []any{
-						map[string]any{"name": "Resources not implemented", "category": "gap", "severity": "high"},
-					},
-				},
-				Output: "Prioritized assessment with effort=3, impact=5, urgency=4",
-			},
-		})
-
-	return handler.TypedHandler[AssessInput, AssessOutput](
+	td := handler.TypedHandler[AssessInput, AssessOutput](
 		"research_assess",
-		desc,
+		"Score findings from the other research tools by effort/impact/urgency and produce prioritized assessments with recommendations (pure computation, no HTTP calls).",
 		m.handleAssess,
 	)
+	td.Tool.Description += handler.FormatExamples([]handler.ToolExample{
+		{
+			Description: "Assess a spec gap",
+			Input: map[string]any{
+				"findings": []any{
+					map[string]any{"name": "Resources not implemented", "category": "gap", "severity": "high"},
+				},
+			},
+			Output: "Prioritized assessment with effort=3, impact=5, urgency=4",
+		},
+	})
+	return td
 }
 
 func (m *Module) handleAssess(_ context.Context, input AssessInput) (AssessOutput, error) {

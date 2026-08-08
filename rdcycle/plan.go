@@ -27,14 +27,9 @@ type PlanOutput struct {
 }
 
 func (m *Module) planTool() registry.ToolDefinition {
-	desc := "Load the roadmap, identify the next incomplete phase, run gap analysis, and draft planning suggestions. " +
-		"Optionally pass action_items from a prior scan to incorporate ecosystem signals into suggestions. " +
-		"Returns the next phase, ready-to-start items, gap count, and a list of prioritised suggestions. " +
-		"Use roadmap_path to override the module-configured roadmap file."
-
 	td := handler.TypedHandler[PlanInput, PlanOutput](
 		"rdcycle_plan",
-		desc,
+		"Load the roadmap, identify the next incomplete phase, run gap analysis, and draft prioritized planning suggestions, optionally informed by scan action items.",
 		m.handlePlan,
 	)
 	td.Category = "rdcycle"

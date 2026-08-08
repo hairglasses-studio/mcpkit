@@ -32,17 +32,9 @@ type VerifyOutput struct {
 }
 
 func (m *Module) verifyTool() registry.ToolDefinition {
-	desc := "Run a build/test command and return a structured pass/fail result. " +
-		"Defaults to 'make check' which runs build, vet, and all tests. " +
-		"Use command to specify an alternative command (e.g. 'go test ./...'). " +
-		"Use packages to append specific package paths to the command. " +
-		"The tool enforces a 5-minute execution timeout. " +
-		"When the result has passed=true and no_changes=true, the check succeeded with no " +
-		"uncommitted code changes — call mark_done immediately instead of looping."
-
 	td := handler.TypedHandler[VerifyInput, VerifyOutput](
 		"rdcycle_verify",
-		desc,
+		"Run a build/test command (default 'make check', 5-minute timeout) and return a structured pass/fail result, flagging no_changes when nothing is left uncommitted.",
 		m.handleVerify,
 	)
 	td.Category = "rdcycle"

@@ -1,4 +1,3 @@
-
 package research
 
 import (
@@ -41,31 +40,28 @@ type FeatureChange struct {
 }
 
 func (m *Module) diffAnalysisTool() registry.ToolDefinition {
-	desc := "Compare two SummaryOutput snapshots and produce a diff report. " +
-		"Pure computation — no HTTP calls. Identifies new/resolved action items, " +
-		"added/removed/modified sections, and feature matrix status transitions." +
-		handler.FormatExamples([]handler.ToolExample{
-			{
-				Description: "Compare two weekly research summaries",
-				Input: map[string]any{
-					"before": map[string]any{
-						"action_items": []any{"Upgrade mcp-go to v0.47.0"},
-						"sections":     []any{},
-					},
-					"after": map[string]any{
-						"action_items": []any{"Investigate spec change: elicitation renamed"},
-						"sections":     []any{},
-					},
-				},
-				Output: "DiffReport with 1 new item, 1 resolved item",
-			},
-		})
-
-	return handler.TypedHandler[DiffInput, DiffReport](
+	td := handler.TypedHandler[DiffInput, DiffReport](
 		"research_diff_analysis",
-		desc,
+		"Compare two SummaryOutput snapshots and produce a diff report of new/resolved action items, changed sections, and feature-matrix status transitions (pure computation, no HTTP calls).",
 		m.handleDiffAnalysis,
 	)
+	td.Tool.Description += handler.FormatExamples([]handler.ToolExample{
+		{
+			Description: "Compare two weekly research summaries",
+			Input: map[string]any{
+				"before": map[string]any{
+					"action_items": []any{"Upgrade mcp-go to v0.47.0"},
+					"sections":     []any{},
+				},
+				"after": map[string]any{
+					"action_items": []any{"Investigate spec change: elicitation renamed"},
+					"sections":     []any{},
+				},
+			},
+			Output: "DiffReport with 1 new item, 1 resolved item",
+		},
+	})
+	return td
 }
 
 func (m *Module) handleDiffAnalysis(_ context.Context, input DiffInput) (DiffReport, error) {

@@ -45,13 +45,9 @@ type NotesOutput struct {
 }
 
 func (m *Module) notesTool() registry.ToolDefinition {
-	desc := "Record improvement notes for an R&D cycle: what worked, what failed, " +
-		"wasted iterations, cost, and suggestions. Notes are persisted to disk and " +
-		"to the artifact store for later analysis by rdcycle_improve."
-
 	td := handler.TypedHandler[NotesInput, NotesOutput](
 		"rdcycle_notes",
-		desc,
+		"Record what worked, what failed, wasted iterations, cost, and suggestions for an R&D cycle, persisting the note for later analysis by rdcycle_improve.",
 		m.handleNotes,
 	)
 	td.Category = "rdcycle"

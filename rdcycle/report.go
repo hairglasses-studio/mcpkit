@@ -27,12 +27,9 @@ type ReportOutput struct {
 }
 
 func (m *Module) reportTool() registry.ToolDefinition {
-	desc := "Generate a RESEARCH-*.md report from scan/analysis data. " +
-		"Creates a markdown file following the existing RESEARCH-*.md format."
-
 	td := handler.TypedHandler[ReportInput, ReportOutput](
 		"rdcycle_report",
-		desc,
+		"Generate a RESEARCH-*.md report file from scan/analysis data, following the repo's existing RESEARCH-*.md format.",
 		m.handleReport,
 	)
 	td.Category = "rdcycle"

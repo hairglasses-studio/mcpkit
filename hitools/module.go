@@ -30,8 +30,7 @@ func (m *Module) Description() string {
 func (m *Module) Tools() []registry.ToolDefinition {
 	td := handler.TypedHandler[RequestInput, RequestOutput](
 		"request_human_input",
-		"Request input from the connected human. Supports free-text, yes/no, and multiple-choice formats. "+
-			"Uses MCP elicitation to present an interactive form to the user and waits for their response.",
+		"Request free-text, yes/no, or multiple-choice input from the connected human via an interactive MCP elicitation form, blocking until they respond.",
 		handleRequestHumanInput,
 	)
 	td.Category = "human-interaction"

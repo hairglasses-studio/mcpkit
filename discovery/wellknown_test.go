@@ -60,6 +60,67 @@ func TestServerCardHandler_GET(t *testing.T) {
 	if len(card.Tools) != 1 || card.Tools[0].Name != "greet" {
 		t.Errorf("Tools = %+v, want [{greet ...}]", card.Tools)
 	}
+	if card.ToolCount != 1 {
+		t.Errorf("ToolCount = %d, want 1", card.ToolCount)
+	}
+}
+
+// TestServerCardHandler_ToolCount_MatchesLiveRegistry pins down that
+// tool_count is derived from the live registry at generation time (not
+// len(Tools), and not a hand-maintained constant) so fleetinventory's
+// declared-gap dimension can trust the value on every request.
+func TestServerCardHandler_ToolCount_MatchesLiveRegistry(t *testing.T) {
+	t.Parallel()
+
+	reg := registry.NewToolRegistry()
+	reg.RegisterModule(&stubModule{
+		name: "multi",
+		tools: []registry.ToolDefinition{
+			{Tool: registry.Tool{Name: "one", Description: "One"}},
+			{Tool: registry.Tool{Name: "two", Description: "Two"}},
+			{Tool: registry.Tool{Name: "three", Description: "Three"}},
+		},
+	})
+
+	h := ServerCardHandler(MetadataConfig{Name: "counted-server", Tools: reg})
+
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/.well-known/mcp.json", nil)
+	h.ServeHTTP(rr, req)
+
+	// Assert against the raw JSON, not just the decoded struct, since this
+	// is the exact shape fleetinventory's declaredGap() unmarshals
+	// (a flat top-level "tool_count" key).
+	var raw map[string]any
+	if err := json.Unmarshal(rr.Body.Bytes(), &raw); err != nil {
+		t.Fatalf("unmarshal raw: %v", err)
+	}
+	got, ok := raw["tool_count"]
+	if !ok {
+		t.Fatal("raw JSON missing top-level \"tool_count\" key")
+	}
+	if got != float64(3) {
+		t.Errorf("raw tool_count = %v, want 3", got)
+	}
+
+	// Register a 4th tool and confirm a fresh request reflects the live
+	// registry rather than a value cached at handler-construction time.
+	reg.RegisterModule(&stubModule{
+		name:  "extra",
+		tools: []registry.ToolDefinition{{Tool: registry.Tool{Name: "four", Description: "Four"}}},
+	})
+
+	rr2 := httptest.NewRecorder()
+	req2 := httptest.NewRequest(http.MethodGet, "/.well-known/mcp.json", nil)
+	h.ServeHTTP(rr2, req2)
+
+	var card2 ServerCard
+	if err := json.NewDecoder(rr2.Body).Decode(&card2); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if card2.ToolCount != 4 {
+		t.Errorf("ToolCount after registering a 4th tool = %d, want 4", card2.ToolCount)
+	}
 }
 
 func TestServerCardHandler_HEAD(t *testing.T) {
@@ -241,6 +302,46 @@ func TestWriteFile_RoundTrip(t *testing.T) {
 	}
 	if len(got.Tools) != 1 || got.Tools[0].Name != "ping" {
 		t.Errorf("Tools = %v, want [{ping Pong}]", got.Tools)
+	}
+}
+
+// TestHandleContractWrite_ToolCount confirms the --contract-write path
+// (used by CI/repo-generation scripts to collect .well-known/mcp.json from
+// binaries) writes a live-registry-derived tool_count, matching the shape
+// fleetinventory.declaredGap expects.
+func TestHandleContractWrite_ToolCount(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	dest := filepath.Join(dir, ".well-known", "mcp.json")
+
+	reg := registry.NewToolRegistry()
+	reg.RegisterModule(&stubModule{
+		name: "contract",
+		tools: []registry.ToolDefinition{
+			{Tool: registry.Tool{Name: "a", Description: "A"}},
+			{Tool: registry.Tool{Name: "b", Description: "B"}},
+		},
+	})
+
+	err := HandleContractWrite(dest, MetadataConfig{Name: "contract-count-server", Tools: reg})
+	if !errors.Is(err, ErrContractWritten) {
+		t.Fatalf("expected ErrContractWritten, got %v", err)
+	}
+
+	data, readErr := os.ReadFile(dest)
+	if readErr != nil {
+		t.Fatalf("file not written: %v", readErr)
+	}
+
+	var doc struct {
+		ToolCount int `json:"tool_count"`
+	}
+	if err := json.Unmarshal(data, &doc); err != nil {
+		t.Fatalf("Unmarshal: %v", err)
+	}
+	if doc.ToolCount != 2 {
+		t.Errorf("tool_count = %d, want 2", doc.ToolCount)
 	}
 }
 

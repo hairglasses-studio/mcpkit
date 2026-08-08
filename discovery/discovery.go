@@ -29,24 +29,31 @@ var (
 // (License, Homepage, Categories, Install) are omitted from API
 // payloads when empty.
 type ServerMetadata struct {
-	ID           string            `json:"id"`
-	Name         string            `json:"name"`
-	Description  string            `json:"description"`
-	Version      string            `json:"version"`
-	Organization string            `json:"organization"`
-	Repository   string            `json:"repository"`
-	Homepage     string            `json:"homepage,omitempty"`
-	License      string            `json:"license,omitempty"`
-	Categories   []string          `json:"categories,omitempty"`
-	Install      *InstallInfo      `json:"install,omitempty"`
-	Tools        []ToolSummary     `json:"tools,omitempty"`
-	Resources    []ResourceSummary `json:"resources,omitempty"`
-	Prompts      []PromptSummary   `json:"prompts,omitempty"`
-	Transports   []TransportInfo   `json:"transports,omitempty"`
-	Auth         *AuthRequirement  `json:"auth,omitempty"`
-	Tags         []string          `json:"tags,omitempty"`
-	CreatedAt    time.Time         `json:"created_at"`
-	UpdatedAt    time.Time         `json:"updated_at"`
+	ID           string        `json:"id"`
+	Name         string        `json:"name"`
+	Description  string        `json:"description"`
+	Version      string        `json:"version"`
+	Organization string        `json:"organization"`
+	Repository   string        `json:"repository"`
+	Homepage     string        `json:"homepage,omitempty"`
+	License      string        `json:"license,omitempty"`
+	Categories   []string      `json:"categories,omitempty"`
+	Install      *InstallInfo  `json:"install,omitempty"`
+	Tools        []ToolSummary `json:"tools,omitempty"`
+	// ToolCount is a machine-readable count of registered tools, set from
+	// the live registry (not len(Tools)) at generation time so consumers
+	// like fleetinventory's declared-gap scoring can trust it even when
+	// the Tools summary slice itself is omitted or truncated. Always
+	// present (no omitempty) so a 0 is distinguishable from "not generated
+	// from a live registry".
+	ToolCount  int               `json:"tool_count"`
+	Resources  []ResourceSummary `json:"resources,omitempty"`
+	Prompts    []PromptSummary   `json:"prompts,omitempty"`
+	Transports []TransportInfo   `json:"transports,omitempty"`
+	Auth       *AuthRequirement  `json:"auth,omitempty"`
+	Tags       []string          `json:"tags,omitempty"`
+	CreatedAt  time.Time         `json:"created_at"`
+	UpdatedAt  time.Time         `json:"updated_at"`
 }
 
 // InstallInfo holds per-runtime install commands for the server,

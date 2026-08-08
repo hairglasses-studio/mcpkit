@@ -59,10 +59,7 @@ type orchestratorState struct {
 func (m *Module) perpetualStartTool() registry.ToolDefinition {
 	td := handler.TypedHandler[perpetualStartInput, perpetualStartOutput](
 		"rdcycle_perpetual_start",
-		"Start the perpetual R&D cycle orchestrator. It will autonomously scan, plan, "+
-			"synthesize specs, run ralph loops, record notes, and repeat. "+
-			"Uses circuit breaker and cost velocity governor for safety. "+
-			"Requires a RalphStarter to be wired (see SetRalphStarter).",
+		"Start the perpetual R&D cycle orchestrator, which autonomously scans, plans, synthesizes specs, runs ralph loops, and records notes on repeat under circuit-breaker and cost-velocity-governor safety limits.",
 		m.handlePerpetualStart,
 	)
 	td.Category = "rdcycle"

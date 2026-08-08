@@ -126,6 +126,10 @@ func TestGitDiffQuiet_CleanRepo(t *testing.T) {
 	run("git", "init", "-b", "main")
 	run("git", "config", "user.email", "test@test")
 	run("git", "config", "user.name", "test")
+	// A global commit.gpgsign=true would otherwise block the "git commit"
+	// below on an interactive/agent signing prompt unavailable in
+	// CI/sandboxed environments.
+	run("git", "config", "commit.gpgsign", "false")
 	f := filepath.Join(dir, "README")
 	if err := os.WriteFile(f, []byte("hello\n"), 0o644); err != nil {
 		t.Fatal(err)
@@ -160,6 +164,10 @@ func TestGitDiffQuiet_DirtyRepo(t *testing.T) {
 	run("git", "init", "-b", "main")
 	run("git", "config", "user.email", "test@test")
 	run("git", "config", "user.name", "test")
+	// A global commit.gpgsign=true would otherwise block the "git commit"
+	// below on an interactive/agent signing prompt unavailable in
+	// CI/sandboxed environments.
+	run("git", "config", "commit.gpgsign", "false")
 	f := filepath.Join(dir, "README")
 	if err := os.WriteFile(f, []byte("hello\n"), 0o644); err != nil {
 		t.Fatal(err)

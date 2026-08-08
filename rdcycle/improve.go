@@ -27,14 +27,9 @@ type ImproveOutput struct {
 }
 
 func (m *Module) improveTool() registry.ToolDefinition {
-	desc := "Analyze accumulated improvement notes across R&D cycles to identify " +
-		"common failure patterns, cost trends, and wasted iterations. Returns " +
-		"recommendations and optionally a budget profile suggestion. " +
-		"Best used every 10 cycles to calibrate the autonomous loop."
-
 	td := handler.TypedHandler[ImproveInput, ImproveOutput](
 		"rdcycle_improve",
-		desc,
+		"Analyze accumulated improvement notes across R&D cycles to surface common failure patterns, cost trends, and a budget profile suggestion.",
 		m.handleImprove,
 	)
 	td.Category = "rdcycle"

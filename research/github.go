@@ -1,4 +1,3 @@
-
 package research
 
 import (
@@ -23,11 +22,11 @@ type GitHubActivityInput struct {
 
 // GitHubActivity holds activity data for a single repository.
 type GitHubActivity struct {
-	Repo     string           `json:"repo"`
-	Commits  []ActivityCommit `json:"commits,omitempty"`
-	Issues   []ActivityIssue  `json:"issues,omitempty"`
+	Repo     string            `json:"repo"`
+	Commits  []ActivityCommit  `json:"commits,omitempty"`
+	Issues   []ActivityIssue   `json:"issues,omitempty"`
 	Releases []ActivityRelease `json:"releases,omitempty"`
-	Error    string           `json:"error,omitempty"`
+	Error    string            `json:"error,omitempty"`
 }
 
 // ActivityCommit is a simplified commit record for activity reporting.
@@ -80,33 +79,30 @@ type githubIssueResponse struct {
 }
 
 func (m *Module) githubActivityTool() registry.ToolDefinition {
-	desc := "Monitor GitHub repository activity including commits, issues, and releases. " +
-		"Fetches recent activity for each specified repository using the GitHub REST API. " +
-		"Set a GitHub token in the module config for higher rate limits (5000 req/hr vs 60 req/hr)." +
-		handler.FormatExamples([]handler.ToolExample{
-			{
-				Description: "Check recent activity for mcp-go",
-				Input: map[string]any{
-					"repos": []any{"mark3labs/mcp-go"},
-				},
-				Output: "Commits, issues, and releases from the last 7 days",
-			},
-			{
-				Description: "Check multiple repos since a specific date",
-				Input: map[string]any{
-					"repos":     []any{"mark3labs/mcp-go", "modelcontextprotocol/go-sdk"},
-					"since":     "2025-03-01T00:00:00Z",
-					"max_items": 5,
-				},
-				Output: "Activity summary for both repos",
-			},
-		})
-
-	return handler.TypedHandler[GitHubActivityInput, GitHubActivityOutput](
+	td := handler.TypedHandler[GitHubActivityInput, GitHubActivityOutput](
 		"research_github_activity",
-		desc,
+		"Fetch recent commits, issues, and releases for the specified GitHub repositories via the GitHub REST API.",
 		m.handleGitHubActivity,
 	)
+	td.Tool.Description += handler.FormatExamples([]handler.ToolExample{
+		{
+			Description: "Check recent activity for mcp-go",
+			Input: map[string]any{
+				"repos": []any{"mark3labs/mcp-go"},
+			},
+			Output: "Commits, issues, and releases from the last 7 days",
+		},
+		{
+			Description: "Check multiple repos since a specific date",
+			Input: map[string]any{
+				"repos":     []any{"mark3labs/mcp-go", "modelcontextprotocol/go-sdk"},
+				"since":     "2025-03-01T00:00:00Z",
+				"max_items": 5,
+			},
+			Output: "Activity summary for both repos",
+		},
+	})
+	return td
 }
 
 func (m *Module) handleGitHubActivity(ctx context.Context, input GitHubActivityInput) (GitHubActivityOutput, error) {
@@ -311,4 +307,3 @@ func buildActivitySummary(activities []GitHubActivity, since string) string {
 	}
 	return s
 }
-

@@ -89,26 +89,24 @@ type PlatformSignal struct {
 }
 
 func (m *Module) platformActivityTool() registry.ToolDefinition {
-	desc := "Monitor cloud-platform MCP activity across Cloudflare Workers, Vercel AI SDK, and Azure AI Foundry. " +
-		"Fetches official changelog and documentation sources, extracts MCP-relevant signals, and produces action items." +
-		handler.FormatExamples([]handler.ToolExample{
-			{
-				Description: "Scan all default cloud platforms",
-				Input:       map[string]any{},
-				Output:      "Platform monitor results with high-signal MCP activity and action items",
-			},
-			{
-				Description: "Scan only Vercel AI SDK sources",
-				Input:       map[string]any{"platforms": []any{"Vercel AI SDK"}},
-				Output:      "Vercel MCP/AI SDK signals from official sources",
-			},
-		})
-
-	return handler.TypedHandler[PlatformInput, PlatformOutput](
+	td := handler.TypedHandler[PlatformInput, PlatformOutput](
 		"research_platform_activity",
-		desc,
+		"Monitor cloud-platform MCP activity (Cloudflare Workers, Vercel AI SDK, Azure AI Foundry changelogs/docs) and extract high-signal findings into action items.",
 		m.handlePlatformActivity,
 	)
+	td.Tool.Description += handler.FormatExamples([]handler.ToolExample{
+		{
+			Description: "Scan all default cloud platforms",
+			Input:       map[string]any{},
+			Output:      "Platform monitor results with high-signal MCP activity and action items",
+		},
+		{
+			Description: "Scan only Vercel AI SDK sources",
+			Input:       map[string]any{"platforms": []any{"Vercel AI SDK"}},
+			Output:      "Vercel MCP/AI SDK signals from official sources",
+		},
+	})
+	return td
 }
 
 func (m *Module) handlePlatformActivity(ctx context.Context, input PlatformInput) (PlatformOutput, error) {

@@ -106,15 +106,9 @@ type researchDashboardExportRow struct {
 }
 
 func (m *Module) scanTool() registry.ToolDefinition {
-	desc := "Scan the MCP ecosystem for recent activity across configured GitHub repositories. " +
-		"Returns a structured summary of commits, issues, and actionable items derived from repository activity. " +
-		"Includes optional feedback and competitive research signals when providers are configured. " +
-		"Use repos to override the module-configured list. " +
-		"Use since (ISO 8601 date) to control the scan window (default: 7 days ago)."
-
 	td := handler.TypedHandler[ScanInput, ScanOutput](
 		"rdcycle_scan",
-		desc,
+		"Scan configured GitHub repositories for recent MCP ecosystem activity and return a structured summary of commits, issues, and actionable items.",
 		m.handleScan,
 	)
 	td.Category = "rdcycle"

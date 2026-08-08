@@ -1,4 +1,3 @@
-
 package research
 
 import (
@@ -35,26 +34,24 @@ type CoverageSummary struct {
 }
 
 func (m *Module) specTool() registry.ToolDefinition {
-	desc := "Check the MCP specification for changes against mcpkit's baseline feature matrix. " +
-		"Fetches the spec page, keyword-matches against 14 tracked features, and reports new or changed features." +
-		handler.FormatExamples([]handler.ToolExample{
-			{
-				Description: "Scan all spec areas",
-				Input:       map[string]any{},
-				Output:      "Coverage summary with 10/14 features implemented",
-			},
-			{
-				Description: "Focus on auth changes",
-				Input:       map[string]any{"focus_area": "auth", "include_roadmap": true},
-				Output:      "Auth-specific findings with roadmap context",
-			},
-		})
-
-	return handler.TypedHandler[SpecInput, SpecOutput](
+	td := handler.TypedHandler[SpecInput, SpecOutput](
 		"research_mcp_spec",
-		desc,
+		"Check the MCP specification page for changes against mcpkit's baseline of 14 tracked features and report new or changed features.",
 		m.handleSpec,
 	)
+	td.Tool.Description += handler.FormatExamples([]handler.ToolExample{
+		{
+			Description: "Scan all spec areas",
+			Input:       map[string]any{},
+			Output:      "Coverage summary with 10/14 features implemented",
+		},
+		{
+			Description: "Focus on auth changes",
+			Input:       map[string]any{"focus_area": "auth", "include_roadmap": true},
+			Output:      "Auth-specific findings with roadmap context",
+		},
+	})
+	return td
 }
 
 func (m *Module) handleSpec(ctx context.Context, input SpecInput) (SpecOutput, error) {

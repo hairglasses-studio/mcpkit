@@ -29,12 +29,9 @@ type ScheduleOutput struct {
 }
 
 func (m *Module) scheduleTool() registry.ToolDefinition {
-	desc := "Write a Ralph spec file for the next R&D cycle, parameterized with the current " +
-		"date as since_date. Uses the rd_cycle.json template format."
-
 	td := handler.TypedHandler[ScheduleInput, ScheduleOutput](
 		"rdcycle_schedule",
-		desc,
+		"Write a Ralph spec file for the next R&D cycle, using the rd_cycle.json template format parameterized with the current date.",
 		m.handleSchedule,
 	)
 	td.Category = "rdcycle"

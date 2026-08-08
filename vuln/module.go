@@ -90,28 +90,9 @@ type OSVQueryOutput = OSVQueryResult
 // --- Tool definitions ---
 
 func (m *Module) scanTool() registry.ToolDefinition {
-	desc := "Run govulncheck on a Go module directory and return structured vulnerability results. " +
-		"Requires govulncheck to be installed (go install golang.org/x/vuln/cmd/govulncheck@latest). " +
-		"Returns each vulnerability with its OSV ID, severity estimate, affected module, current version, " +
-		"fixed version, and whether the vulnerable symbol is reachable from your code." +
-		handler.FormatExamples([]handler.ToolExample{
-			{
-				Description: "Scan the current directory",
-				Input:       map[string]any{"dir": "."},
-				Output:      "ScanResult with Vulnerabilities list and Summary",
-			},
-			{
-				Description: "Scan a specific module path with custom patterns",
-				Input: map[string]any{
-					"dir":      "/path/to/mymodule",
-					"patterns": []any{"./cmd/...", "./internal/..."},
-				},
-				Output: "ScanResult filtered to specified package patterns",
-			},
-		})
-	return handler.TypedHandler[ScanInput, ScanOutput](
+	td := handler.TypedHandler[ScanInput, ScanOutput](
 		"vuln_scan",
-		desc,
+		"Run govulncheck on a Go module directory and return structured vulnerability results (OSV ID, severity, affected/fixed versions, and reachability).",
 		func(ctx context.Context, input ScanInput) (ScanOutput, error) {
 			dir := input.Dir
 			if dir == "" {
@@ -130,32 +111,32 @@ func (m *Module) scanTool() registry.ToolDefinition {
 			return result, nil
 		},
 	)
+	// Requires govulncheck to be installed (go install golang.org/x/vuln/cmd/govulncheck@latest).
+	// The runtime description carries usage examples; keep the one-sentence
+	// literal above as the description argument itself so static tool
+	// scanners (surfaceinventory/fleetinventory) can see it.
+	td.Tool.Description += handler.FormatExamples([]handler.ToolExample{
+		{
+			Description: "Scan the current directory",
+			Input:       map[string]any{"dir": "."},
+			Output:      "ScanResult with Vulnerabilities list and Summary",
+		},
+		{
+			Description: "Scan a specific module path with custom patterns",
+			Input: map[string]any{
+				"dir":      "/path/to/mymodule",
+				"patterns": []any{"./cmd/...", "./internal/..."},
+			},
+			Output: "ScanResult filtered to specified package patterns",
+		},
+	})
+	return td
 }
 
 func (m *Module) osvQueryTool() registry.ToolDefinition {
-	desc := "Query the OSV (Open Source Vulnerabilities) API for known vulnerabilities " +
-		"affecting a specific Go module and version. Returns structured vulnerability data " +
-		"including CVE aliases, severity estimate, affected version ranges, and fix version." +
-		handler.FormatExamples([]handler.ToolExample{
-			{
-				Description: "Query vulnerabilities for golang.org/x/net v0.50.0",
-				Input: map[string]any{
-					"module":  "golang.org/x/net",
-					"version": "v0.50.0",
-				},
-				Output: "OSVQueryResult with vulnerability list and summary",
-			},
-			{
-				Description: "Query all known vulnerabilities for a module",
-				Input: map[string]any{
-					"module": "github.com/gin-gonic/gin",
-				},
-				Output: "OSVQueryResult listing all historically vulnerable versions",
-			},
-		})
-	return handler.TypedHandler[OSVQueryInput, OSVQueryOutput](
+	td := handler.TypedHandler[OSVQueryInput, OSVQueryOutput](
 		"vuln_osv_query",
-		desc,
+		"Query the OSV (Open Source Vulnerabilities) API for known vulnerabilities affecting a specific Go module and version.",
 		func(ctx context.Context, input OSVQueryInput) (OSVQueryOutput, error) {
 			if input.Module == "" {
 				return OSVQueryResult{}, fmt.Errorf("module path is required")
@@ -168,4 +149,22 @@ func (m *Module) osvQueryTool() registry.ToolDefinition {
 			return m.osvClient.Query(ctx, input.Module, version)
 		},
 	)
+	td.Tool.Description += handler.FormatExamples([]handler.ToolExample{
+		{
+			Description: "Query vulnerabilities for golang.org/x/net v0.50.0",
+			Input: map[string]any{
+				"module":  "golang.org/x/net",
+				"version": "v0.50.0",
+			},
+			Output: "OSVQueryResult with vulnerability list and summary",
+		},
+		{
+			Description: "Query all known vulnerabilities for a module",
+			Input: map[string]any{
+				"module": "github.com/gin-gonic/gin",
+			},
+			Output: "OSVQueryResult listing all historically vulnerable versions",
+		},
+	})
+	return td
 }

@@ -52,13 +52,9 @@ type WriteFileOutput struct {
 }
 
 func (m *FileToolModule) writeFileTool() registry.ToolDefinition {
-	desc := "Write content to a file, creating directories as needed. " +
-		"Path is relative to the project root. Overwrites existing files. " +
-		"Use this to create new Go source files, test files, or config files."
-
 	td := handler.TypedHandler[WriteFileInput, WriteFileOutput](
 		"write_file",
-		desc,
+		"Write content to a file relative to the project root, creating parent directories as needed and overwriting any existing file.",
 		m.handleWriteFile,
 	)
 	td.Category = "file"
@@ -106,12 +102,9 @@ type ReadFileOutput struct {
 }
 
 func (m *FileToolModule) readFileTool() registry.ToolDefinition {
-	desc := "Read the contents of a file. Path is relative to the project root. " +
-		"Use this to inspect existing source files before modifying them."
-
 	td := handler.TypedHandler[ReadFileInput, ReadFileOutput](
 		"read_file",
-		desc,
+		"Read and return the contents of a file (truncated past 32000 bytes) at a path relative to the project root.",
 		m.handleReadFile,
 	)
 	td.Category = "file"
@@ -159,12 +152,9 @@ type ListDirOutput struct {
 }
 
 func (m *FileToolModule) listDirTool() registry.ToolDefinition {
-	desc := "List files and directories in a path. Returns entries as 'name' for files and 'name/' for directories. " +
-		"Path is relative to the project root. Defaults to root if empty."
-
 	td := handler.TypedHandler[ListDirInput, ListDirOutput](
 		"list_dir",
-		desc,
+		"List files and directories at a path relative to the project root (defaulting to root), marking directories with a trailing slash.",
 		m.handleListDir,
 	)
 	td.Category = "file"
@@ -215,13 +205,9 @@ type TestPackageOutput struct {
 }
 
 func (m *FileToolModule) testPackageTool() registry.ToolDefinition {
-	desc := "Run go test -count=1 -v on a package and return the output. " +
-		"Package path is relative to the project root (e.g. 'ralph' or './ralph/...'). " +
-		"Use this to verify that tests pass after making changes."
-
 	td := handler.TypedHandler[TestPackageInput, TestPackageOutput](
 		"test_package",
-		desc,
+		"Run `go test -count=1 -v` on a Go package relative to the project root and return its pass/fail result and output.",
 		m.handleTestPackage,
 	)
 	td.Category = "test"
@@ -276,13 +262,9 @@ type CheckCoverageOutput struct {
 }
 
 func (m *FileToolModule) checkCoverageTool() registry.ToolDefinition {
-	desc := "Run go test -cover on a package and parse the coverage percentage. " +
-		"Package path is relative to the project root (e.g. 'ralph'). " +
-		"Returns the coverage percentage and full output."
-
 	td := handler.TypedHandler[CheckCoverageInput, CheckCoverageOutput](
 		"check_coverage",
-		desc,
+		"Run `go test -cover` on a Go package relative to the project root and return the parsed coverage percentage plus full output.",
 		m.handleCheckCoverage,
 	)
 	td.Category = "test"

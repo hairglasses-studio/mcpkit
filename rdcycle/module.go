@@ -125,14 +125,9 @@ type ArtifactsOutput struct {
 }
 
 func (m *Module) artifactsTool() registry.ToolDefinition {
-	desc := "List artifacts stored during the current R&D cycle session. " +
-		"Use type to filter by artifact kind: scan, plan, verify, code, or test. " +
-		"Omit type to return all artifacts. " +
-		"Artifacts are stored in-memory and reset when the server restarts."
-
 	td := handler.TypedHandler[ArtifactsInput, ArtifactsOutput](
 		"rdcycle_artifacts",
-		desc,
+		"List artifacts stored in-memory during the current R&D cycle session, optionally filtered by artifact type (scan/plan/verify/code/test).",
 		m.handleArtifacts,
 	)
 	td.Category = "rdcycle"

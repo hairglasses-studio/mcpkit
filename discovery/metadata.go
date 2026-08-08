@@ -72,6 +72,10 @@ func MetadataFromConfig(cfg MetadataConfig) ServerMetadata {
 
 	// Extract tool summaries.
 	if cfg.Tools != nil {
+		// ToolCount is read from the live registry directly (not
+		// len(defs)/len(tools) below) so it reflects the registry's own
+		// bookkeeping even if summary extraction is ever filtered.
+		meta.ToolCount = cfg.Tools.ToolCount()
 		defs := cfg.Tools.GetAllToolDefinitions()
 		sort.Slice(defs, func(i, j int) bool {
 			return defs[i].Tool.Name < defs[j].Tool.Name

@@ -155,6 +155,13 @@ func setupTestRepo(t *testing.T, branch string) string {
 		{"git", "checkout", "-b", branch},
 		{"git", "config", "user.email", "test@test.com"},
 		{"git", "config", "user.name", "Test"},
+		// Disable commit signing for this throwaway repo: a global
+		// commit.gpgsign=true (common on dev machines) makes `git commit`
+		// below block indefinitely on an interactive/agent signing prompt
+		// that's unavailable in CI/sandboxed environments — a pre-existing
+		// portability gap, not exercised by any test until one actually
+		// commits here.
+		{"git", "config", "commit.gpgsign", "false"},
 	}
 
 	for _, args := range cmds {

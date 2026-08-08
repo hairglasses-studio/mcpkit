@@ -92,7 +92,7 @@ func (m *module) Tools() []registry.ToolDefinition {
 	report.Category = "audit"
 	report.SearchTerms = []string{"surface report", "inventory markdown", "fleet summary"}
 
-	return []registry.ToolDefinition{scan, report}
+	return []registry.ToolDefinition{scan, report, liveToolDef()}
 }
 
 // RenderMarkdown renders a Report as a repos-by-kinds counts table.

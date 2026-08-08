@@ -102,21 +102,19 @@ type A2ASignal struct {
 }
 
 func (m *Module) a2aTrackingTool() registry.ToolDefinition {
-	desc := "Track A2A protocol specification, release, and agent-card sample activity. " +
-		"Detects version candidates, agent-card example changes, and breaking-change signals from official A2A sources." +
-		handler.FormatExamples([]handler.ToolExample{
-			{
-				Description: "Scan all default A2A sources",
-				Input:       map[string]any{},
-				Output:      "A2A source findings, version candidates, protocol signals, and action items",
-			},
-		})
-
-	return handler.TypedHandler[A2ATrackingInput, A2ATrackingOutput](
+	td := handler.TypedHandler[A2ATrackingInput, A2ATrackingOutput](
 		"research_a2a_tracking",
-		desc,
+		"Track the A2A protocol's spec, release, and agent-card sample activity to detect version candidates and breaking-change signals from official sources.",
 		m.handleA2ATracking,
 	)
+	td.Tool.Description += handler.FormatExamples([]handler.ToolExample{
+		{
+			Description: "Scan all default A2A sources",
+			Input:       map[string]any{},
+			Output:      "A2A source findings, version candidates, protocol signals, and action items",
+		},
+	})
+	return td
 }
 
 func (m *Module) handleA2ATracking(ctx context.Context, input A2ATrackingInput) (A2ATrackingOutput, error) {
@@ -346,21 +344,19 @@ var defaultSDKCompareFeatures = []sdkFeatureSpec{
 }
 
 func (m *Module) sdkCompareTool() registry.ToolDefinition {
-	desc := "Compare MCP SDK feature coverage across mcp-go, official Go SDK, FastMCP, and the TypeScript SDK. " +
-		"Fetches official repository documentation, builds a cross-framework feature matrix, and emits template reports." +
-		handler.FormatExamples([]handler.ToolExample{
-			{
-				Description: "Compare all default SDKs",
-				Input:       map[string]any{},
-				Output:      "Feature matrix, competitive reports, and parity action items",
-			},
-		})
-
-	return handler.TypedHandler[SDKCompareInput, SDKCompareOutput](
+	td := handler.TypedHandler[SDKCompareInput, SDKCompareOutput](
 		"research_sdk_compare",
-		desc,
+		"Compare MCP SDK feature coverage across mcp-go, the official Go SDK, FastMCP, and the TypeScript SDK into a cross-framework feature matrix.",
 		m.handleSDKCompare,
 	)
+	td.Tool.Description += handler.FormatExamples([]handler.ToolExample{
+		{
+			Description: "Compare all default SDKs",
+			Input:       map[string]any{},
+			Output:      "Feature matrix, competitive reports, and parity action items",
+		},
+	})
+	return td
 }
 
 func (m *Module) handleSDKCompare(ctx context.Context, input SDKCompareInput) (SDKCompareOutput, error) {
@@ -574,21 +570,19 @@ type CompetitiveDashboardRow struct {
 }
 
 func (m *Module) competitiveDashboardTool() registry.ToolDefinition {
-	desc := "Build dashboard-ready competitive research data from A2A tracking and SDK comparison outputs. " +
-		"Returns normalized rows, action items, and markdown report templates for monitoring dashboards." +
-		handler.FormatExamples([]handler.ToolExample{
-			{
-				Description: "Generate a dashboard from prior research outputs",
-				Input:       map[string]any{"a2a_findings": map[string]any{"summary": "A2A scan"}, "sdk_compare_findings": map[string]any{"summary": "SDK scan"}},
-				Output:      "Dashboard rows, action items, and template reports",
-			},
-		})
-
-	return handler.TypedHandler[CompetitiveDashboardInput, CompetitiveDashboardOutput](
+	td := handler.TypedHandler[CompetitiveDashboardInput, CompetitiveDashboardOutput](
 		"research_competitive_dashboard",
-		desc,
+		"Build dashboard-ready competitive research data (normalized rows, action items, markdown report templates) from prior A2A-tracking and SDK-comparison outputs.",
 		m.handleCompetitiveDashboard,
 	)
+	td.Tool.Description += handler.FormatExamples([]handler.ToolExample{
+		{
+			Description: "Generate a dashboard from prior research outputs",
+			Input:       map[string]any{"a2a_findings": map[string]any{"summary": "A2A scan"}, "sdk_compare_findings": map[string]any{"summary": "SDK scan"}},
+			Output:      "Dashboard rows, action items, and template reports",
+		},
+	})
+	return td
 }
 
 func (m *Module) handleCompetitiveDashboard(_ context.Context, input CompetitiveDashboardInput) (CompetitiveDashboardOutput, error) {

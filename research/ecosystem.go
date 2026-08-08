@@ -39,26 +39,24 @@ type Highlight struct {
 }
 
 func (m *Module) ecosystemTool() registry.ToolDefinition {
-	desc := "Fetch and analyze MCP ecosystem sources for relevant developments. " +
-		"Monitors spec pages, blog posts, and release pages for keyword matches and produces relevance scores." +
-		handler.FormatExamples([]handler.ToolExample{
-			{
-				Description: "Scan all default sources",
-				Input:       map[string]any{},
-				Output:      "Findings from 5 sources with relevance scores",
-			},
-			{
-				Description: "Check only the spec",
-				Input:       map[string]any{"sources": []any{"MCP Spec"}},
-				Output:      "Spec-specific findings",
-			},
-		})
-
-	return handler.TypedHandler[EcosystemInput, EcosystemOutput](
+	td := handler.TypedHandler[EcosystemInput, EcosystemOutput](
 		"research_ecosystem",
-		desc,
+		"Fetch MCP ecosystem sources (spec pages, blog posts, release pages) and score them for keyword-match relevance.",
 		m.handleEcosystem,
 	)
+	td.Tool.Description += handler.FormatExamples([]handler.ToolExample{
+		{
+			Description: "Scan all default sources",
+			Input:       map[string]any{},
+			Output:      "Findings from 5 sources with relevance scores",
+		},
+		{
+			Description: "Check only the spec",
+			Input:       map[string]any{"sources": []any{"MCP Spec"}},
+			Output:      "Spec-specific findings",
+		},
+	})
+	return td
 }
 
 func (m *Module) handleEcosystem(ctx context.Context, input EcosystemInput) (EcosystemOutput, error) {

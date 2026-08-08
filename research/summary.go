@@ -38,25 +38,22 @@ type Section struct {
 }
 
 func (m *Module) summaryTool() registry.ToolDefinition {
-	desc := "Combine outputs from all research tools into a unified summary report. " +
-		"Accepts spec, SDK, ecosystem, platform, A2A, competitive, and assessment findings and produces a markdown report " +
-		"with action items and an updated feature matrix." +
-		handler.FormatExamples([]handler.ToolExample{
-			{
-				Description: "Generate summary from spec and SDK findings",
-				Input: map[string]any{
-					"spec_findings": map[string]any{"coverage_summary": map[string]any{"percentage": "72%"}},
-					"sdk_findings":  map[string]any{"go_mod_version": "v0.45.0"},
-				},
-				Output: "Markdown report with sections, action items, and updated feature matrix",
-			},
-		})
-
-	return handler.TypedHandler[SummaryInput, SummaryOutput](
+	td := handler.TypedHandler[SummaryInput, SummaryOutput](
 		"research_summary",
-		desc,
+		"Combine outputs from the other research_* tools (spec, SDK, ecosystem, platform, A2A, competitive, assessment) into a unified markdown report with action items and an updated feature matrix.",
 		m.handleSummary,
 	)
+	td.Tool.Description += handler.FormatExamples([]handler.ToolExample{
+		{
+			Description: "Generate summary from spec and SDK findings",
+			Input: map[string]any{
+				"spec_findings": map[string]any{"coverage_summary": map[string]any{"percentage": "72%"}},
+				"sdk_findings":  map[string]any{"go_mod_version": "v0.45.0"},
+			},
+			Output: "Markdown report with sections, action items, and updated feature matrix",
+		},
+	})
+	return td
 }
 
 func (m *Module) handleSummary(_ context.Context, input SummaryInput) (SummaryOutput, error) {

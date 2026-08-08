@@ -71,12 +71,9 @@ type ReadOutput struct {
 }
 
 func (m *Module) readTool() registry.ToolDefinition {
-	desc := "Read the roadmap JSON file and return the structured roadmap with rendered markdown. " +
-		"Use this to understand the current state of the project roadmap, phases, and work items."
-
 	return handler.TypedHandler[ReadInput, ReadOutput](
 		"roadmap_read",
-		desc,
+		"Read the roadmap JSON file and return the structured roadmap (phases, work items) with rendered markdown.",
 		m.handleRead,
 	)
 }
@@ -116,12 +113,9 @@ type UpdateOutput struct {
 }
 
 func (m *Module) updateTool() registry.ToolDefinition {
-	desc := "Update a work item's status by ID and save the roadmap back to disk. " +
-		"Use this to mark items as active or complete as work progresses."
-
 	td := handler.TypedHandler[UpdateInput, UpdateOutput](
 		"roadmap_update",
-		desc,
+		"Update a roadmap work item's status (planned/active/complete) by ID and save the roadmap back to disk.",
 		m.handleUpdate,
 	)
 	td.IsWrite = true
@@ -203,12 +197,9 @@ type GapsOutput struct {
 }
 
 func (m *Module) gapsTool() registry.ToolDefinition {
-	desc := "Run gap analysis on the roadmap and return all planned (not yet started) work items. " +
-		"Use this to identify what work remains before starting new phases."
-
 	return handler.TypedHandler[GapsInput, GapsOutput](
 		"roadmap_gaps",
-		desc,
+		"Run gap analysis on the roadmap and return all planned-but-not-yet-started work items.",
 		m.handleGaps,
 	)
 }
@@ -246,12 +237,9 @@ type NextPhaseOutput struct {
 }
 
 func (m *Module) nextPhaseTool() registry.ToolDefinition {
-	desc := "Return the next incomplete phase and its ready-to-start work items. " +
-		"Use this to understand what to work on next and which items are unblocked."
-
 	return handler.TypedHandler[NextPhaseInput, NextPhaseOutput](
 		"roadmap_next_phase",
-		desc,
+		"Return the next incomplete roadmap phase and its ready-to-start (unblocked) work items.",
 		m.handleNextPhase,
 	)
 }

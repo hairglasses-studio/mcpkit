@@ -107,6 +107,9 @@ func TestMetadataFromConfig_AllRegistries(t *testing.T) {
 	if meta.Tools[1].Name != "beta" {
 		t.Errorf("Tools[1].Name = %q, want beta", meta.Tools[1].Name)
 	}
+	if meta.ToolCount != 2 {
+		t.Errorf("ToolCount = %d, want 2 (from live registry, independent of the Tools summary slice)", meta.ToolCount)
+	}
 
 	// Resources: 2 static + 1 template = 3 total.
 	if len(meta.Resources) != 3 {
@@ -165,6 +168,9 @@ func TestMetadataFromConfig_NilRegistries(t *testing.T) {
 	}
 	if meta.Prompts != nil {
 		t.Errorf("Prompts should be nil when no Prompts registry provided, got %v", meta.Prompts)
+	}
+	if meta.ToolCount != 0 {
+		t.Errorf("ToolCount = %d, want 0 when no Tools registry provided", meta.ToolCount)
 	}
 }
 

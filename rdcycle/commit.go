@@ -28,13 +28,9 @@ type CommitOutput struct {
 }
 
 func (m *Module) commitTool() registry.ToolDefinition {
-	desc := "Stage files and create a git commit on a feature branch. " +
-		"Safety: refuses to commit to main/master branches. " +
-		"Validates file paths against the configured git root."
-
 	td := handler.TypedHandler[CommitInput, CommitOutput](
 		"rdcycle_commit",
-		desc,
+		"Stage the given files and create a git commit on a feature branch, refusing to commit directly to main or master.",
 		m.handleCommit,
 	)
 	td.Category = "rdcycle"
