@@ -24,6 +24,7 @@ type RepoReport struct {
 	Surfaces      map[string]int             `json:"surface_counts"`
 	SurfaceDetail []surfaceinventory.Surface `json:"surface_detail,omitempty"`
 	MCPRuntime    MCPRuntime                 `json:"mcp_runtime"`
+	CCMeta        CCMetaProfile              `json:"cc_meta"`
 	ScanMillis    int64                      `json:"scan_millis"`
 }
 
@@ -102,6 +103,7 @@ func Scan(ctx context.Context, root string, opts ScanOptions) (PlatformReport, e
 		}
 		if rr.MCPRuntime.SpecEra != EraNone {
 			rr.MCPRuntime.TasksLegacyShape, rr.MCPRuntime.TasksEvidence = detectTasksShape(idx.Dir, idx.Paths)
+			rr.CCMeta = detectCCMeta(idx.Dir, idx.Paths)
 		}
 		if opts.IncludeSurfaces || opts.Score {
 			rr.SurfaceDetail = surfaces.Surfaces
@@ -267,6 +269,42 @@ func renderMCPRuntime(rep PlatformReport) string {
 		b.WriteString("\n### Tasks-shape warnings\n\n")
 		b.WriteString(strings.Join(tasksWarnings, "\n"))
 		b.WriteString("\n")
+	}
+	b.WriteString(renderCCMeta(mcpRepos))
+	return b.String()
+}
+
+// renderCCMeta summarizes fleet adoption of Claude Code's _meta tool
+// extensions (deferred-loading opt-out, output-size, consent-prompt).
+func renderCCMeta(mcpRepos []RepoReport) string {
+	var adopters []RepoReport
+	for _, r := range mcpRepos {
+		if r.CCMeta.Any() {
+			adopters = append(adopters, r)
+		}
+	}
+	var b strings.Builder
+	b.WriteString("\n### Claude Code _meta extensions\n\n")
+	if len(adopters) == 0 {
+		fmt.Fprintf(&b, "No fleet server sets Claude Code's per-tool _meta extensions (anthropic/alwaysLoad, "+
+			"maxResultSizeChars, requiresUserInteraction). Tool-search / deferred loading runs on Claude Code's "+
+			"defaults; the large servers (%s) could opt their hottest tools into alwaysLoad or raise "+
+			"maxResultSizeChars for big-output tools.\n", "hg-mcp/mesmer/jellyfin-mcp-deluxe/secretstudios")
+		return b.String()
+	}
+	b.WriteString("| Repo | alwaysLoad | maxResultChars | skipRequiresUser | literalKeys |\n|---|---|---|---|---|\n")
+	for _, r := range adopters {
+		fmt.Fprintf(&b, "| %s | %d | %d | %d | %d |\n", r.Repo,
+			r.CCMeta.AlwaysLoad, r.CCMeta.MaxResultChars, r.CCMeta.SkipRequiresUser, r.CCMeta.LiteralMetaKeys)
+	}
+	var warns []string
+	for _, r := range adopters {
+		if r.CCMeta.Warning != "" {
+			warns = append(warns, fmt.Sprintf("- **%s**: %s", r.Repo, r.CCMeta.Warning))
+		}
+	}
+	if len(warns) > 0 {
+		b.WriteString("\n" + strings.Join(warns, "\n") + "\n")
 	}
 	return b.String()
 }
