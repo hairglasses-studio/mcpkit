@@ -128,12 +128,37 @@ func TemplateURI(tpl ResourceTemplate) string {
 // PromptArgument itself stays a value-type alias on both builds; only this
 // constructor's output shape differs.
 func MakePrompt(name, description string, args ...PromptArgument) Prompt {
-	arguments := make([]*mcp.PromptArgument, len(args))
-	for i := range args {
-		a := args[i]
-		arguments[i] = &a
+	var arguments []*mcp.PromptArgument
+	if len(args) > 0 {
+		arguments = make([]*mcp.PromptArgument, len(args))
+		for i := range args {
+			a := args[i]
+			arguments[i] = &a
+		}
 	}
 	return mcp.Prompt{Name: name, Description: description, Arguments: arguments}
+}
+
+// PromptArguments returns p's arguments as a value slice — the read-back
+// mirror of MakePrompt. The official SDK's Prompt.Arguments is
+// []*mcp.PromptArgument (a pointer slice, unlike mcp-go's value slice — see
+// compat.go's PromptArguments), so each element is dereferenced into the
+// result. Nil-safe: a nil Arguments slice returns nil, not an
+// allocated-but-empty one, matching the mcp-go side's behavior. A nil
+// element within Arguments (should not occur from any of this package's own
+// constructors) is skipped rather than causing a nil dereference.
+func PromptArguments(p Prompt) []PromptArgument {
+	if p.Arguments == nil {
+		return nil
+	}
+	args := make([]PromptArgument, 0, len(p.Arguments))
+	for _, a := range p.Arguments {
+		if a == nil {
+			continue
+		}
+		args = append(args, *a)
+	}
+	return args
 }
 
 // MakeTextContent constructs a Content value containing text.
@@ -241,6 +266,19 @@ func SetToolMetaField(tool *Tool, key string, value any) {
 		tool.Meta = ToolMeta{}
 	}
 	tool.Meta[key] = value
+}
+
+// ToolMetaField reads a metadata field previously set by SetToolMetaField —
+// the read mirror of that function. The official SDK stores fields directly
+// in the plain-map Meta (unlike mcp-go's Meta.AdditionalFields sub-field —
+// see compat.go's ToolMetaField). Returns (nil, false) if tool.Meta or the
+// key itself is absent.
+func ToolMetaField(t Tool, key string) (any, bool) {
+	if t.Meta == nil {
+		return nil, false
+	}
+	v, ok := t.Meta[key]
+	return v, ok
 }
 
 // SetToolDeferLoading is a no-op for the official SDK until it exposes an

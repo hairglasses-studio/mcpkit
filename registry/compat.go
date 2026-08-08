@@ -119,6 +119,16 @@ func MakePrompt(name, description string, args ...PromptArgument) Prompt {
 	return mcp.Prompt{Name: name, Description: description, Arguments: args}
 }
 
+// PromptArguments returns p's arguments as a value slice — the read-back
+// mirror of MakePrompt. mcp-go's Prompt.Arguments is already
+// []mcp.PromptArgument, so this returns it as-is (nil-safe: a nil slice
+// stays nil, never allocated into an empty non-nil one). See
+// compat_official.go's PromptArguments for the pointer-slice-dereferencing
+// counterpart.
+func PromptArguments(p Prompt) []PromptArgument {
+	return p.Arguments
+}
+
 // MakeTextContent constructs a Content value containing text.
 // In mcp-go this is a value type; in the official SDK it would be a pointer.
 func MakeTextContent(text string) Content {
@@ -243,6 +253,19 @@ func SetToolMetaField(tool *Tool, key string, value any) {
 		tool.Meta.AdditionalFields = map[string]any{}
 	}
 	tool.Meta.AdditionalFields[key] = value
+}
+
+// ToolMetaField reads a metadata field previously set by SetToolMetaField —
+// the read mirror of that function. mcp-go stores fields under
+// tool.Meta.AdditionalFields[key]; see compat_official.go's ToolMetaField
+// for the official SDK's plain-map counterpart. Returns (nil, false) if
+// tool.Meta, its AdditionalFields, or the key itself is absent.
+func ToolMetaField(t Tool, key string) (any, bool) {
+	if t.Meta == nil || t.Meta.AdditionalFields == nil {
+		return nil, false
+	}
+	v, ok := t.Meta.AdditionalFields[key]
+	return v, ok
 }
 
 // SetToolDeferLoading sets the SDK's defer_loading flag when supported.
