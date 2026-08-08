@@ -396,3 +396,48 @@ func f() {
 		t.Errorf("t_none has no description arg, HasDescription must be false: %+v", byName["t_none"])
 	}
 }
+
+func TestExtractParamsFromNewTool(t *testing.T) {
+	root := t.TempDir()
+	writeRepo(t, root, "fixture", map[string]string{
+		"a.go": `package a
+
+import "x/mcp"
+
+func f() {
+	_ = mcp.NewTool("search",
+		mcp.WithDescription("Search things."),
+		mcp.WithString("query", mcp.Description("The search query."), mcp.Required()),
+		mcp.WithString("mode", mcp.Enum("fast", "deep")),
+		mcp.WithNumber("limit"),
+	)
+}
+`,
+	})
+	rep, err := ScanWorkspace(root, []string{"fixture"}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var tool Surface
+	for _, s := range rep.Repos[0].Surfaces {
+		if s.Name == "search" {
+			tool = s
+		}
+	}
+	if len(tool.Params) != 3 {
+		t.Fatalf("params = %d, want 3: %+v", len(tool.Params), tool.Params)
+	}
+	byName := map[string]ToolParam{}
+	for _, p := range tool.Params {
+		byName[p.Name] = p
+	}
+	if q := byName["query"]; !q.HasDescription || !q.Required || q.Type != "String" {
+		t.Errorf("query param = %+v", q)
+	}
+	if m := byName["mode"]; !m.HasEnum || m.HasDescription {
+		t.Errorf("mode param = %+v", m)
+	}
+	if l := byName["limit"]; l.HasDescription || l.Required || l.Type != "Number" {
+		t.Errorf("limit param = %+v", l)
+	}
+}

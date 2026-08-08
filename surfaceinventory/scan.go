@@ -50,6 +50,21 @@ type Surface struct {
 	Pattern        string `json:"pattern"`
 	File           string `json:"file"`
 	Line           int    `json:"line"`
+	// Params carries per-parameter metadata when statically extractable — today
+	// only the mcp-go WithString/WithNumber/… inline option pattern. Struct-
+	// based inputs (mcpkit TypedHandler, official-SDK generics) need cross-file
+	// type resolution and are not populated (nil), which is distinct from a
+	// genuinely param-less tool (empty non-nil is not produced).
+	Params []ToolParam `json:"params,omitempty"`
+}
+
+// ToolParam is one statically-extracted input parameter of an MCP tool.
+type ToolParam struct {
+	Name           string `json:"name"`
+	Type           string `json:"type,omitempty"` // String, Number, Boolean, Array, Object
+	HasDescription bool   `json:"has_description,omitempty"`
+	Required       bool   `json:"required,omitempty"`
+	HasEnum        bool   `json:"has_enum,omitempty"`
 }
 
 // RepoInventory is the scan result for one repo.
@@ -261,13 +276,13 @@ func relPath(dir, path string) string {
 // extractFile pulls every recognized surface out of one parsed file.
 func extractFile(fset *token.FileSet, file *ast.File, relFile string) []Surface {
 	var out []Surface
-	add := func(node ast.Node, kind, name, desc, pattern string, hasDesc bool) {
+	add := func(node ast.Node, kind, name, desc, pattern string, hasDesc bool, params []ToolParam) {
 		if name == "" {
 			return
 		}
 		out = append(out, Surface{
 			Kind: kind, Name: name, Description: desc, HasDescription: hasDesc || desc != "",
-			Pattern: pattern, File: relFile, Line: fset.Position(node.Pos()).Line,
+			Pattern: pattern, File: relFile, Line: fset.Position(node.Pos()).Line, Params: params,
 		})
 	}
 	ast.Inspect(file, func(n ast.Node) bool {
@@ -282,7 +297,7 @@ func extractFile(fset *token.FileSet, file *ast.File, relFile string) []Surface 
 	return out
 }
 
-type addFunc func(node ast.Node, kind, name, desc, pattern string, hasDesc bool)
+type addFunc func(node ast.Node, kind, name, desc, pattern string, hasDesc bool, params []ToolParam)
 
 func extractCall(call *ast.CallExpr, add addFunc) {
 	callee := calleeName(call.Fun)
@@ -290,12 +305,13 @@ func extractCall(call *ast.CallExpr, add addFunc) {
 	case "TypedHandler": // mcpkit: handler.TypedHandler[In, Out]("name", "desc", fn)
 		if len(call.Args) >= 2 {
 			// The 2nd arg is the description slot whether or not it's a literal.
-			add(call, KindMCPTool, stringLit(call.Args[0]), stringLit(call.Args[1]), "mcpkit.TypedHandler", true)
+			// Params come from the In type struct (cross-file resolution) — not extracted.
+			add(call, KindMCPTool, stringLit(call.Args[0]), stringLit(call.Args[1]), "mcpkit.TypedHandler", true, nil)
 		}
-	case "NewTool": // mcp-go: mcp.NewTool("name", mcp.WithDescription("desc"), ...)
+	case "NewTool": // mcp-go: mcp.NewTool("name", mcp.WithDescription("desc"), mcp.WithString("p", ...), ...)
 		if len(call.Args) >= 1 {
 			add(call, KindMCPTool, stringLit(call.Args[0]), optionString(call.Args, "WithDescription"),
-				"mcp-go.NewTool", optionPresent(call.Args, "WithDescription"))
+				"mcp-go.NewTool", optionPresent(call.Args, "WithDescription"), extractParams(call.Args))
 		}
 	case "NewResource", "NewResourceTemplate": // mcp-go + mcpkit compat: (uri, name, opts...)
 		if len(call.Args) >= 1 {
@@ -303,24 +319,65 @@ func extractCall(call *ast.CallExpr, add addFunc) {
 			if len(call.Args) >= 2 {
 				desc = stringLit(call.Args[1])
 			}
-			add(call, KindMCPResource, stringLit(call.Args[0]), desc, callee, len(call.Args) >= 2)
+			add(call, KindMCPResource, stringLit(call.Args[0]), desc, callee, len(call.Args) >= 2, nil)
 		}
 	case "NewPrompt": // mcp-go: mcp.NewPrompt("name", opts...)
 		if len(call.Args) >= 1 {
 			add(call, KindMCPPrompt, stringLit(call.Args[0]), optionString(call.Args, "WithPromptDescription"),
-				"mcp-go.NewPrompt", optionPresent(call.Args, "WithPromptDescription"))
+				"mcp-go.NewPrompt", optionPresent(call.Args, "WithPromptDescription"), nil)
 		}
 	case "NewFlagSet": // stdlib flag: flag.NewFlagSet("name", ...)
 		if len(call.Args) >= 1 {
-			add(call, KindCLICommand, stringLit(call.Args[0]), "", "flag.NewFlagSet", false)
+			add(call, KindCLICommand, stringLit(call.Args[0]), "", "flag.NewFlagSet", false, nil)
 		}
 	case "Handle", "HandleFunc": // net/http muxes and gateway routers
 		if len(call.Args) >= 1 {
 			if route := stringLit(call.Args[0]); strings.Contains(route, "/") {
-				add(call, KindHTTPRoute, route, "", "http."+callee, false)
+				add(call, KindHTTPRoute, route, "", "http."+callee, false, nil)
 			}
 		}
 	}
+}
+
+// paramDefiners are the mcp-go option calls that declare a tool input
+// parameter: mcp.WithString("name", opts...), WithNumber, WithBoolean, etc.
+var paramDefiners = map[string]bool{
+	"WithString": true, "WithNumber": true, "WithBoolean": true,
+	"WithArray": true, "WithObject": true, "WithInteger": true,
+}
+
+// extractParams pulls per-parameter metadata from the mcp-go WithXxx option
+// calls in a NewTool argument list. Each param's property options
+// (mcp.Description / mcp.Required / mcp.Enum) are inspected for presence.
+func extractParams(args []ast.Expr) []ToolParam {
+	var params []ToolParam
+	for _, a := range args {
+		call, ok := a.(*ast.CallExpr)
+		if !ok || !paramDefiners[calleeName(call.Fun)] || len(call.Args) < 1 {
+			continue
+		}
+		pname := stringLit(call.Args[0])
+		if pname == "" {
+			continue
+		}
+		p := ToolParam{Name: pname, Type: strings.TrimPrefix(calleeName(call.Fun), "With")}
+		for _, opt := range call.Args[1:] {
+			oc, ok := opt.(*ast.CallExpr)
+			if !ok {
+				continue
+			}
+			switch calleeName(oc.Fun) {
+			case "Description":
+				p.HasDescription = true
+			case "Required":
+				p.Required = true
+			case "Enum":
+				p.HasEnum = true
+			}
+		}
+		params = append(params, p)
+	}
+	return params
 }
 
 func extractComposite(lit *ast.CompositeLit, add addFunc) {
@@ -345,27 +402,27 @@ func emitComposite(lit *ast.CompositeLit, typeName string, qualified bool, add a
 	case "Tool": // official go-sdk: &mcp.Tool{Name: ..., Description: ...}
 		if qualified {
 			if name := fieldString(lit, "Name"); name != "" {
-				add(lit, KindMCPTool, name, fieldString(lit, "Description"), "official-sdk.Tool", fieldPresent(lit, "Description"))
+				add(lit, KindMCPTool, name, fieldString(lit, "Description"), "official-sdk.Tool", fieldPresent(lit, "Description"), nil)
 			}
 		}
 	case "ToolDef": // codexkit: codexkit.ToolDef{Name: ..., Description: ...}
 		if name := fieldString(lit, "Name"); name != "" {
-			add(lit, KindMCPTool, name, fieldString(lit, "Description"), "codexkit.ToolDef", fieldPresent(lit, "Description"))
+			add(lit, KindMCPTool, name, fieldString(lit, "Description"), "codexkit.ToolDef", fieldPresent(lit, "Description"), nil)
 		}
 	case "Resource", "ResourceTemplate": // official go-sdk resource literals
 		if qualified {
 			if uri := firstNonEmpty(fieldString(lit, "URI"), fieldString(lit, "URITemplate")); uri != "" {
-				add(lit, KindMCPResource, uri, fieldString(lit, "Description"), "official-sdk."+typeName, fieldPresent(lit, "Description"))
+				add(lit, KindMCPResource, uri, fieldString(lit, "Description"), "official-sdk."+typeName, fieldPresent(lit, "Description"), nil)
 			}
 		}
 	case "Prompt", "PromptDefinition": // official go-sdk / mcpkit prompt literals
 		if name := fieldString(lit, "Name"); name != "" {
-			add(lit, KindMCPPrompt, name, fieldString(lit, "Description"), typeName, fieldPresent(lit, "Description"))
+			add(lit, KindMCPPrompt, name, fieldString(lit, "Description"), typeName, fieldPresent(lit, "Description"), nil)
 		}
 	case "Command": // cobra.Command{Use: "serve [flags]"}
 		if use := fieldString(lit, "Use"); use != "" {
 			name := strings.Fields(use)[0]
-			add(lit, KindCLICommand, name, fieldString(lit, "Short"), "cobra.Command", fieldPresent(lit, "Short"))
+			add(lit, KindCLICommand, name, fieldString(lit, "Short"), "cobra.Command", fieldPresent(lit, "Short"), nil)
 		}
 	}
 }

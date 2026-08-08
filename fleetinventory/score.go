@@ -28,20 +28,22 @@ type ScoreWeights struct {
 	DeclaredGap         float64 `json:"declared_gap"`
 	Security            float64 `json:"security"`
 	Discoverability     float64 `json:"discoverability"`
+	ParamQuality        float64 `json:"param_quality"`
 }
 
-// DefaultScoreWeights sum to 1.0. Security (2026-08-08) and Discoverability
-// (2026-08-08, tool-count-aware) were added incrementally; the others were
-// rebalanced down to keep the total at 1.0.
+// DefaultScoreWeights sum to 1.0. Security, Discoverability, and ParamQuality
+// were added incrementally (2026-08-08); the others were rebalanced down to
+// keep the total at 1.0.
 var DefaultScoreWeights = ScoreWeights{
-	DescriptionCoverage: 0.16,
-	NamingDiscipline:    0.10,
-	Duplication:         0.16,
+	DescriptionCoverage: 0.15,
+	NamingDiscipline:    0.09,
+	Duplication:         0.15,
 	ViolationBurden:     0.18,
-	SizeOutlier:         0.12,
-	DeclaredGap:         0.06,
+	SizeOutlier:         0.11,
+	DeclaredGap:         0.05,
 	Security:            0.12,
-	Discoverability:     0.10,
+	Discoverability:     0.09,
+	ParamQuality:        0.06,
 }
 
 // ScoreDimensions holds per-dimension scores; nil = not measured.
@@ -54,6 +56,7 @@ type ScoreDimensions struct {
 	DeclaredGap         *int `json:"declared_gap,omitempty"`
 	Security            *int `json:"security,omitempty"`
 	Discoverability     *int `json:"discoverability,omitempty"`
+	ParamQuality        *int `json:"param_quality,omitempty"`
 }
 
 // RepoScore is one repo's scored row.
@@ -229,7 +232,7 @@ func scoreRepo(r RepoReport, w ScoreWeights, nameRepos map[string]map[string]boo
 	rs.Dims.ViolationBurden = clamp(100 - 15*burden)
 
 	measured := w.ViolationBurden
-	total := w.DescriptionCoverage + w.NamingDiscipline + w.Duplication + w.ViolationBurden + w.SizeOutlier + w.DeclaredGap + w.Security + w.Discoverability
+	total := w.DescriptionCoverage + w.NamingDiscipline + w.Duplication + w.ViolationBurden + w.SizeOutlier + w.DeclaredGap + w.Security + w.Discoverability + w.ParamQuality
 	sum := float64(rs.Dims.ViolationBurden) * w.ViolationBurden
 
 	if hasDetail {
@@ -275,6 +278,14 @@ func scoreRepo(r RepoReport, w ScoreWeights, nameRepos map[string]map[string]boo
 			measured += w.Discoverability
 			sum += float64(*disc) * w.Discoverability
 			if *disc < 70 {
+				rs.Notes = append(rs.Notes, note)
+			}
+		}
+		if pq, note := paramQualityScore(r.SurfaceDetail); pq != nil {
+			rs.Dims.ParamQuality = pq
+			measured += w.ParamQuality
+			sum += float64(*pq) * w.ParamQuality
+			if *pq < 70 {
 				rs.Notes = append(rs.Notes, note)
 			}
 		}
@@ -610,7 +621,7 @@ func clamp(v int) int {
 // RenderScoreMarkdown renders the scoreboard section.
 func RenderScoreMarkdown(sr ScoreReport) string {
 	var b strings.Builder
-	b.WriteString("\n## Quality Scoreboard\n\n| Repo | composite | confidence | desc | naming | dup | violations | size | security | disc | priority | notes |\n|---|---|---|---|---|---|---|---|---|---|---|---|\n")
+	b.WriteString("\n## Quality Scoreboard\n\n| Repo | composite | confidence | desc | naming | dup | violations | size | security | disc | param | priority | notes |\n|---|---|---|---|---|---|---|---|---|---|---|---|---|\n")
 	dim := func(p *int) string {
 		if p == nil {
 			return "—"
@@ -625,11 +636,11 @@ func RenderScoreMarkdown(sr ScoreReport) string {
 		if r.RoadmapPriority != nil {
 			prio = fmt.Sprintf("%.1f", *r.RoadmapPriority)
 		}
-		fmt.Fprintf(&b, "| %s | %s | %.2f | %s | %s | %s | %d | %s | %s | %s | %s | %s |\n",
+		fmt.Fprintf(&b, "| %s | %s | %.2f | %s | %s | %s | %d | %s | %s | %s | %s | %s | %s |\n",
 			r.Repo, comp, r.DataConfidence,
 			dim(r.Dims.DescriptionCoverage), dim(r.Dims.NamingDiscipline), dim(r.Dims.Duplication),
 			r.Dims.ViolationBurden, dim(r.Dims.SizeOutlier), dim(r.Dims.Security), dim(r.Dims.Discoverability),
-			prio, strings.Join(r.Notes, "; "))
+			dim(r.Dims.ParamQuality), prio, strings.Join(r.Notes, "; "))
 	}
 	if len(sr.Namespaces) > 0 {
 		b.WriteString("\n### Cross-repo namespaces (top by span)\n\n| Namespace | tools | repos |\n|---|---|---|\n")
