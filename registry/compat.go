@@ -39,6 +39,12 @@ type (
 	BlobResourceContents = mcp.BlobResourceContents
 	ReadResourceRequest  = mcp.ReadResourceRequest
 	ReadResourceResult   = mcp.ReadResourceResult
+	// Annotations carries resource audience/priority hints (Resource.Annotations).
+	// A plain alias suffices for the struct/field itself (both SDKs' fields
+	// have the same names), but the two SDKs' Priority field type differs
+	// (mcp-go: *float64; official: float64) — see MakeResourceAnnotations
+	// for the constructor that papers over that.
+	Annotations = mcp.Annotations
 
 	// Prompt types
 	Prompt           = mcp.Prompt
@@ -106,6 +112,19 @@ func TemplateURI(tpl ResourceTemplate) string {
 		return ""
 	}
 	return tpl.URITemplate.Raw()
+}
+
+// MakeResourceAnnotations constructs Resource/ResourceTemplate audience and
+// priority hints (the Annotations struct assigned to Resource.Annotations).
+// mcp-go's Annotations.Priority is *float64 (nil means unset); the official
+// SDK's is a plain float64 (see compat_official.go's counterpart) — this
+// constructor takes a plain priority and always sets it, so a caller that
+// wants "unset" should not call this at all and leave Resource.Annotations
+// nil, rather than passing a zero priority (both SDKs' JSON encoding omits
+// a zero-valued priority via `omitempty` either way, so a zero priority
+// here and an unset one are wire-equivalent, just not construction-equivalent).
+func MakeResourceAnnotations(audience []Role, priority float64) *Annotations {
+	return &mcp.Annotations{Audience: audience, Priority: &priority}
 }
 
 // MakePrompt constructs a Prompt with SDK-neutral PromptArgument values.

@@ -167,3 +167,29 @@ func TestMakeStructuredResult(t *testing.T) {
 		t.Errorf("count = %v, want 42", structured["count"])
 	}
 }
+
+func TestMakeResourceAnnotations(t *testing.T) {
+	a := MakeResourceAnnotations([]Role{RoleUser, RoleAssistant}, 0.75)
+	if a == nil {
+		t.Fatal("MakeResourceAnnotations returned nil")
+	}
+	if len(a.Audience) != 2 || a.Audience[0] != RoleUser || a.Audience[1] != RoleAssistant {
+		t.Errorf("Audience = %v, want [user assistant]", a.Audience)
+	}
+	if a.Priority == nil || *a.Priority != 0.75 {
+		t.Errorf("Priority = %v, want 0.75", a.Priority)
+	}
+}
+
+func TestMakeResourceAnnotations_ZeroPriority(t *testing.T) {
+	a := MakeResourceAnnotations(nil, 0)
+	if a == nil {
+		t.Fatal("MakeResourceAnnotations returned nil")
+	}
+	if a.Priority == nil {
+		t.Fatal("Priority should be a non-nil pointer to 0, not nil (unset)")
+	}
+	if *a.Priority != 0 {
+		t.Errorf("Priority = %v, want 0", *a.Priority)
+	}
+}

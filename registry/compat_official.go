@@ -30,6 +30,11 @@ type (
 	ResourceContents    = mcp.ResourceContents
 	ReadResourceRequest = mcp.ReadResourceRequest
 	ReadResourceResult  = mcp.ReadResourceResult
+	// Annotations carries resource audience/priority hints (Resource.Annotations).
+	// See compat.go's counterpart for the mcp-go side and its doc comment on
+	// why Priority's field type (float64 here, *float64 there) needs a
+	// constructor rather than a bare composite literal to stay portable.
+	Annotations = mcp.Annotations
 
 	// Prompt types
 	Prompt           = mcp.Prompt
@@ -121,6 +126,14 @@ func ProgressTokenFromRequest(req CallToolRequest) any {
 // so this just returns the field directly.
 func TemplateURI(tpl ResourceTemplate) string {
 	return tpl.URITemplate
+}
+
+// MakeResourceAnnotations constructs Resource/ResourceTemplate audience and
+// priority hints. The official SDK's Annotations.Priority is a plain
+// float64 (unlike mcp-go's *float64 — see compat.go's counterpart), so this
+// just assigns it directly.
+func MakeResourceAnnotations(audience []Role, priority float64) *Annotations {
+	return &mcp.Annotations{Audience: audience, Priority: priority}
 }
 
 // MakePrompt constructs a Prompt with SDK-neutral PromptArgument values. The
@@ -345,6 +358,19 @@ func MakeEmbeddedResourceText(uri, mimeType, text string) Content {
 // MakeTextContent constructs a Content value containing text.
 func MakeTextContent(text string) Content {
 	return &mcp.TextContent{Text: text}
+}
+
+// NewTextContent constructs a Content value containing text — the
+// official_sdk counterpart to mcp-go's aliased mcp.NewTextContent
+// constructor (compat.go's NewTextContent var), added for call-site parity
+// (found missing by the dotfiles-mcp codemod). Behaves identically to
+// MakeTextContent, including its pointer-shape handling (the official SDK's
+// TextContent must be pointer-wrapped to satisfy the Content interface,
+// since MarshalJSON has a pointer receiver) — kept as a separate name only
+// so code written against the mcp-go build's NewTextContent compiles
+// unchanged here too.
+func NewTextContent(text string) Content {
+	return MakeTextContent(text)
 }
 
 // MakeErrorResult creates a CallToolResult marked as an error with text content.
