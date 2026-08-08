@@ -1,18 +1,14 @@
-//go:build !official_sdk
-
 package gate
 
 import (
 	"context"
 	"testing"
 
-	"github.com/mark3labs/mcp-go/mcp"
-
 	"github.com/hairglasses-studio/mcpkit/registry"
 )
 
 func makeReq() registry.CallToolRequest {
-	return mcp.CallToolRequest{}
+	return registry.CallToolRequest{}
 }
 
 func okHandler(_ context.Context, _ registry.CallToolRequest) (*registry.CallToolResult, error) {

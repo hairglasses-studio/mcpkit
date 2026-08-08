@@ -1,5 +1,3 @@
-//go:build !official_sdk
-
 // Package gate provides a ToolCallGate middleware that pauses between tool
 // selection and execution.
 //
