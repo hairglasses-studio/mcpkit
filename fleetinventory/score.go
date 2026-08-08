@@ -26,16 +26,20 @@ type ScoreWeights struct {
 	ViolationBurden     float64 `json:"violation_burden"`
 	SizeOutlier         float64 `json:"size_outlier"`
 	DeclaredGap         float64 `json:"declared_gap"`
+	Security            float64 `json:"security"`
 }
 
-// DefaultScoreWeights mirror the lane-scoring prototype.
+// DefaultScoreWeights sum to 1.0. Security (OWASP MCP01/MCP03 static subset +
+// spec name validity) was added 2026-08-08; the others were rebalanced down
+// to make room without inflating the total.
 var DefaultScoreWeights = ScoreWeights{
-	DescriptionCoverage: 0.20,
-	NamingDiscipline:    0.15,
-	Duplication:         0.20,
+	DescriptionCoverage: 0.18,
+	NamingDiscipline:    0.12,
+	Duplication:         0.18,
 	ViolationBurden:     0.20,
-	SizeOutlier:         0.15,
-	DeclaredGap:         0.10,
+	SizeOutlier:         0.12,
+	DeclaredGap:         0.08,
+	Security:            0.12,
 }
 
 // ScoreDimensions holds per-dimension scores; nil = not measured.
@@ -46,17 +50,19 @@ type ScoreDimensions struct {
 	ViolationBurden     int  `json:"violation_burden"`
 	SizeOutlier         *int `json:"size_outlier,omitempty"`
 	DeclaredGap         *int `json:"declared_gap,omitempty"`
+	Security            *int `json:"security,omitempty"`
 }
 
 // RepoScore is one repo's scored row.
 type RepoScore struct {
-	Repo            string          `json:"repo"`
-	Dims            ScoreDimensions `json:"dims"`
-	Composite       *float64        `json:"composite_score,omitempty"`
-	DataConfidence  float64         `json:"data_confidence"`
-	ImpactWeight    float64         `json:"impact_weight"`
-	RoadmapPriority *float64        `json:"roadmap_priority,omitempty"`
-	Notes           []string        `json:"notes,omitempty"`
+	Repo             string            `json:"repo"`
+	Dims             ScoreDimensions   `json:"dims"`
+	Composite        *float64          `json:"composite_score,omitempty"`
+	DataConfidence   float64           `json:"data_confidence"`
+	ImpactWeight     float64           `json:"impact_weight"`
+	RoadmapPriority  *float64          `json:"roadmap_priority,omitempty"`
+	SecurityFindings []SecurityFinding `json:"security_findings,omitempty"`
+	Notes            []string          `json:"notes,omitempty"`
 }
 
 // NamespaceScore aggregates one tool-name prefix across the fleet.
@@ -220,7 +226,7 @@ func scoreRepo(r RepoReport, w ScoreWeights, nameRepos map[string]map[string]boo
 	rs.Dims.ViolationBurden = clamp(100 - 15*burden)
 
 	measured := w.ViolationBurden
-	total := w.DescriptionCoverage + w.NamingDiscipline + w.Duplication + w.ViolationBurden + w.SizeOutlier + w.DeclaredGap
+	total := w.DescriptionCoverage + w.NamingDiscipline + w.Duplication + w.ViolationBurden + w.SizeOutlier + w.DeclaredGap + w.Security
 	sum := float64(rs.Dims.ViolationBurden) * w.ViolationBurden
 
 	if hasDetail {
@@ -248,6 +254,18 @@ func scoreRepo(r RepoReport, w ScoreWeights, nameRepos map[string]map[string]boo
 		sum += float64(v) * w.SizeOutlier
 		if z > 5 {
 			rs.Notes = append(rs.Notes, fmt.Sprintf("size outlier: %d tools (fleet median %.0f)", n, med))
+		}
+	}
+	if hasDetail {
+		findings := SecurityFindings(r.SurfaceDetail)
+		if sec := securityScore(r.SurfaceDetail, findings); sec != nil {
+			rs.Dims.Security = sec
+			measured += w.Security
+			sum += float64(*sec) * w.Security
+			if len(findings) > 0 {
+				rs.SecurityFindings = findings
+				rs.Notes = append(rs.Notes, fmt.Sprintf("%d security finding(s)", len(findings)))
+			}
 		}
 	}
 	if g := declaredGap(r); g != nil {
@@ -294,6 +312,12 @@ func descCoverage(surfaces []surfaceinventory.Surface) *int {
 	return &v
 }
 
+// namingDiscipline scores the fleet HOUSE style (snake_case dominance, no
+// whitespace/scaffold names). Note this is a house convention, NOT an MCP
+// requirement: the spec sanctions camelCase, SCREAMING_SNAKE, and
+// dot-namespaced names alike (getUser, DATA_EXPORT_v2, admin.tools.list). The
+// spec's actual name MUST (charset/length) is checked separately as a security
+// finding (FindingSpecInvalidName), not here.
 func namingDiscipline(surfaces []surfaceinventory.Surface) *int {
 	total, flagged, snake, camel := 0, 0, 0, 0
 	for _, s := range surfaces {
@@ -575,7 +599,7 @@ func clamp(v int) int {
 // RenderScoreMarkdown renders the scoreboard section.
 func RenderScoreMarkdown(sr ScoreReport) string {
 	var b strings.Builder
-	b.WriteString("\n## Quality Scoreboard\n\n| Repo | composite | confidence | desc | naming | dup | violations | size | priority | notes |\n|---|---|---|---|---|---|---|---|---|---|\n")
+	b.WriteString("\n## Quality Scoreboard\n\n| Repo | composite | confidence | desc | naming | dup | violations | size | security | priority | notes |\n|---|---|---|---|---|---|---|---|---|---|---|\n")
 	dim := func(p *int) string {
 		if p == nil {
 			return "—"
@@ -590,10 +614,10 @@ func RenderScoreMarkdown(sr ScoreReport) string {
 		if r.RoadmapPriority != nil {
 			prio = fmt.Sprintf("%.1f", *r.RoadmapPriority)
 		}
-		fmt.Fprintf(&b, "| %s | %s | %.2f | %s | %s | %s | %d | %s | %s | %s |\n",
+		fmt.Fprintf(&b, "| %s | %s | %.2f | %s | %s | %s | %d | %s | %s | %s | %s |\n",
 			r.Repo, comp, r.DataConfidence,
 			dim(r.Dims.DescriptionCoverage), dim(r.Dims.NamingDiscipline), dim(r.Dims.Duplication),
-			r.Dims.ViolationBurden, dim(r.Dims.SizeOutlier), prio, strings.Join(r.Notes, "; "))
+			r.Dims.ViolationBurden, dim(r.Dims.SizeOutlier), dim(r.Dims.Security), prio, strings.Join(r.Notes, "; "))
 	}
 	if len(sr.Namespaces) > 0 {
 		b.WriteString("\n### Cross-repo namespaces (top by span)\n\n| Namespace | tools | repos |\n|---|---|---|\n")
