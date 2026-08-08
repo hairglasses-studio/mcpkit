@@ -41,6 +41,10 @@ const (
 type MCPRuntime struct {
 	SDKs    []string `json:"sdks,omitempty"` // "module vX.Y.Z" for each MCP SDK required
 	SpecEra string   `json:"spec_era,omitempty"`
+	// TasksLegacyShape reports static use of the removed-from-core 2025-11-25
+	// Tasks shape (see tasksshape.go); TasksEvidence carries a few examples.
+	TasksLegacyShape bool     `json:"tasks_legacy_shape,omitempty"`
+	TasksEvidence    []string `json:"tasks_evidence,omitempty"`
 }
 
 // detectMCPRuntime parses the go.mod files under dir (bounded) and classifies

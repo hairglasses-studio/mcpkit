@@ -100,6 +100,9 @@ func Scan(ctx context.Context, root string, opts ScanOptions) (PlatformReport, e
 			MCPRuntime: detectMCPRuntime(idx.Dir),
 			ScanMillis: now().Sub(repoStart).Milliseconds(),
 		}
+		if rr.MCPRuntime.SpecEra != EraNone {
+			rr.MCPRuntime.TasksLegacyShape, rr.MCPRuntime.TasksEvidence = detectTasksShape(idx.Dir, idx.Paths)
+		}
 		if opts.IncludeSurfaces || opts.Score {
 			rr.SurfaceDetail = surfaces.Surfaces
 		}
@@ -249,8 +252,21 @@ func renderMCPRuntime(rep PlatformReport) string {
 		eraCounts[EraModernCapable], eraCounts[EraDual], eraCounts[EraLegacyOnly], eraCounts[EraViaMcpkit])
 	b.WriteString("| Repo | spec era | MCP SDK(s) |\n|---|---|---|\n")
 	sort.Slice(mcpRepos, func(i, j int) bool { return mcpRepos[i].Repo < mcpRepos[j].Repo })
+	var tasksWarnings []string
 	for _, r := range mcpRepos {
 		fmt.Fprintf(&b, "| %s | %s | %s |\n", r.Repo, r.MCPRuntime.SpecEra, strings.Join(r.MCPRuntime.SDKs, ", "))
+		if w := tasksWarning(r.MCPRuntime); w != "" {
+			ev := ""
+			if len(r.MCPRuntime.TasksEvidence) > 0 {
+				ev = " (" + r.MCPRuntime.TasksEvidence[0] + ")"
+			}
+			tasksWarnings = append(tasksWarnings, fmt.Sprintf("- **%s**: %s%s", r.Repo, w, ev))
+		}
+	}
+	if len(tasksWarnings) > 0 {
+		b.WriteString("\n### Tasks-shape warnings\n\n")
+		b.WriteString(strings.Join(tasksWarnings, "\n"))
+		b.WriteString("\n")
 	}
 	return b.String()
 }
