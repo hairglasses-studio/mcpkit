@@ -147,10 +147,20 @@ func (e *BridgeExecutor) Execute(
 			return
 		}
 
-		// 5. Build the MCP CallToolRequest.
-		callReq := registry.CallToolRequest{}
-		callReq.Params.Name = skillID
-		callReq.Params.Arguments = args
+		// 5. Build the MCP CallToolRequest. registry.NewCallToolRequest (not a
+		// raw Params.Arguments field assignment) handles the argument-shape
+		// difference between SDKs -- mcp-go's Arguments is `any`, the
+		// official SDK's is json.RawMessage.
+		callReq, err := registry.NewCallToolRequest(skillID, args)
+		if err != nil {
+			e.logger.Warn("failed to build call request", "skill", skillID, "error", err)
+			errMsg := a2atypes.NewMessageForTask(
+				a2atypes.MessageRoleAgent, taskInfo,
+				a2atypes.NewTextPart(fmt.Sprintf("invalid arguments: %v", err)),
+			)
+			yield(a2atypes.NewStatusUpdateEvent(taskInfo, a2atypes.TaskStateFailed, errMsg), nil)
+			return
+		}
 
 		// 6. Apply bridge-level middleware chain and execute.
 		handler := td.Handler

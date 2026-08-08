@@ -12,7 +12,6 @@ import (
 	a2atypes "github.com/a2aproject/a2a-go/v2/a2a"
 	"github.com/a2aproject/a2a-go/v2/a2aclient"
 	"github.com/a2aproject/a2a-go/v2/a2aclient/agentcard"
-	"github.com/mark3labs/mcp-go/mcp"
 
 	"github.com/hairglasses-studio/mcpkit/registry"
 )
@@ -42,10 +41,10 @@ var _ registry.ToolModule = (*RemoteAgent)(nil)
 type RemoteOption func(*remoteOptions)
 
 type remoteOptions struct {
-	timeout    time.Duration
-	prefix     string
-	translator *Translator
-	httpClient *agentcard.Resolver
+	timeout     time.Duration
+	prefix      string
+	translator  *Translator
+	httpClient  *agentcard.Resolver
 	factoryOpts []a2aclient.FactoryOption
 }
 
@@ -210,13 +209,24 @@ func (ra *RemoteAgent) skillToToolDefinition(skill a2atypes.AgentSkill) registry
 
 	// Build the MCP tool. The input schema has a single "message" string
 	// parameter: callers pass a natural-language message or JSON arguments
-	// that will be forwarded to the A2A agent.
-	tool := mcp.NewTool(toolName,
-		mcp.WithDescription(desc),
-		mcp.WithString("message",
-			mcp.Description("Message or JSON arguments to send to the remote agent"),
+	// that will be forwarded to the A2A agent. Built via registry's
+	// SDK-neutral Tool/MakeToolInputSchema instead of mcp-go's functional-
+	// option builder (mcp.NewTool/mcp.WithString/...), which has no
+	// compat-layer equivalent.
+	tool := registry.Tool{
+		Name:        toolName,
+		Description: desc,
+		InputSchema: registry.MakeToolInputSchema(
+			map[string]any{
+				"message": map[string]any{
+					"type":        "string",
+					"description": "Message or JSON arguments to send to the remote agent",
+				},
+			},
+			nil,
+			nil,
 		),
-	)
+	}
 
 	// Extract tags from the skill, separating category from other tags.
 	var category string

@@ -1,13 +1,10 @@
 package a2a
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"iter"
-
-	"github.com/mark3labs/mcp-go/mcp"
 
 	a2atypes "github.com/a2aproject/a2a-go/v2/a2a"
 
@@ -207,52 +204,60 @@ func (t *Translator) MessageToCallToolRequest(msg a2atypes.Message, skill a2atyp
 	return "", nil, errors.New("no skill identifier found in message: expected DataPart with 'skill' field or non-empty skill hint")
 }
 
-// contentToPart converts a single MCP content block to an A2A Part.
+// contentToPart converts a single MCP content block to an A2A Part. Routed
+// entirely through registry's SDK-neutral Extract*Content accessors instead
+// of an mcp-go-specific type switch, so this function needs no SDK import
+// and compiles identically under both build tags.
+//
+// One documented behavior difference from the pre-port version: a
+// corrupt/non-base64 ImageContent.Data used to fall back to a text part
+// containing the raw (undecoded) base64 string; ExtractImageContent now
+// treats a decode failure as "not extractable as image content" and this
+// falls through to the generic JSON-serialization default case instead.
+// This only affects malformed image data from a misbehaving MCP server, not
+// normal operation.
 func contentToPart(content registry.Content) *a2atypes.Part {
 	if content == nil {
 		return nil
 	}
 
-	switch v := content.(type) {
-	case mcp.TextContent:
-		return a2atypes.NewTextPart(v.Text)
-
-	case mcp.ImageContent:
-		// Decode base64 image data to raw bytes for A2A RawPart.
-		raw, err := base64.StdEncoding.DecodeString(v.Data)
-		if err != nil {
-			// If decoding fails, fall back to text with the base64 string.
-			return a2atypes.NewTextPart(v.Data)
-		}
-		part := a2atypes.NewRawPart(raw)
-		part.MediaType = v.MIMEType
-		return part
-
-	case mcp.EmbeddedResource:
-		// Serialize the embedded resource as structured data.
-		return a2atypes.NewDataPart(v.Resource)
-
-	default:
-		// Unknown content type: attempt JSON serialization as data.
-		return a2atypes.NewDataPart(content)
+	if text, ok := registry.ExtractTextContent(content); ok {
+		return a2atypes.NewTextPart(text)
 	}
+
+	if data, mimeType, ok := registry.ExtractImageContent(content); ok {
+		part := a2atypes.NewRawPart(data)
+		part.MediaType = mimeType
+		return part
+	}
+
+	if resource, ok := registry.ExtractEmbeddedResource(content); ok {
+		// Serialize the embedded resource as structured data.
+		return a2atypes.NewDataPart(resource)
+	}
+
+	// Unknown content type: attempt JSON serialization as data.
+	return a2atypes.NewDataPart(content)
 }
 
 // marshalInputSchema serializes a ToolInputSchema to a JSON string for
-// embedding in skill examples. Returns empty string on error.
+// embedding in skill examples. Returns empty string on error. Routed
+// through registry's SDK-neutral InputSchema* accessors instead of direct
+// field access, which does not compile under official_sdk (Tool.InputSchema
+// is `any` there, holding a map[string]any rather than a typed struct).
 func marshalInputSchema(schema registry.ToolInputSchema) string {
-	// Build a clean schema representation.
-	schemaMap := map[string]any{
-		"type": schema.Type,
+	schemaMap := map[string]any{"type": "object"}
+	if typ, ok := registry.InputSchemaType(schema); ok {
+		schemaMap["type"] = typ
 	}
-	if len(schema.Properties) > 0 {
-		schemaMap["properties"] = schema.Properties
+	if properties, ok := registry.InputSchemaProperties(schema); ok {
+		schemaMap["properties"] = properties
 	}
-	if len(schema.Required) > 0 {
-		schemaMap["required"] = schema.Required
+	if required, ok := registry.InputSchemaRequired(schema); ok {
+		schemaMap["required"] = required
 	}
-	if schema.AdditionalProperties != nil {
-		schemaMap["additionalProperties"] = schema.AdditionalProperties
+	if additional, ok := registry.InputSchemaAdditionalProperties(schema); ok {
+		schemaMap["additionalProperties"] = additional
 	}
 
 	data, err := json.Marshal(schemaMap)
@@ -323,12 +328,16 @@ func (t *Translator) CallResultToEvents(
 // BuildCallToolRequest constructs a registry.CallToolRequest from a tool name
 // and argument map, suitable for passing to a tool handler.
 func BuildCallToolRequest(toolName string, args map[string]any) registry.CallToolRequest {
-	return registry.CallToolRequest{
-		Params: mcp.CallToolParams{
-			Name:      toolName,
-			Arguments: args,
-		},
+	req, err := registry.NewCallToolRequest(toolName, args)
+	if err != nil {
+		// registry.NewCallToolRequest only errors on a JSON-marshal failure
+		// of args (official_sdk build only, and only for an unmarshalable
+		// value); fall back to a request with the name set and no
+		// arguments rather than silently losing the error, matching this
+		// function's no-error return signature.
+		req, _ = registry.NewCallToolRequest(toolName, nil)
 	}
+	return req
 }
 
 // toStringMap attempts to convert an any value to map[string]any.
