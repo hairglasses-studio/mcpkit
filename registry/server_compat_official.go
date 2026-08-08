@@ -77,6 +77,28 @@ func RemovePromptsFromServer(s *MCPServer, names ...string) {
 	s.RemovePrompts(names...)
 }
 
+// NewResource constructs a Resource with the given URI and name. mcp-go's
+// aliased NewResource (compat.go) also accepts variadic
+// ...mcp.ResourceOption functional options (mcp.WithResourceDescription,
+// mcp.WithMIMEType, ...) — an mcp-go-specific type with no official-SDK
+// equivalent in this compat layer. No known consumer passes options today
+// (every real call site is 2-arg, then sets .Description/.MIMEType directly
+// on the returned value, which this signature supports identically since
+// Resource's fields are exported on both builds); a variadic option
+// parameter can be added later if a consumer needs one.
+func NewResource(uri, name string) Resource {
+	return mcp.Resource{URI: uri, Name: name}
+}
+
+// NewResourceTemplate constructs a ResourceTemplate with the given URI
+// template and name. Same 2-arg-only scope as NewResource above — mcp-go's
+// aliased NewResourceTemplate also accepts variadic
+// ...mcp.ResourceTemplateOption functional options, which this compat layer
+// does not mirror because no known consumer uses them.
+func NewResourceTemplate(uriTemplate, name string) ResourceTemplate {
+	return mcp.ResourceTemplate{URITemplate: uriTemplate, Name: name}
+}
+
 // NewMCPServerWithOptions creates an MCPServer from SDK-neutral ServerOptions
 // (see server_options.go). Instructions and the Tool/Resource/Prompt
 // capability flags are honored via mcp.ServerOptions.Capabilities (an
