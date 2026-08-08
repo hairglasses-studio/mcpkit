@@ -28,7 +28,7 @@ var prunedDirs = map[string]bool{
 	".venv": true, "venv": true, "venv_test": true, "__pycache__": true,
 	".pytest_cache": true, ".mypy_cache": true, ".ruff_cache": true,
 	"htmlcov": true, "_salvage": true, "build": true, "dist": true,
-	"testdata": true,
+	"testdata": true, "site-packages": true,
 }
 
 // FileIndex is the product of one repo walk: every regular file's
@@ -115,13 +115,16 @@ func WalkRepo(ctx context.Context, dir, name string, opts WalkOptions) FileIndex
 
 // isHiddenPrunable prunes hidden dirs EXCEPT the provider-config dirs the
 // parity metrics need to see (.agents, .claude, .codex, .gemini, .github,
-// .mcp.json lives at root as a file, .codex-plugin, .ralph markers).
+// .codex-plugin, .well-known). Notably PRUNED: .ralph and .ouro — loop state
+// dirs that leak rehomed Go module caches and other machine state into the
+// index (jobb's .ralph/go-mod-cache-* inflated its apparent MCP surface 24x).
+// HasRalph is detected by a direct stat in CollectParity instead.
 func isHiddenPrunable(base string) bool {
 	if !strings.HasPrefix(base, ".") {
 		return false
 	}
 	switch base {
-	case ".agents", ".claude", ".codex", ".codex-plugin", ".gemini", ".github", ".ralph", ".well-known":
+	case ".agents", ".claude", ".codex", ".codex-plugin", ".gemini", ".github", ".well-known":
 		return false
 	}
 	return true

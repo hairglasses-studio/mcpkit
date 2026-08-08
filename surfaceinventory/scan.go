@@ -64,10 +64,13 @@ type Report struct {
 
 // skipDirs are directory basenames never descended into.
 var skipDirs = map[string]bool{
-	"vendor":       true,
-	"node_modules": true,
-	"testdata":     true,
-	"worktrees":    true,
+	"vendor":        true,
+	"node_modules":  true,
+	"testdata":      true,
+	"worktrees":     true,
+	"venv":          true,
+	"site-packages": true,
+	"__pycache__":   true,
 }
 
 type manifestFile struct {
@@ -148,17 +151,29 @@ func ScanFiles(dir, name string, files []string, kindSet map[string]bool) RepoIn
 	inv := RepoInventory{Repo: name, Counts: map[string]int{}}
 	fset := token.NewFileSet()
 	for _, rel := range files {
-		if !strings.HasSuffix(rel, ".go") || strings.HasSuffix(rel, "_test.go") {
-			continue
-		}
-		path := filepath.Join(dir, filepath.FromSlash(rel))
-		file, err := parser.ParseFile(fset, path, nil, parser.SkipObjectResolution)
-		if err != nil {
-			inv.ParseErrors = append(inv.ParseErrors, fmt.Sprintf("%s: %v", rel, err))
+		var surfaces []Surface
+		switch {
+		case strings.HasSuffix(rel, ".go") && !strings.HasSuffix(rel, "_test.go"):
+			path := filepath.Join(dir, filepath.FromSlash(rel))
+			file, err := parser.ParseFile(fset, path, nil, parser.SkipObjectResolution)
+			if err != nil {
+				inv.ParseErrors = append(inv.ParseErrors, fmt.Sprintf("%s: %v", rel, err))
+				continue
+			}
+			surfaces = extractFile(fset, file, rel)
+		case isScannablePython(rel):
+			path := filepath.Join(dir, filepath.FromSlash(rel))
+			var err error
+			surfaces, err = scanPythonFile(path, rel)
+			if err != nil {
+				inv.ParseErrors = append(inv.ParseErrors, fmt.Sprintf("%s: %v", rel, err))
+				continue
+			}
+		default:
 			continue
 		}
 		inv.FilesParsed++
-		for _, s := range extractFile(fset, file, rel) {
+		for _, s := range surfaces {
 			if kindSet != nil && !kindSet[s.Kind] {
 				continue
 			}
@@ -171,10 +186,9 @@ func ScanFiles(dir, name string, files []string, kindSet map[string]bool) RepoIn
 }
 
 // ScanRepo walks one repo directory and extracts surfaces from every non-test
-// Go file. Parse failures are recorded per-file, never fatal.
+// Go and Python source file. Parse failures are recorded per-file, never fatal.
 func ScanRepo(dir, name string, kindSet map[string]bool) RepoInventory {
-	inv := RepoInventory{Repo: name, Counts: map[string]int{}}
-	fset := token.NewFileSet()
+	var files []string
 	_ = filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return nil
@@ -186,26 +200,10 @@ func ScanRepo(dir, name string, kindSet map[string]bool) RepoInventory {
 			}
 			return nil
 		}
-		if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
-			return nil
-		}
-		file, err := parser.ParseFile(fset, path, nil, parser.SkipObjectResolution)
-		if err != nil {
-			inv.ParseErrors = append(inv.ParseErrors, fmt.Sprintf("%s: %v", relPath(dir, path), err))
-			return nil
-		}
-		inv.FilesParsed++
-		for _, s := range extractFile(fset, file, relPath(dir, path)) {
-			if kindSet != nil && !kindSet[s.Kind] {
-				continue
-			}
-			inv.Surfaces = append(inv.Surfaces, s)
-			inv.Counts[s.Kind]++
-		}
+		files = append(files, relPath(dir, path))
 		return nil
 	})
-	sortSurfaces(inv.Surfaces)
-	return inv
+	return ScanFiles(dir, name, files, kindSet)
 }
 
 func sortSurfaces(surfaces []Surface) {

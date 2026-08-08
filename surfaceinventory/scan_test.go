@@ -258,3 +258,70 @@ func f() { _ = Tool{Name: "not_a_tool"} }
 		t.Fatalf("bare Tool literal counted: %d", n)
 	}
 }
+
+const fastMCPStyle = `import x
+
+@mcp.tool()
+async def audio_sinks() -> str:
+    """List audio output sinks."""
+    return "ok"
+
+@mcp.tool(name="named_tool", description="Explicit kwargs.")
+def whatever():
+    pass
+
+@mcp.tool()
+def no_docstring():
+    return 1
+@mcp.resource("pi://status")
+def status_resource():
+    """Live status resource."""
+    return {}
+
+@mcp.prompt()
+def diagnose():
+    """Diagnose prompt."""
+    return ""
+`
+
+func TestScanPythonFastMCP(t *testing.T) {
+	root := t.TempDir()
+	writeRepo(t, root, "fixture", map[string]string{
+		"src/pkg/audio.py": fastMCPStyle,
+		"src/test_skip.py": "@mcp.tool()\ndef skipped(): pass\n",
+		"venv/lib/bad.py":  "@mcp.tool()\ndef venv_noise(): pass\n",
+	})
+	rep, err := ScanWorkspace(root, []string{"fixture"}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	inv := rep.Repos[0]
+	if inv.Counts[KindMCPTool] != 3 || inv.Counts[KindMCPResource] != 1 || inv.Counts[KindMCPPrompt] != 1 {
+		t.Fatalf("counts = %v, want 3 tools / 1 resource / 1 prompt\n%+v", inv.Counts, inv.Surfaces)
+	}
+	byName := map[string]Surface{}
+	for _, s := range inv.Surfaces {
+		byName[s.Name] = s
+	}
+	if s := byName["audio_sinks"]; s.Description != "List audio output sinks." || s.Pattern != "fastmcp.decorator" {
+		t.Errorf("audio_sinks = %+v", s)
+	}
+	if s := byName["named_tool"]; s.Description != "Explicit kwargs." {
+		t.Errorf("named_tool = %+v", s)
+	}
+	if s, ok := byName["no_docstring"]; !ok || s.Description != "" {
+		t.Errorf("no_docstring = %+v ok=%v", s, ok)
+	}
+	if s := byName["pi://status"]; s.Kind != KindMCPResource || s.Description != "Live status resource." {
+		t.Errorf("resource = %+v", s)
+	}
+	if s := byName["diagnose"]; s.Kind != KindMCPPrompt {
+		t.Errorf("prompt = %+v", s)
+	}
+	if _, ok := byName["skipped"]; ok {
+		t.Error("test_*.py file was scanned")
+	}
+	if _, ok := byName["venv_noise"]; ok {
+		t.Error("venv dir was scanned")
+	}
+}

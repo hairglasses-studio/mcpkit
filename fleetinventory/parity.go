@@ -81,9 +81,12 @@ func CollectParity(idx *FileIndex) ParityMetrics {
 			m.ClaudeAgents++
 		case strings.HasSuffix(p, ".agents/hooks.json"):
 			m.AgentsHooks++
-		case strings.HasPrefix(p, ".ralph/"):
-			m.HasRalph = true
 		}
+	}
+	// .ralph is pruned from the walk (state dir, cache-leak hazard); detect
+	// the marker directly.
+	if info, err := os.Stat(filepath.Join(idx.Dir, ".ralph")); err == nil && info.IsDir() {
+		m.HasRalph = true
 	}
 
 	m.MCPServerCount = countMCPServers(filepath.Join(idx.Dir, ".mcp.json"))
