@@ -40,9 +40,16 @@ type Surface struct {
 	Kind        string `json:"kind"`
 	Name        string `json:"name"`
 	Description string `json:"description,omitempty"`
-	Pattern     string `json:"pattern"`
-	File        string `json:"file"`
-	Line        int    `json:"line"`
+	// HasDescription is true when a description slot is syntactically present
+	// at the registration site — even when Description is empty because the
+	// value is a non-literal expression (a `desc := ...` local, a `+`-
+	// concatenated string, a call). Lets coverage scoring credit real-but-
+	// non-literal descriptions instead of counting a scanner limitation as an
+	// undocumented tool.
+	HasDescription bool   `json:"has_description,omitempty"`
+	Pattern        string `json:"pattern"`
+	File           string `json:"file"`
+	Line           int    `json:"line"`
 }
 
 // RepoInventory is the scan result for one repo.
@@ -254,13 +261,13 @@ func relPath(dir, path string) string {
 // extractFile pulls every recognized surface out of one parsed file.
 func extractFile(fset *token.FileSet, file *ast.File, relFile string) []Surface {
 	var out []Surface
-	add := func(node ast.Node, kind, name, desc, pattern string) {
+	add := func(node ast.Node, kind, name, desc, pattern string, hasDesc bool) {
 		if name == "" {
 			return
 		}
 		out = append(out, Surface{
-			Kind: kind, Name: name, Description: desc, Pattern: pattern,
-			File: relFile, Line: fset.Position(node.Pos()).Line,
+			Kind: kind, Name: name, Description: desc, HasDescription: hasDesc || desc != "",
+			Pattern: pattern, File: relFile, Line: fset.Position(node.Pos()).Line,
 		})
 	}
 	ast.Inspect(file, func(n ast.Node) bool {
@@ -275,18 +282,20 @@ func extractFile(fset *token.FileSet, file *ast.File, relFile string) []Surface 
 	return out
 }
 
-type addFunc func(node ast.Node, kind, name, desc, pattern string)
+type addFunc func(node ast.Node, kind, name, desc, pattern string, hasDesc bool)
 
 func extractCall(call *ast.CallExpr, add addFunc) {
 	callee := calleeName(call.Fun)
 	switch callee {
 	case "TypedHandler": // mcpkit: handler.TypedHandler[In, Out]("name", "desc", fn)
 		if len(call.Args) >= 2 {
-			add(call, KindMCPTool, stringLit(call.Args[0]), stringLit(call.Args[1]), "mcpkit.TypedHandler")
+			// The 2nd arg is the description slot whether or not it's a literal.
+			add(call, KindMCPTool, stringLit(call.Args[0]), stringLit(call.Args[1]), "mcpkit.TypedHandler", true)
 		}
 	case "NewTool": // mcp-go: mcp.NewTool("name", mcp.WithDescription("desc"), ...)
 		if len(call.Args) >= 1 {
-			add(call, KindMCPTool, stringLit(call.Args[0]), optionString(call.Args, "WithDescription"), "mcp-go.NewTool")
+			add(call, KindMCPTool, stringLit(call.Args[0]), optionString(call.Args, "WithDescription"),
+				"mcp-go.NewTool", optionPresent(call.Args, "WithDescription"))
 		}
 	case "NewResource", "NewResourceTemplate": // mcp-go + mcpkit compat: (uri, name, opts...)
 		if len(call.Args) >= 1 {
@@ -294,20 +303,21 @@ func extractCall(call *ast.CallExpr, add addFunc) {
 			if len(call.Args) >= 2 {
 				desc = stringLit(call.Args[1])
 			}
-			add(call, KindMCPResource, stringLit(call.Args[0]), desc, callee)
+			add(call, KindMCPResource, stringLit(call.Args[0]), desc, callee, len(call.Args) >= 2)
 		}
 	case "NewPrompt": // mcp-go: mcp.NewPrompt("name", opts...)
 		if len(call.Args) >= 1 {
-			add(call, KindMCPPrompt, stringLit(call.Args[0]), optionString(call.Args, "WithPromptDescription"), "mcp-go.NewPrompt")
+			add(call, KindMCPPrompt, stringLit(call.Args[0]), optionString(call.Args, "WithPromptDescription"),
+				"mcp-go.NewPrompt", optionPresent(call.Args, "WithPromptDescription"))
 		}
 	case "NewFlagSet": // stdlib flag: flag.NewFlagSet("name", ...)
 		if len(call.Args) >= 1 {
-			add(call, KindCLICommand, stringLit(call.Args[0]), "", "flag.NewFlagSet")
+			add(call, KindCLICommand, stringLit(call.Args[0]), "", "flag.NewFlagSet", false)
 		}
 	case "Handle", "HandleFunc": // net/http muxes and gateway routers
 		if len(call.Args) >= 1 {
 			if route := stringLit(call.Args[0]); strings.Contains(route, "/") {
-				add(call, KindHTTPRoute, route, "", "http."+callee)
+				add(call, KindHTTPRoute, route, "", "http."+callee, false)
 			}
 		}
 	}
@@ -335,27 +345,27 @@ func emitComposite(lit *ast.CompositeLit, typeName string, qualified bool, add a
 	case "Tool": // official go-sdk: &mcp.Tool{Name: ..., Description: ...}
 		if qualified {
 			if name := fieldString(lit, "Name"); name != "" {
-				add(lit, KindMCPTool, name, fieldString(lit, "Description"), "official-sdk.Tool")
+				add(lit, KindMCPTool, name, fieldString(lit, "Description"), "official-sdk.Tool", fieldPresent(lit, "Description"))
 			}
 		}
 	case "ToolDef": // codexkit: codexkit.ToolDef{Name: ..., Description: ...}
 		if name := fieldString(lit, "Name"); name != "" {
-			add(lit, KindMCPTool, name, fieldString(lit, "Description"), "codexkit.ToolDef")
+			add(lit, KindMCPTool, name, fieldString(lit, "Description"), "codexkit.ToolDef", fieldPresent(lit, "Description"))
 		}
 	case "Resource", "ResourceTemplate": // official go-sdk resource literals
 		if qualified {
 			if uri := firstNonEmpty(fieldString(lit, "URI"), fieldString(lit, "URITemplate")); uri != "" {
-				add(lit, KindMCPResource, uri, fieldString(lit, "Description"), "official-sdk."+typeName)
+				add(lit, KindMCPResource, uri, fieldString(lit, "Description"), "official-sdk."+typeName, fieldPresent(lit, "Description"))
 			}
 		}
 	case "Prompt", "PromptDefinition": // official go-sdk / mcpkit prompt literals
 		if name := fieldString(lit, "Name"); name != "" {
-			add(lit, KindMCPPrompt, name, fieldString(lit, "Description"), typeName)
+			add(lit, KindMCPPrompt, name, fieldString(lit, "Description"), typeName, fieldPresent(lit, "Description"))
 		}
 	case "Command": // cobra.Command{Use: "serve [flags]"}
 		if use := fieldString(lit, "Use"); use != "" {
 			name := strings.Fields(use)[0]
-			add(lit, KindCLICommand, name, fieldString(lit, "Short"), "cobra.Command")
+			add(lit, KindCLICommand, name, fieldString(lit, "Short"), "cobra.Command", fieldPresent(lit, "Short"))
 		}
 	}
 }
@@ -399,6 +409,31 @@ func stringLit(expr ast.Expr) string {
 		return ""
 	}
 	return val
+}
+
+// optionPresent reports whether an option call like mcp.WithDescription(...)
+// appears among the args at all, regardless of whether its argument is a
+// string literal the scanner can read.
+func optionPresent(args []ast.Expr, option string) bool {
+	for _, arg := range args {
+		if call, ok := arg.(*ast.CallExpr); ok && calleeName(call.Fun) == option {
+			return true
+		}
+	}
+	return false
+}
+
+// fieldPresent reports whether a named field key appears in a composite
+// literal, regardless of whether its value is a string literal.
+func fieldPresent(lit *ast.CompositeLit, field string) bool {
+	for _, elt := range lit.Elts {
+		if kv, ok := elt.(*ast.KeyValueExpr); ok {
+			if key, ok := kv.Key.(*ast.Ident); ok && key.Name == field {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // optionString finds an option-call argument like mcp.WithDescription("...")

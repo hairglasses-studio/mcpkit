@@ -137,3 +137,85 @@ func TestTruncatedWalkCapsConfidence(t *testing.T) {
 	}
 	_ = os.Remove(filepath.Join(root, "unused"))
 }
+
+func TestMirrorPairNotCountedAsCrossDup(t *testing.T) {
+	root := t.TempDir()
+	// canonical is a tree inside "host" with mirror-parity.json declaring
+	// "mirror" as its publish mirror; both register the same tool name.
+	writeFiles(t, root, map[string]string{
+		"workspace/manifest.json": `{"version":1,"repos":[
+			{"name":"host","scope":"active_operator","lifecycle":"active"},
+			{"name":"mirror","scope":"compatibility_only","lifecycle":"publish-mirror"},
+			{"name":"other","scope":"active_operator","lifecycle":"active"}]}`,
+		"host/.git/HEAD":                  "x",
+		"host/AGENTS.md":                  "h",
+		"host/sub/mcp/mirror-parity.json": `{"version":1,"mirrors":[{"module":"m","standalone_repo":"mirror","canonical_path":"sub/mcp/m"}]}`,
+		"host/sub/mcp/m/tools.go": `package m
+
+import "x/mcp"
+
+func f() {
+	_ = mcp.NewTool("shared_widget", mcp.WithDescription("d"))
+	_ = mcp.NewTool("host_only", mcp.WithDescription("d"))
+}
+`,
+		"mirror/.git/HEAD": "x",
+		"mirror/AGENTS.md": "m",
+		"mirror/tools.go": `package m
+
+import "x/mcp"
+
+func f() { _ = mcp.NewTool("shared_widget", mcp.WithDescription("d")) }
+`,
+		// unrelated repo that genuinely shares a different tool name
+		"other/.git/HEAD": "x",
+		"other/AGENTS.md": "o",
+		"other/tools.go": `package o
+
+import "x/mcp"
+
+func f() {
+	_ = mcp.NewTool("host_only", mcp.WithDescription("d"))
+	_ = mcp.NewTool("other_thing", mcp.WithDescription("d"))
+}
+`,
+	})
+	rep, err := Scan(context.Background(), root, ScanOptions{Score: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// namespace view: "shared" spans host+mirror but they're a declared
+	// mirror pair → RepoSpan 1, not cross-repo duplicate.
+	// "host_only" spans host + other (genuinely unrelated) → cross-dup.
+	nsByName := map[string]NamespaceScore{}
+	for _, ns := range rep.Scoring.Namespaces {
+		nsByName[ns.Namespace] = ns
+	}
+	if ns, ok := nsByName["shared"]; ok {
+		if ns.RepoSpan != 1 || ns.CrossRepoDuplicate {
+			t.Errorf("shared_widget mirror pair should collapse to span 1, got %+v", ns)
+		}
+	}
+	if ns, ok := nsByName["host"]; ok { // "host_only" -> prefix "host"
+		if ns.RepoSpan != 2 || !ns.CrossRepoDuplicate {
+			t.Errorf("host_only spans host+other (unrelated) → should be cross-dup, got %+v", ns)
+		}
+	}
+	// host's duplication dimension: shared_widget must NOT be penalized as
+	// cross-repo dup (mirror), so host scores no worse than if shared_widget
+	// were unique.
+	byRepo := map[string]RepoScore{}
+	for _, s := range rep.Scoring.Repos {
+		byRepo[s.Repo] = s
+	}
+	host := byRepo["host"]
+	if host.Dims.Duplication == nil {
+		t.Fatal("host duplication unmeasured")
+	}
+	// host has 2 tools: shared_widget (mirror, excluded) + host_only (real
+	// cross-dup with other). So exactly 1/2 cross-dup → score reflects that,
+	// but the mirror one must not add to it. Sanity: >50 (not both flagged).
+	if *host.Dims.Duplication < 50 {
+		t.Errorf("host duplication over-penalized (mirror counted?): %d", *host.Dims.Duplication)
+	}
+}

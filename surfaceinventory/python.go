@@ -61,6 +61,7 @@ func scanPythonFile(path, relFile string) ([]Surface, error) {
 			}
 			if m := pyDocstringRe.FindStringSubmatch(line); m != nil {
 				out[awaitingDocstring].Description = m[1]
+				out[awaitingDocstring].HasDescription = m[1] != ""
 				awaitingDocstring = -1
 				continue
 			}
@@ -89,7 +90,7 @@ func scanPythonFile(path, relFile string) ([]Surface, error) {
 					name = m[1]
 				}
 				out = append(out, Surface{
-					Kind: p.kind, Name: name, Description: p.desc,
+					Kind: p.kind, Name: name, Description: p.desc, HasDescription: p.desc != "",
 					Pattern: "fastmcp.decorator", File: relFile, Line: p.line,
 				})
 				if p.desc == "" {

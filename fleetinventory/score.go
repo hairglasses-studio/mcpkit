@@ -142,8 +142,12 @@ func impactWeights(root string) map[string]float64 {
 func Score(rep PlatformReport, weights ScoreWeights) ScoreReport {
 	sr := ScoreReport{Weights: weights}
 	impacts := impactWeights(rep.Root)
+	canon := mirrorCanonicalizer(rep.Repos)
 
-	// Cross-repo duplicate name index (tools only, scaffold excluded).
+	// Cross-repo duplicate name index (tools only, scaffold excluded). Repos
+	// are keyed by their mirror-group so a tool shared between a canonical
+	// in-tree server and its registered publish mirror counts as one, not
+	// cross-repo duplication debt.
 	nameRepos := map[string]map[string]bool{}
 	for _, r := range rep.Repos {
 		for _, s := range r.SurfaceDetail {
@@ -153,7 +157,7 @@ func Score(rep PlatformReport, weights ScoreWeights) ScoreReport {
 			if nameRepos[s.Name] == nil {
 				nameRepos[s.Name] = map[string]bool{}
 			}
-			nameRepos[s.Name][r.Repo] = true
+			nameRepos[s.Name][canon(r.Repo)] = true
 		}
 	}
 
@@ -193,7 +197,7 @@ func Score(rep PlatformReport, weights ScoreWeights) ScoreReport {
 		return sr.Repos[i].Repo < sr.Repos[j].Repo
 	})
 
-	sr.Namespaces = namespaceScores(rep)
+	sr.Namespaces = namespaceScores(rep, canon)
 	return sr
 }
 
@@ -274,7 +278,12 @@ func descCoverage(surfaces []surfaceinventory.Surface) *int {
 			continue
 		}
 		total++
-		if strings.TrimSpace(s.Description) != "" {
+		// Credit a description slot that is syntactically present even when
+		// its value is non-literal (a local var, a concatenation, a call) —
+		// otherwise the static scanner's inability to read the string counts
+		// a real description as absent. HasDescription is set whenever the
+		// literal was read OR the slot was present-but-unreadable.
+		if s.HasDescription || strings.TrimSpace(s.Description) != "" {
 			described++
 		}
 	}
@@ -373,10 +382,109 @@ func declaredGap(r RepoReport) *int {
 
 func repoDir(r RepoReport) string { return r.Dir }
 
-func namespaceScores(rep PlatformReport) []NamespaceScore {
+// mirrorParityFile is the shape of a repo's mirror-parity.json (dotfiles-style
+// publish-mirror registry): each mirror declares a standalone_repo that is a
+// publish mirror of a canonical tree hosted inside THIS repo.
+type mirrorParityFile struct {
+	Mirrors []struct {
+		StandaloneRepo string `json:"standalone_repo"`
+	} `json:"mirrors"`
+}
+
+// mirrorCanonicalizer returns a function mapping each repo name to a
+// mirror-group representative, so a canonical in-tree MCP server and its
+// registered standalone publish mirror(s) collapse to one group. Cross-repo
+// duplication between such declared pairs is intentional parity, not debt.
+// Groups are discovered from any mirror-parity.json inside each repo (bounded
+// walk); a standalone_repo only joins a group if it is itself a fleet repo.
+func mirrorCanonicalizer(repos []RepoReport) func(string) string {
+	inFleet := make(map[string]bool, len(repos))
+	for _, r := range repos {
+		inFleet[r.Repo] = true
+	}
+	parent := make(map[string]string, len(repos))
+	var find func(string) string
+	find = func(x string) string {
+		p, ok := parent[x]
+		if !ok || p == x {
+			return x
+		}
+		root := find(p)
+		parent[x] = root
+		return root
+	}
+	union := func(a, b string) {
+		ra, rb := find(a), find(b)
+		if ra != rb {
+			parent[rb] = ra
+		}
+	}
+	for _, r := range repos {
+		parent[r.Repo] = r.Repo
+	}
+	for _, r := range repos {
+		if r.Dir == "" {
+			continue
+		}
+		for _, mp := range findMirrorParity(r.Dir) {
+			for _, m := range mp.Mirrors {
+				if m.StandaloneRepo != "" && inFleet[m.StandaloneRepo] {
+					union(r.Repo, m.StandaloneRepo)
+				}
+			}
+		}
+	}
+	return func(repo string) string {
+		if _, ok := parent[repo]; ok {
+			return find(repo)
+		}
+		return repo
+	}
+}
+
+// findMirrorParity returns parsed mirror-parity.json files within dir, walking
+// up to 4 levels deep and skipping pruned/hidden dirs so a large repo doesn't
+// pay a full second walk.
+func findMirrorParity(dir string) []mirrorParityFile {
+	var out []mirrorParityFile
+	base := filepath.Clean(dir)
+	_ = filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if d.IsDir() {
+			if path != dir {
+				name := d.Name()
+				if strings.HasPrefix(name, ".") || prunedDirs[name] {
+					return filepath.SkipDir
+				}
+				if rel, e := filepath.Rel(base, path); e == nil && strings.Count(rel, string(filepath.Separator)) >= 4 {
+					return filepath.SkipDir
+				}
+			}
+			return nil
+		}
+		if d.Name() != "mirror-parity.json" {
+			return nil
+		}
+		raw, e := os.ReadFile(path)
+		if e != nil {
+			return nil
+		}
+		var mp mirrorParityFile
+		if json.Unmarshal(raw, &mp) == nil && len(mp.Mirrors) > 0 {
+			out = append(out, mp)
+		}
+		return nil
+	})
+	return out
+}
+
+func namespaceScores(rep PlatformReport, canon func(string) string) []NamespaceScore {
 	type agg struct {
 		count, described int
-		repos            map[string]bool
+		repos            map[string]bool // actual repo names, for display
+		groups           map[string]bool // mirror-collapsed, for span/cross-dup
 	}
 	byNS := map[string]*agg{}
 	for _, r := range rep.Repos {
@@ -390,12 +498,13 @@ func namespaceScores(rep PlatformReport) []NamespaceScore {
 			}
 			a := byNS[ns]
 			if a == nil {
-				a = &agg{repos: map[string]bool{}}
+				a = &agg{repos: map[string]bool{}, groups: map[string]bool{}}
 				byNS[ns] = a
 			}
 			a.count++
 			a.repos[r.Repo] = true
-			if strings.TrimSpace(s.Description) != "" {
+			a.groups[canon(r.Repo)] = true
+			if s.HasDescription || strings.TrimSpace(s.Description) != "" {
 				a.described++
 			}
 		}
@@ -413,10 +522,10 @@ func namespaceScores(rep PlatformReport) []NamespaceScore {
 		out = append(out, NamespaceScore{
 			Namespace:           ns,
 			ToolCount:           a.count,
-			RepoSpan:            len(repos),
+			RepoSpan:            len(a.groups),
 			Repos:               repos,
 			DescriptionCoverage: clamp(100 * a.described / a.count),
-			CrossRepoDuplicate:  len(repos) >= 2,
+			CrossRepoDuplicate:  len(a.groups) >= 2,
 		})
 	}
 	sort.Slice(out, func(i, j int) bool {

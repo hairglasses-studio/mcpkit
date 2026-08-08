@@ -347,3 +347,52 @@ func TestNestedRepoSkipped(t *testing.T) {
 		t.Errorf("surface = %+v", inv.Surfaces[0])
 	}
 }
+
+func TestNonLiteralDescriptionCredited(t *testing.T) {
+	root := t.TempDir()
+	writeRepo(t, root, "fixture", map[string]string{
+		"a.go": `package a
+
+import "x/mcp"
+import "x/handler"
+
+func f() {
+	// literal description
+	_ = handler.TypedHandler[In, Out]("t_literal", "Real desc.", nil)
+	// non-literal 2nd arg — description present but scanner can't read it
+	desc := "built at runtime"
+	_ = handler.TypedHandler[In, Out]("t_local", desc, nil)
+	// mcp-go with non-literal WithDescription arg
+	_ = mcp.NewTool("t_concat", mcp.WithDescription("a"+"b"))
+	// mcp-go with NO description option at all
+	_ = mcp.NewTool("t_none")
+	// composite with non-literal Description field
+	_ = &mcp.Tool{Name: "t_field", Description: desc}
+}
+`,
+	})
+	rep, err := ScanWorkspace(root, []string{"fixture"}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	byName := map[string]Surface{}
+	for _, s := range rep.Repos[0].Surfaces {
+		byName[s.Name] = s
+	}
+	// present-but-non-literal → HasDescription true, Description empty
+	for _, n := range []string{"t_literal", "t_local", "t_concat", "t_field"} {
+		if !byName[n].HasDescription {
+			t.Errorf("%s: HasDescription should be true (%+v)", n, byName[n])
+		}
+	}
+	if byName["t_literal"].Description != "Real desc." {
+		t.Errorf("literal desc lost: %+v", byName["t_literal"])
+	}
+	if byName["t_local"].Description != "" {
+		t.Errorf("t_local should have empty literal desc: %+v", byName["t_local"])
+	}
+	// genuinely absent → HasDescription false
+	if byName["t_none"].HasDescription {
+		t.Errorf("t_none has no description arg, HasDescription must be false: %+v", byName["t_none"])
+	}
+}
