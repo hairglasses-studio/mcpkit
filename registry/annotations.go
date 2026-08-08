@@ -74,6 +74,46 @@ func ApplyMCPAnnotations(td ToolDefinition, prefix string) ToolDefinition {
 	return td
 }
 
+// AnnotationReadOnlyHint returns t.Annotations.ReadOnlyHint dereferenced,
+// plus whether it was declared (the pointer is non-nil). mcp-go's
+// ToolAnnotation hints are all *bool; the official SDK's ReadOnlyHint and
+// IdempotentHint are plain bool with no way to distinguish "unset" from
+// "explicitly false" — see compat_official.go's counterpart in this file
+// for how "declared" is defined there (Annotations != nil).
+func AnnotationReadOnlyHint(t Tool) (bool, bool) {
+	if t.Annotations.ReadOnlyHint == nil {
+		return false, false
+	}
+	return *t.Annotations.ReadOnlyHint, true
+}
+
+// AnnotationDestructiveHint returns t.Annotations.DestructiveHint
+// dereferenced, plus whether it was declared (the pointer is non-nil).
+func AnnotationDestructiveHint(t Tool) (bool, bool) {
+	if t.Annotations.DestructiveHint == nil {
+		return false, false
+	}
+	return *t.Annotations.DestructiveHint, true
+}
+
+// AnnotationIdempotentHint returns t.Annotations.IdempotentHint
+// dereferenced, plus whether it was declared (the pointer is non-nil).
+func AnnotationIdempotentHint(t Tool) (bool, bool) {
+	if t.Annotations.IdempotentHint == nil {
+		return false, false
+	}
+	return *t.Annotations.IdempotentHint, true
+}
+
+// AnnotationOpenWorldHint returns t.Annotations.OpenWorldHint dereferenced,
+// plus whether it was declared (the pointer is non-nil).
+func AnnotationOpenWorldHint(t Tool) (bool, bool) {
+	if t.Annotations.OpenWorldHint == nil {
+		return false, false
+	}
+	return *t.Annotations.OpenWorldHint, true
+}
+
 // toolNameToTitle converts a tool name like "myapp_gmail_send" to "Gmail Send".
 func toolNameToTitle(name, prefix string) string {
 	if prefix != "" {

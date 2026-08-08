@@ -66,6 +66,52 @@ func ApplyMCPAnnotations(td ToolDefinition, prefix string) ToolDefinition {
 	return td
 }
 
+// AnnotationReadOnlyHint returns t.Annotations.ReadOnlyHint, plus whether it
+// was declared. The official SDK's ReadOnlyHint is a plain bool (mcp-go's is
+// *bool — see annotations.go's counterpart in this file), so there is no
+// per-field way to distinguish "unset" from "explicitly false"; "declared"
+// here means Annotations itself is non-nil (an Annotations struct was
+// constructed at all, e.g. via ApplyMCPAnnotations, which always sets
+// ReadOnlyHint alongside it).
+func AnnotationReadOnlyHint(t Tool) (bool, bool) {
+	if t.Annotations == nil {
+		return false, false
+	}
+	return t.Annotations.ReadOnlyHint, true
+}
+
+// AnnotationDestructiveHint returns t.Annotations.DestructiveHint
+// dereferenced, plus whether it was declared. DestructiveHint is *bool on
+// this build (unlike ReadOnlyHint/IdempotentHint), so declared-ness is a
+// real per-field signal here: Annotations non-nil AND the pointer non-nil.
+func AnnotationDestructiveHint(t Tool) (bool, bool) {
+	if t.Annotations == nil || t.Annotations.DestructiveHint == nil {
+		return false, false
+	}
+	return *t.Annotations.DestructiveHint, true
+}
+
+// AnnotationIdempotentHint returns t.Annotations.IdempotentHint, plus
+// whether it was declared. Plain bool on this build (see
+// AnnotationReadOnlyHint's doc comment for why "declared" means Annotations
+// != nil rather than a per-field pointer check).
+func AnnotationIdempotentHint(t Tool) (bool, bool) {
+	if t.Annotations == nil {
+		return false, false
+	}
+	return t.Annotations.IdempotentHint, true
+}
+
+// AnnotationOpenWorldHint returns t.Annotations.OpenWorldHint dereferenced,
+// plus whether it was declared. *bool on this build (like DestructiveHint),
+// so declared-ness is a real per-field signal.
+func AnnotationOpenWorldHint(t Tool) (bool, bool) {
+	if t.Annotations == nil || t.Annotations.OpenWorldHint == nil {
+		return false, false
+	}
+	return *t.Annotations.OpenWorldHint, true
+}
+
 // toolNameToTitle converts a tool name like "myapp_gmail_send" to "Gmail Send".
 func toolNameToTitle(name, prefix string) string {
 	if prefix != "" {
