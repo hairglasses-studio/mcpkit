@@ -1,11 +1,13 @@
+//go:build !official_sdk
+
 package resources
 
 import (
 	"context"
 	"testing"
 
-	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/hairglasses-studio/mcpkit/registry"
+	"github.com/mark3labs/mcp-go/mcp"
 )
 
 func TestWireResourceListChanged_Add(t *testing.T) {
@@ -14,14 +16,18 @@ func TestWireResourceListChanged_Add(t *testing.T) {
 
 	d.AddResource(ResourceDefinition{
 		Resource: mcp.Resource{URI: "test://initial", Name: "initial"},
-		Handler:  func(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) { return nil, nil },
+		Handler: func(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+			return nil, nil
+		},
 	})
 
 	d.RegisterWithServer(s)
 
 	d.AddResource(ResourceDefinition{
 		Resource: mcp.Resource{URI: "test://added", Name: "added"},
-		Handler:  func(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) { return nil, nil },
+		Handler: func(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+			return nil, nil
+		},
 	})
 
 	uris := d.ListResources()
@@ -36,11 +42,15 @@ func TestWireResourceListChanged_Remove(t *testing.T) {
 
 	d.AddResource(ResourceDefinition{
 		Resource: mcp.Resource{URI: "test://keep", Name: "keep"},
-		Handler:  func(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) { return nil, nil },
+		Handler: func(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+			return nil, nil
+		},
 	})
 	d.AddResource(ResourceDefinition{
 		Resource: mcp.Resource{URI: "test://remove", Name: "remove"},
-		Handler:  func(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) { return nil, nil },
+		Handler: func(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+			return nil, nil
+		},
 	})
 
 	d.RegisterWithServer(s)
@@ -65,11 +75,15 @@ func TestWireResourceListChanged_AddAndRemove(t *testing.T) {
 
 	d.AddResource(ResourceDefinition{
 		Resource: mcp.Resource{URI: "test://a", Name: "a"},
-		Handler:  func(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) { return nil, nil },
+		Handler: func(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+			return nil, nil
+		},
 	})
 	d.AddResource(ResourceDefinition{
 		Resource: mcp.Resource{URI: "test://b", Name: "b"},
-		Handler:  func(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) { return nil, nil },
+		Handler: func(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+			return nil, nil
+		},
 	})
 
 	d.RegisterWithServer(s)
@@ -77,7 +91,9 @@ func TestWireResourceListChanged_AddAndRemove(t *testing.T) {
 	d.RemoveResource("test://b")
 	d.AddResource(ResourceDefinition{
 		Resource: mcp.Resource{URI: "test://c", Name: "c"},
-		Handler:  func(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) { return nil, nil },
+		Handler: func(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+			return nil, nil
+		},
 	})
 
 	uris := d.ListResources()

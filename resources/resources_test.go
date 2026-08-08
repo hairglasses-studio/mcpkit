@@ -18,10 +18,10 @@ type testModule struct {
 	templates []TemplateDefinition
 }
 
-func (m *testModule) Name() string                     { return m.name }
-func (m *testModule) Description() string              { return "test module" }
-func (m *testModule) Resources() []ResourceDefinition  { return m.resources }
-func (m *testModule) Templates() []TemplateDefinition  { return m.templates }
+func (m *testModule) Name() string                    { return m.name }
+func (m *testModule) Description() string             { return "test module" }
+func (m *testModule) Resources() []ResourceDefinition { return m.resources }
+func (m *testModule) Templates() []TemplateDefinition { return m.templates }
 
 func textHandler(text string) ResourceHandlerFunc {
 	return func(_ context.Context, _ mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
