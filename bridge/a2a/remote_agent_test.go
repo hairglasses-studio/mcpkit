@@ -228,9 +228,10 @@ func TestRemoteAgent_ToolCallSendsMessageAndReturnsResult(t *testing.T) {
 	}
 
 	// Call the tool.
-	req := registry.CallToolRequest{}
-	req.Params.Name = "echo"
-	req.Params.Arguments = map[string]any{"message": "hello world"}
+	req, err := registry.NewCallToolRequest("echo", map[string]any{"message": "hello world"})
+	if err != nil {
+		t.Fatalf("build request: %v", err)
+	}
 
 	result, err := tools[0].Handler(ctx, req)
 	if err != nil {
@@ -292,9 +293,10 @@ func TestRemoteAgent_TimeoutHandling(t *testing.T) {
 		t.Fatalf("expected 1 tool, got %d", len(tools))
 	}
 
-	req := registry.CallToolRequest{}
-	req.Params.Name = "slow"
-	req.Params.Arguments = map[string]any{"message": "please be slow"}
+	req, err := registry.NewCallToolRequest("slow", map[string]any{"message": "please be slow"})
+	if err != nil {
+		t.Fatalf("build request: %v", err)
+	}
 
 	_, err = tools[0].Handler(ctx, req)
 	if err == nil {
@@ -408,9 +410,10 @@ func TestRemoteAgent_FromCard(t *testing.T) {
 	}
 
 	// Call the tool to verify the full round-trip works.
-	req := registry.CallToolRequest{}
-	req.Params.Name = "analyze"
-	req.Params.Arguments = map[string]any{"message": "test data"}
+	req, err := registry.NewCallToolRequest("analyze", map[string]any{"message": "test data"})
+	if err != nil {
+		t.Fatalf("build request: %v", err)
+	}
 
 	result, err := tools[0].Handler(ctx, req)
 	if err != nil {
@@ -452,9 +455,10 @@ func TestRemoteAgent_FailedTask(t *testing.T) {
 	defer func() { _ = remote.Close() }()
 
 	tools := remote.Tools()
-	req := registry.CallToolRequest{}
-	req.Params.Name = "fail"
-	req.Params.Arguments = map[string]any{"message": "do something"}
+	req, err := registry.NewCallToolRequest("fail", map[string]any{"message": "do something"})
+	if err != nil {
+		t.Fatalf("build request: %v", err)
+	}
 
 	result, err := tools[0].Handler(ctx, req)
 	if err != nil {

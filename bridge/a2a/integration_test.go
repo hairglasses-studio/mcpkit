@@ -15,7 +15,6 @@ import (
 
 	a2atypes "github.com/a2aproject/a2a-go/v2/a2a"
 	"github.com/a2aproject/a2a-go/v2/a2asrv"
-	"github.com/mark3labs/mcp-go/mcp"
 
 	"github.com/hairglasses-studio/mcpkit/registry"
 )
@@ -209,10 +208,7 @@ func TestBridgeRoundTrip_TextTool(t *testing.T) {
 		description: "Greeting tools",
 		tools: []registry.ToolDefinition{
 			{
-				Tool: mcp.NewTool("greet",
-					mcp.WithDescription("Say hello"),
-					mcp.WithString("name", mcp.Description("Who to greet")),
-				),
+				Tool:    newTestTool("greet", "Say hello", nil, nil),
 				Handler: greetIntegrationHandler,
 			},
 		},
@@ -246,7 +242,7 @@ func TestBridgeRoundTrip_ErrorTool(t *testing.T) {
 		name: "errors",
 		tools: []registry.ToolDefinition{
 			{
-				Tool:    mcp.NewTool("fail_tool", mcp.WithDescription("Always fails")),
+				Tool:    newTestTool("fail_tool", "Always fails", nil, nil),
 				Handler: errorIntegrationHandler,
 			},
 		},
@@ -275,7 +271,7 @@ func TestBridgeRoundTrip_GoErrorTool(t *testing.T) {
 		name: "errors",
 		tools: []registry.ToolDefinition{
 			{
-				Tool:    mcp.NewTool("go_err_tool", mcp.WithDescription("Returns Go error")),
+				Tool:    newTestTool("go_err_tool", "Returns Go error", nil, nil),
 				Handler: goErrorIntegrationHandler,
 			},
 		},
@@ -312,25 +308,15 @@ func TestBridgeRoundTrip_MultipleTools(t *testing.T) {
 		name: "multi",
 		tools: []registry.ToolDefinition{
 			{
-				Tool: mcp.NewTool("greet",
-					mcp.WithDescription("Say hello"),
-					mcp.WithString("name", mcp.Description("Who to greet")),
-				),
+				Tool:    newTestTool("greet", "Say hello", nil, nil),
 				Handler: greetIntegrationHandler,
 			},
 			{
-				Tool: mcp.NewTool("echo",
-					mcp.WithDescription("Echo message"),
-					mcp.WithString("message", mcp.Description("Message to echo")),
-				),
+				Tool:    newTestTool("echo", "Echo message", nil, nil),
 				Handler: echoIntegrationHandler,
 			},
 			{
-				Tool: mcp.NewTool("add",
-					mcp.WithDescription("Add two numbers"),
-					mcp.WithNumber("a", mcp.Description("First number")),
-					mcp.WithNumber("b", mcp.Description("Second number")),
-				),
+				Tool:    newTestTool("add", "Add two numbers", nil, nil),
 				Handler: addIntegrationHandler,
 			},
 		},
@@ -396,7 +382,7 @@ func TestBridgeRoundTrip_Timeout(t *testing.T) {
 		name: "slow",
 		tools: []registry.ToolDefinition{
 			{
-				Tool:    mcp.NewTool("slow_tool", mcp.WithDescription("Takes forever")),
+				Tool:    newTestTool("slow_tool", "Takes forever", nil, nil),
 				Handler: slowIntegrationHandler,
 			},
 		},
@@ -423,7 +409,7 @@ func TestBridgeRoundTrip_Cancel(t *testing.T) {
 		name: "cancel",
 		tools: []registry.ToolDefinition{
 			{
-				Tool: mcp.NewTool("blocking_tool", mcp.WithDescription("Blocks until canceled")),
+				Tool: newTestTool("blocking_tool", "Blocks until canceled", nil, nil),
 				Handler: func(ctx context.Context, _ registry.CallToolRequest) (*registry.CallToolResult, error) {
 					select {
 					case <-blockCh:
@@ -459,7 +445,7 @@ func TestBridgeRoundTrip_Cancel(t *testing.T) {
 		name: "fast",
 		tools: []registry.ToolDefinition{
 			{
-				Tool:    mcp.NewTool("fast_tool", mcp.WithDescription("Completes immediately")),
+				Tool:    newTestTool("fast_tool", "Completes immediately", nil, nil),
 				Handler: greetIntegrationHandler,
 			},
 		},
@@ -504,13 +490,13 @@ func TestIntegration_AgentCardEndpoint(t *testing.T) {
 		name: "card-test",
 		tools: []registry.ToolDefinition{
 			{
-				Tool:     mcp.NewTool("alpha_tool", mcp.WithDescription("First tool")),
+				Tool:     newTestTool("alpha_tool", "First tool", nil, nil),
 				Category: "system",
 				Tags:     []string{"test"},
 				Handler:  greetIntegrationHandler,
 			},
 			{
-				Tool:     mcp.NewTool("beta_tool", mcp.WithDescription("Second tool")),
+				Tool:     newTestTool("beta_tool", "Second tool", nil, nil),
 				Category: "network",
 				IsWrite:  true,
 				Handler:  echoIntegrationHandler,
@@ -571,10 +557,7 @@ func TestBridge_ConcurrentRequests(t *testing.T) {
 		name: "concurrent",
 		tools: []registry.ToolDefinition{
 			{
-				Tool: mcp.NewTool("echo",
-					mcp.WithDescription("Echo message"),
-					mcp.WithString("message", mcp.Description("Message to echo")),
-				),
+				Tool:    newTestTool("echo", "Echo message", nil, nil),
 				Handler: echoIntegrationHandler,
 			},
 		},
@@ -640,10 +623,7 @@ func TestBridgeRoundTrip_EmptyArguments(t *testing.T) {
 		name: "empty-args",
 		tools: []registry.ToolDefinition{
 			{
-				Tool: mcp.NewTool("greet",
-					mcp.WithDescription("Say hello"),
-					mcp.WithString("name", mcp.Description("Who to greet")),
-				),
+				Tool:    newTestTool("greet", "Say hello", nil, nil),
 				Handler: greetIntegrationHandler,
 			},
 		},
@@ -669,10 +649,7 @@ func TestBridgeRoundTrip_Middleware(t *testing.T) {
 		name: "mw",
 		tools: []registry.ToolDefinition{
 			{
-				Tool: mcp.NewTool("greet",
-					mcp.WithDescription("Say hello"),
-					mcp.WithString("name", mcp.Description("Who to greet")),
-				),
+				Tool:    newTestTool("greet", "Say hello", nil, nil),
 				Handler: greetIntegrationHandler,
 			},
 		},
@@ -729,10 +706,7 @@ func TestBridgeRoundTrip_InputRequired(t *testing.T) {
 		name: "input-required",
 		tools: []registry.ToolDefinition{
 			{
-				Tool: mcp.NewTool("confirm_action",
-					mcp.WithDescription("Action requiring confirmation"),
-					mcp.WithBoolean("confirmed", mcp.Description("Set to true to confirm")),
-				),
+				Tool:    newTestTool("confirm_action", "Action requiring confirmation", nil, nil),
 				Handler: inputRequiredHandler,
 			},
 		},
@@ -827,14 +801,11 @@ func TestBridge_ConcurrentMixedSuccessFailure(t *testing.T) {
 		name: "mixed",
 		tools: []registry.ToolDefinition{
 			{
-				Tool: mcp.NewTool("echo",
-					mcp.WithDescription("Echo message"),
-					mcp.WithString("message", mcp.Description("Message")),
-				),
+				Tool:    newTestTool("echo", "Echo message", nil, nil),
 				Handler: echoIntegrationHandler,
 			},
 			{
-				Tool:    mcp.NewTool("fail_tool", mcp.WithDescription("Always fails")),
+				Tool:    newTestTool("fail_tool", "Always fails", nil, nil),
 				Handler: errorIntegrationHandler,
 			},
 		},
@@ -901,18 +872,18 @@ func TestIntegration_AgentCardWithFilter(t *testing.T) {
 		name: "filtered",
 		tools: []registry.ToolDefinition{
 			{
-				Tool:     mcp.NewTool("public_tool", mcp.WithDescription("Public")),
+				Tool:     newTestTool("public_tool", "Public", nil, nil),
 				Category: "public",
 				Handler:  greetIntegrationHandler,
 			},
 			{
-				Tool:     mcp.NewTool("private_tool", mcp.WithDescription("Private")),
+				Tool:     newTestTool("private_tool", "Private", nil, nil),
 				Category: "private",
 				IsWrite:  true,
 				Handler:  echoIntegrationHandler,
 			},
 			{
-				Tool:     mcp.NewTool("admin_tool", mcp.WithDescription("Admin only")),
+				Tool:     newTestTool("admin_tool", "Admin only", nil, nil),
 				Category: "admin",
 				IsWrite:  true,
 				Handler:  echoIntegrationHandler,
@@ -960,7 +931,7 @@ func TestIntegration_AgentCardInvalidation(t *testing.T) {
 		name: "initial",
 		tools: []registry.ToolDefinition{
 			{
-				Tool:    mcp.NewTool("tool_a", mcp.WithDescription("Tool A")),
+				Tool:    newTestTool("tool_a", "Tool A", nil, nil),
 				Handler: greetIntegrationHandler,
 			},
 		},
@@ -988,7 +959,7 @@ func TestIntegration_AgentCardInvalidation(t *testing.T) {
 		name: "added",
 		tools: []registry.ToolDefinition{
 			{
-				Tool:    mcp.NewTool("tool_b", mcp.WithDescription("Tool B")),
+				Tool:    newTestTool("tool_b", "Tool B", nil, nil),
 				Handler: echoIntegrationHandler,
 			},
 		},
@@ -1010,13 +981,13 @@ func TestBridgeRoundTrip_ErrorPropagation(t *testing.T) {
 		name: "errors",
 		tools: []registry.ToolDefinition{
 			{
-				Tool: mcp.NewTool("go_err_tool", mcp.WithDescription("Returns Go error")),
+				Tool: newTestTool("go_err_tool", "Returns Go error", nil, nil),
 				Handler: func(_ context.Context, _ registry.CallToolRequest) (*registry.CallToolResult, error) {
 					return nil, fmt.Errorf("database connection refused: dial tcp 127.0.0.1:5432: connection refused")
 				},
 			},
 			{
-				Tool: mcp.NewTool("coded_err_tool", mcp.WithDescription("Returns coded error result")),
+				Tool: newTestTool("coded_err_tool", "Returns coded error result", nil, nil),
 				Handler: func(_ context.Context, _ registry.CallToolRequest) (*registry.CallToolResult, error) {
 					return registry.MakeErrorResult("validation failed: name is required"), nil
 				},
@@ -1065,11 +1036,11 @@ func TestBridge_ConcurrentAgentCardAccess(t *testing.T) {
 		name: "concurrent-card",
 		tools: []registry.ToolDefinition{
 			{
-				Tool:    mcp.NewTool("tool_1", mcp.WithDescription("Tool 1")),
+				Tool:    newTestTool("tool_1", "Tool 1", nil, nil),
 				Handler: greetIntegrationHandler,
 			},
 			{
-				Tool:    mcp.NewTool("tool_2", mcp.WithDescription("Tool 2")),
+				Tool:    newTestTool("tool_2", "Tool 2", nil, nil),
 				Handler: echoIntegrationHandler,
 			},
 		},
@@ -1108,7 +1079,7 @@ func TestBridgeRoundTrip_TimeoutWithDetailedError(t *testing.T) {
 		name: "timeout",
 		tools: []registry.ToolDefinition{
 			{
-				Tool:    mcp.NewTool("slow_tool", mcp.WithDescription("Takes too long")),
+				Tool:    newTestTool("slow_tool", "Takes too long", nil, nil),
 				Handler: slowIntegrationHandler,
 			},
 		},
@@ -1141,10 +1112,7 @@ func TestBridgeRoundTrip_MultipleMiddleware(t *testing.T) {
 		name: "mw-multi",
 		tools: []registry.ToolDefinition{
 			{
-				Tool: mcp.NewTool("greet",
-					mcp.WithDescription("Say hello"),
-					mcp.WithString("name", mcp.Description("Who to greet")),
-				),
+				Tool:    newTestTool("greet", "Say hello", nil, nil),
 				Handler: greetIntegrationHandler,
 			},
 		},

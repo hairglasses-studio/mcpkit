@@ -11,14 +11,25 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mark3labs/mcp-go/mcp"
-
 	a2atypes "github.com/a2aproject/a2a-go/v2/a2a"
 	"github.com/a2aproject/a2a-go/v2/a2asrv"
 
 	bridgea2a "github.com/hairglasses-studio/mcpkit/bridge/a2a"
 	"github.com/hairglasses-studio/mcpkit/registry"
 )
+
+// exampleTool builds a registry.Tool for the examples below, routed
+// entirely through registry's SDK-neutral Tool/MakeToolInputSchema so this
+// file needs no SDK import and compiles identically under both build tags
+// (the P52.6/P52.7 bridge/a2a port). properties/required may be nil for a
+// no-parameter tool.
+func exampleTool(name, description string, properties map[string]any, required []string) registry.Tool {
+	return registry.Tool{
+		Name:        name,
+		Description: description,
+		InputSchema: registry.MakeToolInputSchema(properties, required, nil),
+	}
+}
 
 // --- example tool modules ---
 
@@ -45,9 +56,9 @@ func ExampleBridge() {
 		desc: "Demo tools",
 		tools: []registry.ToolDefinition{
 			{
-				Tool: mcp.NewTool("greet",
-					mcp.WithDescription("Say hello to someone"),
-					mcp.WithString("name", mcp.Description("Who to greet")),
+				Tool: exampleTool("greet", "Say hello to someone",
+					map[string]any{"name": map[string]any{"type": "string", "description": "Who to greet"}},
+					nil,
 				),
 				Handler: func(_ context.Context, req registry.CallToolRequest) (*registry.CallToolResult, error) {
 					args := registry.ExtractArguments(req)
@@ -99,9 +110,7 @@ func ExampleNewBridge_withMiddleware() {
 		name: "tools",
 		tools: []registry.ToolDefinition{
 			{
-				Tool: mcp.NewTool("ping",
-					mcp.WithDescription("Ping-pong"),
-				),
+				Tool: exampleTool("ping", "Ping-pong", nil, nil),
 				Handler: func(_ context.Context, _ registry.CallToolRequest) (*registry.CallToolResult, error) {
 					return registry.MakeTextResult("pong"), nil
 				},
@@ -169,10 +178,12 @@ func ExampleNewBridgeExecutor() {
 		name: "math",
 		tools: []registry.ToolDefinition{
 			{
-				Tool: mcp.NewTool("add",
-					mcp.WithDescription("Add two numbers"),
-					mcp.WithNumber("a", mcp.Description("First number")),
-					mcp.WithNumber("b", mcp.Description("Second number")),
+				Tool: exampleTool("add", "Add two numbers",
+					map[string]any{
+						"a": map[string]any{"type": "number", "description": "First number"},
+						"b": map[string]any{"type": "number", "description": "Second number"},
+					},
+					nil,
 				),
 				Category: "math",
 				Handler: func(_ context.Context, req registry.CallToolRequest) (*registry.CallToolResult, error) {
@@ -235,9 +246,9 @@ func ExampleTranslator() {
 
 	// Convert an MCP tool definition to an A2A skill.
 	td := registry.ToolDefinition{
-		Tool: mcp.NewTool("systemd_status",
-			mcp.WithDescription("Get the status of a systemd unit"),
-			mcp.WithString("unit", mcp.Required(), mcp.Description("Unit name")),
+		Tool: exampleTool("systemd_status", "Get the status of a systemd unit",
+			map[string]any{"unit": map[string]any{"type": "string", "description": "Unit name"}},
+			[]string{"unit"},
 		),
 		Category: "system",
 		Tags:     []string{"systemd"},
@@ -357,7 +368,7 @@ func ExampleAuthMiddleware() {
 
 	// Wrap a simple handler.
 	td := registry.ToolDefinition{
-		Tool: mcp.NewTool("secret_tool", mcp.WithDescription("Requires auth")),
+		Tool: exampleTool("secret_tool", "Requires auth", nil, nil),
 	}
 	inner := func(ctx context.Context, _ registry.CallToolRequest) (*registry.CallToolResult, error) {
 		token := bridgea2a.TokenFromContext(ctx)

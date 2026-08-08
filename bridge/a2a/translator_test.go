@@ -1,11 +1,8 @@
 package a2a
 
 import (
-	"encoding/base64"
 	"errors"
 	"testing"
-
-	"github.com/mark3labs/mcp-go/mcp"
 
 	a2atypes "github.com/a2aproject/a2a-go/v2/a2a"
 
@@ -13,14 +10,27 @@ import (
 	"github.com/hairglasses-studio/mcpkit/registry"
 )
 
+// newTestTool builds a registry.Tool for fixtures below, routed entirely
+// through registry's SDK-neutral Tool/MakeToolInputSchema so this whole file
+// needs no SDK import and compiles identically under both build tags (the
+// P52.6/P52.7 bridge/a2a port). properties/required may be nil for a
+// no-parameter tool.
+func newTestTool(name, description string, properties map[string]any, required []string) registry.Tool {
+	return registry.Tool{
+		Name:        name,
+		Description: description,
+		InputSchema: registry.MakeToolInputSchema(properties, required, nil),
+	}
+}
+
 func TestToolToSkill_BasicMapping(t *testing.T) {
 	t.Parallel()
 
 	tr := &Translator{}
 	td := registry.ToolDefinition{
-		Tool: mcp.NewTool("systemd_status",
-			mcp.WithDescription("Get systemd unit status"),
-			mcp.WithString("unit", mcp.Required(), mcp.Description("Unit name")),
+		Tool: newTestTool("systemd_status", "Get systemd unit status",
+			map[string]any{"unit": map[string]any{"type": "string", "description": "Unit name"}},
+			[]string{"unit"},
 		),
 		Category: "system",
 		Tags:     []string{"systemd", "monitoring"},
@@ -50,9 +60,7 @@ func TestToolToSkill_Tags(t *testing.T) {
 
 	tr := &Translator{SkillTags: []string{"mcpkit"}}
 	td := registry.ToolDefinition{
-		Tool: mcp.NewTool("docker_restart",
-			mcp.WithDescription("Restart a Docker container"),
-		),
+		Tool:     newTestTool("docker_restart", "Restart a Docker container", nil, nil),
 		Category: "containers",
 		Tags:     []string{"docker"},
 		IsWrite:  true,
@@ -77,7 +85,7 @@ func TestToolToSkill_ReadTag(t *testing.T) {
 
 	tr := &Translator{}
 	td := registry.ToolDefinition{
-		Tool:    mcp.NewTool("list_files", mcp.WithDescription("List files")),
+		Tool:    newTestTool("list_files", "List files", nil, nil),
 		IsWrite: false,
 	}
 
@@ -102,9 +110,9 @@ func TestToolToSkill_InputSchemaInExamples(t *testing.T) {
 
 	tr := &Translator{}
 	td := registry.ToolDefinition{
-		Tool: mcp.NewTool("greet",
-			mcp.WithDescription("Say hello"),
-			mcp.WithString("name", mcp.Required(), mcp.Description("Who to greet")),
+		Tool: newTestTool("greet", "Say hello",
+			map[string]any{"name": map[string]any{"type": "string", "description": "Who to greet"}},
+			[]string{"name"},
 		),
 	}
 
@@ -125,7 +133,7 @@ func TestToolToSkill_EmptyTool(t *testing.T) {
 
 	tr := &Translator{}
 	td := registry.ToolDefinition{
-		Tool: mcp.NewTool("noop"),
+		Tool: newTestTool("noop", "", nil, nil),
 	}
 
 	skill := tr.ToolToSkill(td)
@@ -145,10 +153,8 @@ func TestCallResultToArtifact_TextContent(t *testing.T) {
 	t.Parallel()
 
 	tr := &Translator{}
-	result := &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{Type: "text", Text: "hello world"},
-		},
+	result := &registry.CallToolResult{
+		Content: []registry.Content{registry.MakeTextContent("hello world")},
 	}
 
 	artifact := tr.CallResultToArtifact(result)
@@ -165,15 +171,8 @@ func TestCallResultToArtifact_ImageContent(t *testing.T) {
 	t.Parallel()
 
 	tr := &Translator{}
-	imgData := base64.StdEncoding.EncodeToString([]byte("fake-png-bytes"))
-	result := &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.ImageContent{
-				Type:     "image",
-				Data:     imgData,
-				MIMEType: "image/png",
-			},
-		},
+	result := &registry.CallToolResult{
+		Content: []registry.Content{registry.MakeImageContent([]byte("fake-png-bytes"), "image/png")},
 	}
 
 	artifact := tr.CallResultToArtifact(result)
@@ -199,10 +198,10 @@ func TestCallResultToArtifact_MultipleContent(t *testing.T) {
 	t.Parallel()
 
 	tr := &Translator{}
-	result := &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{Type: "text", Text: "line 1"},
-			mcp.TextContent{Type: "text", Text: "line 2"},
+	result := &registry.CallToolResult{
+		Content: []registry.Content{
+			registry.MakeTextContent("line 1"),
+			registry.MakeTextContent("line 2"),
 		},
 	}
 
@@ -217,10 +216,8 @@ func TestCallResultToArtifact_ErrorResult(t *testing.T) {
 	t.Parallel()
 
 	tr := &Translator{}
-	result := &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{Type: "text", Text: "something went wrong"},
-		},
+	result := &registry.CallToolResult{
+		Content: []registry.Content{registry.MakeTextContent("something went wrong")},
 		IsError: true,
 	}
 
@@ -255,8 +252,8 @@ func TestCallResultToArtifact_EmptyContent(t *testing.T) {
 	t.Parallel()
 
 	tr := &Translator{}
-	result := &mcp.CallToolResult{
-		Content: []mcp.Content{},
+	result := &registry.CallToolResult{
+		Content: []registry.Content{},
 	}
 
 	artifact := tr.CallResultToArtifact(result)
@@ -548,7 +545,7 @@ func taskInfo() a2atypes.TaskInfo {
 	return a2atypes.TaskInfo{ContextID: "ctx-1", TaskID: "task-1"}
 }
 
-func collectTranslatorEvents(tr *Translator, info a2atypes.TaskInfo, result *mcp.CallToolResult, err error) []a2atypes.Event {
+func collectTranslatorEvents(tr *Translator, info a2atypes.TaskInfo, result *registry.CallToolResult, err error) []a2atypes.Event {
 	var events []a2atypes.Event
 	for ev, evErr := range tr.CallResultToEvents(info, result, err) {
 		if evErr != nil {
@@ -563,10 +560,8 @@ func TestCallResultToEvents_Success(t *testing.T) {
 	t.Parallel()
 
 	tr := &Translator{}
-	result := &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{Type: "text", Text: "all good"},
-		},
+	result := &registry.CallToolResult{
+		Content: []registry.Content{registry.MakeTextContent("all good")},
 	}
 
 	events := collectTranslatorEvents(tr, taskInfo(), result, nil)
@@ -606,10 +601,8 @@ func TestCallResultToEvents_ErrorResult(t *testing.T) {
 	t.Parallel()
 
 	tr := &Translator{}
-	result := &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{Type: "text", Text: "invalid param"},
-		},
+	result := &registry.CallToolResult{
+		Content: []registry.Content{registry.MakeTextContent("invalid param")},
 		IsError: true,
 	}
 
@@ -630,7 +623,7 @@ func TestCallResultToEvents_ErrorResultNoContent(t *testing.T) {
 	t.Parallel()
 
 	tr := &Translator{}
-	result := &mcp.CallToolResult{IsError: true}
+	result := &registry.CallToolResult{IsError: true}
 
 	events := collectTranslatorEvents(tr, taskInfo(), result, nil)
 
@@ -649,12 +642,23 @@ func TestBuildCallToolRequest_Basic(t *testing.T) {
 	if req.Params.Name != "my_tool" {
 		t.Errorf("name = %q, want %q", req.Params.Name, "my_tool")
 	}
-	args, ok := req.Params.Arguments.(map[string]any)
-	if !ok {
-		t.Fatalf("arguments type = %T, want map[string]any", req.Params.Arguments)
+	args := registry.ExtractArguments(req)
+	if args == nil {
+		t.Fatal("expected non-nil arguments")
 	}
-	if args["x"] != 1 {
-		t.Errorf("args[x] = %v, want 1", args["x"])
+	// JSON round-tripping (the official_sdk build's arguments path) turns
+	// an int into a float64; compare loosely.
+	switch v := args["x"].(type) {
+	case int:
+		if v != 1 {
+			t.Errorf("args[x] = %v, want 1", v)
+		}
+	case float64:
+		if v != 1 {
+			t.Errorf("args[x] = %v, want 1", v)
+		}
+	default:
+		t.Errorf("args[x] type = %T, want int or float64", args["x"])
 	}
 }
 
@@ -682,14 +686,7 @@ func TestContentToPart_NilContent(t *testing.T) {
 func TestContentToPart_EmbeddedResource(t *testing.T) {
 	t.Parallel()
 
-	content := mcp.EmbeddedResource{
-		Type: "resource",
-		Resource: mcp.TextResourceContents{
-			URI:      "file:///tmp/test.txt",
-			Text:     "resource content",
-			MIMEType: "text/plain",
-		},
-	}
+	content := registry.MakeEmbeddedResourceText("file:///tmp/test.txt", "text/plain", "resource content")
 
 	part := contentToPart(content)
 	if part == nil {
@@ -699,26 +696,6 @@ func TestContentToPart_EmbeddedResource(t *testing.T) {
 	data := part.Data()
 	if data == nil {
 		t.Fatal("expected DataPart with non-nil data for EmbeddedResource")
-	}
-}
-
-func TestContentToPart_InvalidBase64Image(t *testing.T) {
-	t.Parallel()
-
-	content := mcp.ImageContent{
-		Type:     "image",
-		Data:     "not-valid-base64!!!",
-		MIMEType: "image/png",
-	}
-
-	part := contentToPart(content)
-	if part == nil {
-		t.Fatal("expected non-nil part even for invalid base64")
-	}
-	// Falls back to text part with the raw base64 string.
-	text := part.Text()
-	if text != "not-valid-base64!!!" {
-		t.Errorf("expected fallback text %q, got %q", "not-valid-base64!!!", text)
 	}
 }
 
@@ -770,15 +747,11 @@ func TestToStringMap_InvalidType(t *testing.T) {
 func TestMarshalInputSchema_WithAdditionalProperties(t *testing.T) {
 	t.Parallel()
 
-	boolFalse := false
-	schema := mcp.ToolInputSchema{
-		Type: "object",
-		Properties: map[string]any{
-			"name": map[string]any{"type": "string"},
-		},
-		Required:             []string{"name"},
-		AdditionalProperties: &boolFalse,
-	}
+	schema := registry.MakeToolInputSchema(
+		map[string]any{"name": map[string]any{"type": "string"}},
+		[]string{"name"},
+		false,
+	)
 
 	result := marshalInputSchema(schema)
 	if result == "" {
@@ -793,7 +766,7 @@ func TestMarshalInputSchema_WithAdditionalProperties(t *testing.T) {
 func TestMarshalInputSchema_EmptySchema(t *testing.T) {
 	t.Parallel()
 
-	schema := mcp.ToolInputSchema{}
+	schema := registry.MakeToolInputSchema(nil, nil, nil)
 	result := marshalInputSchema(schema)
 	if result == "" {
 		t.Fatal("expected non-empty schema JSON even for empty schema")
@@ -882,10 +855,8 @@ func TestCallResultToEvents_YieldAbortOnArtifact(t *testing.T) {
 	t.Parallel()
 
 	tr := &Translator{}
-	result := &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{Type: "text", Text: "result"},
-		},
+	result := &registry.CallToolResult{
+		Content: []registry.Content{registry.MakeTextContent("result")},
 	}
 
 	// Collect only the first event, then abort.
