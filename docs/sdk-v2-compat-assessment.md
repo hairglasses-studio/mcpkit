@@ -1,5 +1,16 @@
 # go-sdk v2.0 Compatibility Assessment
 
+> **Superseded 2026-08-07**: the recheck trigger below never fired because
+> upstream shipped the breaking spec rewrite as **`v1.7.0`** (2026-07-27),
+> not a `v2.*` tag or a v2 migration guide — the exact event this doc waited
+> for, under a different version number. `go list -m -versions
+> github.com/modelcontextprotocol/go-sdk` confirms `v1.7.0` is published and
+> latest as of 2026-08-07. The dual-SDK migration lane (ROADMAP "After
+> P34-6" gate) is reopened; see the P52.6 work landing this note for the
+> live compatibility recheck against v1.7.x. This file's original finding
+> below is left unedited as the point-in-time record of the 2026-05-10
+> assessment.
+
 Date: 2026-05-10
 
 Package: `github.com/modelcontextprotocol/go-sdk`

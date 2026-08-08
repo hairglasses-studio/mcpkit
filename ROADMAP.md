@@ -419,7 +419,7 @@ Roadmap consolidation adapters — document migration paths for ralphglasses sem
 |------|-----------|
 | Before P33 | Evaluate the June 2026 spec draft for WebSocket transport details before implementing the WebSocket stub beyond a placeholder. |
 | Before P39 | A2A spec must reach v0.9+ under Linux Foundation governance before any A2A bridge work begins. |
-| After P34-6 | Reopen official go-sdk compatibility work only when a `v2.*` module tag or upstream v2 migration guide is published. |
+| After P34-6 | **Reopened 2026-08-07**: the awaited breaking release shipped as `v1.7.0` (2026-07-27) instead of a `v2.*` tag — see `docs/sdk-v2-compat-assessment.md`'s superseded note. Official go-sdk compatibility work (bump 1.6.0 → 1.7.x, dual-suite re-verify) is back in scope; tracked under secretstudios-mcp's P52.6 plan. |
 | P38 benchmark threshold | Define middleware overhead threshold: no single middleware layer may add more than 5% p99 latency. |
 
 ---
