@@ -12,6 +12,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [v0.8.1] - 2026-08-08
+
+1 commit since v0.8.0, closing out the small-gaps batch that was meant to
+land before the v0.8.0 cut but arrived just after it (a message-ordering
+gap, not a rescope). Patch bump: purely additive, no API changes to
+anything already shipped.
+
+### Added
+
+- **registry** — `NewServerProgressReporterFromRequest` gains its mcp-go
+  counterpart (previously official_sdk-only, added in v0.8.0). Takes
+  `(server, req, total)` rather than official's `(req, total)` — mcp-go's
+  `CallToolRequest` carries no session/server reference the way the
+  official SDK's does, so `server` stays an explicit argument — but the
+  mcp-go build was never subject to official's session-count ambiguity in
+  the first place (`SendNotificationToClient` resolves the session via
+  `ctx` at call time, not anything bound at construction), so this is a
+  thin, genuinely trivial delegation to the existing
+  `NewServerProgressReporter`, added purely for call-site/name-parity
+  discoverability with the official-only constructor.
+
 ## [v0.8.0] - 2026-08-08
 
 41 commits since v0.7.0 (2026-07-08), starting at commit `f43a5d9` ("chore(rdcycle): update cycle-1/cycle-2 specs"). All work is additive (no breaking API changes); minor bump appropriate. Fleet consumers can `go get -u github.com/hairglasses-studio/mcpkit@v0.8.0` cleanly.
