@@ -20,7 +20,8 @@ OFFICIAL_SDK_BUILD_PACKAGES := \
 	./resources \
 	./prompts \
 	./feedback \
-	./testing/conformance
+	./testing/conformance \
+	./middleware/correlation
 
 # `prompts` was previously excluded from this list: prompts/notify_test.go
 # was untagged, using DynamicRegistry (which has no official_sdk port)
@@ -34,7 +35,12 @@ OFFICIAL_SDK_BUILD_PACKAGES := \
 # (NewPortableEverythingServer, portable_*.go) — 13 real tests now run under
 # official_sdk (portable_server_test.go); sampling/elicitation/logging/
 # completions stay !official_sdk-only (NewEverythingServer,
-# everything_server.go — see doc.go for why).
+# everything_server.go — see doc.go for why). `middleware/correlation` was
+# gratuitously `!official_sdk`-tagged despite only touching registry's
+# compat aliases + stdlib (same class as boundedwrite/truncate, d6bb0be) —
+# untagging it was the first blocker secretstudios-mcp's own
+# `-tags official_sdk` build attempt hit (it consumes correlation.FromContext
+# + correlation.Middleware).
 OFFICIAL_SDK_TEST_PACKAGES := \
 	./registry \
 	./handler \
@@ -46,7 +52,8 @@ OFFICIAL_SDK_TEST_PACKAGES := \
 	./resources \
 	./prompts \
 	./feedback \
-	./testing/conformance
+	./testing/conformance \
+	./middleware/correlation
 
 BENCH_PACKAGES ?= ./mcptest ./testing/benchmark
 BENCH_FLAGS ?= -bench=. -benchmem -run '^$$'
