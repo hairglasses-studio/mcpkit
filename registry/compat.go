@@ -74,6 +74,23 @@ var (
 	NewTextContent   = mcp.NewTextContent
 )
 
+// ProgressTokenFromRequest returns the client-supplied progress token from
+// req's _meta field, or nil if none was provided. mcp-go's Meta is a struct
+// with a typed ProgressToken field; the official SDK's Meta is a plain
+// map[string]any with no such field, and go-sdk v1.7.0 does not yet expose
+// per-session progress notifications at all (see
+// registry.ServerProgressReporter's doc comment in progress_server_official.go
+// — an existing, already-accepted no-op), so this always returns nil there
+// (compat_official.go's ProgressTokenFromRequest) rather than a new gap.
+// Consumer code that reaches into req.Params.Meta.ProgressToken directly
+// (mcp-go-specific) should go through this accessor instead.
+func ProgressTokenFromRequest(req CallToolRequest) any {
+	if req.Params.Meta == nil {
+		return nil
+	}
+	return req.Params.Meta.ProgressToken
+}
+
 // TemplateURI returns the raw URI template string from a ResourceTemplate.
 // mcp-go's ResourceTemplate.URITemplate is a parsed *mcp.URITemplate (a
 // uritemplate.Template wrapper with a .Raw() method), not a plain string —

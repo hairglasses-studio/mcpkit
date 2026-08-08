@@ -5,7 +5,9 @@ package registry
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
+	"os"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -60,6 +62,22 @@ func ServeStdio(s *MCPServer) error {
 	// Block until stdin closes
 	<-ctx.Done()
 	return ctx.Err()
+}
+
+// ServeAuto starts the MCP server on stdin/stdout. Unlike the mcp-go build,
+// this does not support MCP_SOCKET_PATH-based Unix-socket pooling:
+// transport.NewUnixSocketServer (transport/unixsocket.go) is itself
+// unconditionally mcp-go-specific — it imports mark3labs/mcp-go's
+// *server.MCPServer directly with no build tag and no official_sdk variant.
+// Porting its per-connection JSON-RPC dispatch loop is a DynamicRegistry-
+// class effort, out of scope here. If MCP_SOCKET_PATH is set, this logs a
+// warning (rather than silently ignoring it) and falls back to stdio.
+func ServeAuto(s *MCPServer) error {
+	if socketPath := os.Getenv("MCP_SOCKET_PATH"); socketPath != "" {
+		slog.Warn("MCP_SOCKET_PATH set but Unix-socket pooling is not supported on the official_sdk build; falling back to stdio",
+			"socket_path", socketPath)
+	}
+	return ServeStdio(s)
 }
 
 // RemoveToolsFromServer removes tools from the MCP server by name.
