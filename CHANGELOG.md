@@ -12,6 +12,41 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [v0.8.0] - 2026-08-08
+
+41 commits since v0.7.0 (2026-07-08), starting at commit `f43a5d9` ("chore(rdcycle): update cycle-1/cycle-2 specs"). All work is additive (no breaking API changes); minor bump appropriate. Fleet consumers can `go get -u github.com/hairglasses-studio/mcpkit@v0.8.0` cleanly.
+
+The headline of this cycle is the `official_sdk` build tag (`modelcontextprotocol/go-sdk`) becoming a real, dual-SDK-tested alternative to the default `mark3labs/mcp-go` build across most of the tree — not just compiling, but with real behavior parity verified by both-tags tests. `go-sdk` bumped v1.6.0 → v1.7.0.
+
+### Added
+
+- **registry** — Real `official_sdk` progress-notification support: `ServerProgressReporter`/`ServerProgressMiddleware` now send genuine `notifications/progress` messages via `ServerSession.NotifyProgress` (previously a no-op stub — go-sdk has supported this since at least v1.6.1, an unwired gap not an SDK limitation), plus a new `NewServerProgressReporterFromRequest` constructor that binds directly to a request's session for always-correct delivery under concurrent/stateless deployments; `ProgressTokenFromRequest` now does real token extraction via `CallToolParamsRaw.GetProgressToken()` instead of hardcoding `nil`.
+- **registry** — `NewTextContent` (official_sdk counterpart to mcp-go's aliased constructor) and an `Annotations`/`MakeResourceAnnotations` compat pair for resource audience/priority hints (the two SDKs' `Priority` field differs, `*float64` vs `float64`).
+- **registry** — `ServeAuto` (official_sdk), `NewResource`/`NewResourceTemplate`, `MakePrompt`, `TemplateURI`, `PromptArguments` + `ToolMetaField` read accessors, `Annotation{ReadOnly,Destructive,Idempotent,OpenWorld}Hint` read accessors, content/schema compat accessors (for the bridge/a2a port), `NewMCPServerWithOptions` + `NewStreamableHTTPHandler`, `ResourceContents` added to compat.go's mcp-go alias surface, consent meta for write tools + annotation overrides.
+- **resources / prompts** — SDK-neutral resource/prompt handler adapters (`TextResourceHandler`, `JSONResourceHandler`, `TextPromptHandler`) so consumer handler code compiles once for both build tags instead of branching on the SDK's differing request/result shapes; `resources.CallHandlerText` neutral resource-handler test invoker; `uri_middleware.go` (SSRF/path-traversal defense) ported to official_sdk with full test coverage.
+- **mcptest** — `Client.ListToolNames`/`ListResourceURIs`/`ListPromptNames`.
+- **bridge/a2a** — Full real official_sdk port (translator/executor/remote_agent + complete test suite), not a stub — the blocker that had silently broken systemd-mcp/tmux-mcp/process-mcp/github-runner-mcp's official-tag builds (missed by the initial fleet exposure audit).
+- **observability** — Real official_sdk support via a meta-carrier compat pair (previously untagged/broken under official_sdk).
+- **testing/conformance** — Tools/resources/prompts lifecycle ported to official_sdk (the portable subset).
+- **middleware/boundedwrite, middleware/truncate** — Made build-tag-free (work under both SDKs without a tag split at all).
+
+### Changed
+
+- **Gratuitous `official_sdk` build tags removed** from packages that didn't actually need SDK-specific code: `middleware/correlation`, `middleware/gate`, Audit/SafetyTier middleware (registry), `ErrorCompactorMiddleware` (resilience), `OutputMiddleware` (sanitize), and `discovery` (`.well-known/mcp.json` generation) — these now compile identically under both tags without duplication.
+- **`ApplyMCPAnnotations`** brought to parity between builds, including a fix to the official-side `OutputSchema` wire format.
+- **Makefile `official_sdk` build/test package lists** — `gateway` removed (a false-green: it does not actually build under official_sdk); `a2a`, `bridge/a2a`, `resources`, `prompts`, `testing/conformance`, `discovery`, `sanitize`, `resilience`, `middleware/gate` added once genuinely dual-SDK.
+- **handler** — Official_sdk `TypedHandler` now populates `Tool.OutputSchema` (was previously left empty on that build).
+- **resilience** — Release the half-open circuit-breaker permit on partial success so breakers can actually close again.
+
+### Fixed
+
+- **prompts** — `notify_test.go` tagged `!official_sdk` (an untagged-test gap, parity with the equivalent resources-package fix).
+
+### Internal
+
+- `docs(sdk-migration)` — reopened the stale "wait for go-sdk v2" recheck trigger (the rewrite shipped as v1.7.0, not v2, so the original hold condition no longer applies) and posted `a2a`/`bridge/a2a` status banners (`a2a/` frozen pending reconciliation, `bridge/a2a` designated primary).
+- Three small compat gaps found by the dotfiles-mcp codemod folded in ahead of this cut (see `a61c028`): `NewTextContent`/`Annotations` additions above, plus confirmation that `registry.ToolInputSchema{...}` composite literals are fundamentally non-portable (official's `ToolInputSchema` is `any`, not a struct) and `MakeToolInputSchema(...)` is the only portable construction path — no code change needed there beyond documenting it.
+
 ## [v0.7.0] - 2026-07-08
 
 42 commits since v0.6.0 (2026-05-10), starting at commit `4bac7bb` ("docs(migration): add consumer pin status section"). All work is additive (no breaking API changes); minor bump appropriate. Fleet consumers can `go get -u github.com/hairglasses-studio/mcpkit@v0.7.0` cleanly.
