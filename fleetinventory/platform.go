@@ -16,6 +16,7 @@ import (
 // RepoReport is the full inventory for one repo.
 type RepoReport struct {
 	Repo          string                     `json:"repo"`
+	Dir           string                     `json:"-"`
 	Files         int                        `json:"files"`
 	Truncated     bool                       `json:"truncated,omitempty"`
 	WalkErrors    []string                   `json:"walk_errors,omitempty"`
@@ -42,6 +43,7 @@ type PlatformReport struct {
 	SurfaceTotals  map[string]int `json:"surface_totals"`
 	ViolationCount int            `json:"violation_count"`
 	Drift          Drift          `json:"drift"`
+	Scoring        *ScoreReport   `json:"scoring,omitempty"`
 	TotalMillis    int64          `json:"total_millis"`
 }
 
@@ -49,7 +51,12 @@ type PlatformReport struct {
 type ScanOptions struct {
 	Repos           []string
 	IncludeSurfaces bool
-	Walk            WalkOptions
+	// Score computes the quality scoreboard. Scoring needs surface detail,
+	// so detail is collected internally regardless of IncludeSurfaces (and
+	// stripped from the output again unless IncludeSurfaces was set) —
+	// otherwise most dimensions silently degrade to violation-only scoring.
+	Score bool
+	Walk  WalkOptions
 	// Now supplies the report timestamp; defaults to time.Now (UTC).
 	Now func() time.Time
 }
@@ -83,6 +90,7 @@ func Scan(ctx context.Context, root string, opts ScanOptions) (PlatformReport, e
 
 		rr := RepoReport{
 			Repo:       idx.Repo,
+			Dir:        idx.Dir,
 			Files:      len(idx.Paths),
 			Truncated:  idx.Truncated,
 			WalkErrors: idx.WalkErrors,
@@ -90,7 +98,7 @@ func Scan(ctx context.Context, root string, opts ScanOptions) (PlatformReport, e
 			Surfaces:   surfaces.Counts,
 			ScanMillis: now().Sub(repoStart).Milliseconds(),
 		}
-		if opts.IncludeSurfaces {
+		if opts.IncludeSurfaces || opts.Score {
 			rr.SurfaceDetail = surfaces.Surfaces
 		}
 		report.Repos = append(report.Repos, rr)
@@ -102,6 +110,16 @@ func Scan(ctx context.Context, root string, opts ScanOptions) (PlatformReport, e
 	sort.Slice(report.Repos, func(i, j int) bool { return report.Repos[i].Repo < report.Repos[j].Repo })
 
 	report.Drift = collectDrift(root, repos)
+
+	if opts.Score {
+		sr := Score(report, DefaultScoreWeights)
+		report.Scoring = &sr
+		if !opts.IncludeSurfaces {
+			for i := range report.Repos {
+				report.Repos[i].SurfaceDetail = nil
+			}
+		}
+	}
 	report.TotalMillis = now().Sub(start).Milliseconds()
 	return report, nil
 }
@@ -194,6 +212,9 @@ func RenderMarkdown(rep PlatformReport) string {
 		if len(rep.Drift.CatalogOnly) > 0 {
 			fmt.Fprintf(&b, "- In catalog, missing on disk: %s\n", strings.Join(rep.Drift.CatalogOnly, ", "))
 		}
+	}
+	if rep.Scoring != nil {
+		b.WriteString(RenderScoreMarkdown(*rep.Scoring))
 	}
 	return b.String()
 }

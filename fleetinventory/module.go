@@ -67,5 +67,19 @@ func (m *module) Tools() []registry.ToolDefinition {
 	report.Category = "audit"
 	report.SearchTerms = []string{"fleet report", "inventory markdown", "parity summary"}
 
-	return []registry.ToolDefinition{scan, report}
+	score := handler.TypedHandler[reportInput, scanOutput](
+		"fleet_inventory_score",
+		"Run the fleet inventory with the quality scoreboard: per-repo 0-100 composite scores (description coverage, naming discipline, duplication, violation burden, size outliers, declared-count gap) with data-confidence and lifecycle-weighted roadmap priority, plus cross-repo namespace duplication.",
+		func(ctx context.Context, in reportInput) (scanOutput, error) {
+			rep, err := Scan(ctx, in.Root, ScanOptions{Repos: in.Repos, Score: true})
+			if err != nil {
+				return scanOutput{}, err
+			}
+			return scanOutput{Report: rep}, nil
+		},
+	)
+	score.Category = "audit"
+	score.SearchTerms = []string{"quality score", "cleanup roadmap", "repo scoreboard", "namespace duplication"}
+
+	return []registry.ToolDefinition{scan, report, score}
 }

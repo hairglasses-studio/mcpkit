@@ -14,6 +14,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- **fleetinventory** — Quality-scoring layer (`score.go`, from the lane-scoring design): per-repo 0-100 composite over six dimensions (description coverage, naming discipline, intra+cross duplication, severity-weighted violation burden, median/MAD size outliers, declared-count gap via machine-readable `.well-known/mcp.json` `tool_count` only — prose claims deliberately not trusted), with data-confidence renormalization (unmeasured dimensions stay nil), truncated-walk confidence capping, lifecycle×scope impact weighting from the workspace manifest, and a lifecycle-weighted roadmap priority that ranks the cleanup queue. Plus a fleet-wide namespace view (prefix × repo-span) exposing cross-repo tool-name duplication. New `fleet_inventory_score` tool; scoreboard appended to the markdown report. Full scored sweep: ~5.6s.
+
 - **surfaceinventory** — Python/FastMCP extraction: `@mcp.tool()`/`@mcp.resource("uri")`/`@mcp.prompt()` decorators (kwargs or def-name + docstring-derived descriptions). Closes the blind spot where hg-pi (100 tools) and hg-android (252 tools) scanned as zero. venv/site-packages/__pycache__ pruned; test_*.py skipped.
 
 ### Fixed
