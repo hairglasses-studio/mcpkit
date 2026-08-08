@@ -129,6 +129,27 @@ func PromptArguments(p Prompt) []PromptArgument {
 	return p.Arguments
 }
 
+// OutputSchemaType returns t.OutputSchema.Type, or ("", false) if unset.
+// mcp-go's Tool.OutputSchema is a value ToolOutputSchema struct; the
+// official SDK's is `any` holding a map[string]any — see
+// compat_official.go's OutputSchemaType for that side's type assertion.
+func OutputSchemaType(t Tool) (string, bool) {
+	if t.OutputSchema.Type == "" {
+		return "", false
+	}
+	return t.OutputSchema.Type, true
+}
+
+// OutputSchemaProperties returns t.OutputSchema.Properties, or (nil, false)
+// if unset/empty. See compat_official.go's OutputSchemaProperties for the
+// official SDK's map-assertion counterpart.
+func OutputSchemaProperties(t Tool) (map[string]any, bool) {
+	if len(t.OutputSchema.Properties) == 0 {
+		return nil, false
+	}
+	return t.OutputSchema.Properties, true
+}
+
 // MakeTextContent constructs a Content value containing text.
 // In mcp-go this is a value type; in the official SDK it would be a pointer.
 func MakeTextContent(text string) Content {

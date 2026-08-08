@@ -161,6 +161,39 @@ func PromptArguments(p Prompt) []PromptArgument {
 	return args
 }
 
+// OutputSchemaType returns the "type" field of t.OutputSchema, or ("", false)
+// if t.OutputSchema isn't a map[string]any or has no non-empty "type" entry.
+// The official SDK's Tool.OutputSchema is `any` (mcp-go's is a typed
+// ToolOutputSchema struct — see compat.go's OutputSchemaType), holding
+// whatever TypedHandler's generateSchemaMap (or a consumer's own hand-built
+// schema) produced.
+func OutputSchemaType(t Tool) (string, bool) {
+	m, ok := t.OutputSchema.(map[string]any)
+	if !ok {
+		return "", false
+	}
+	typ, ok := m["type"].(string)
+	if !ok || typ == "" {
+		return "", false
+	}
+	return typ, true
+}
+
+// OutputSchemaProperties returns the "properties" field of t.OutputSchema, or
+// (nil, false) if t.OutputSchema isn't a map[string]any or "properties" is
+// absent/empty. See compat.go's OutputSchemaProperties for the mcp-go side.
+func OutputSchemaProperties(t Tool) (map[string]any, bool) {
+	m, ok := t.OutputSchema.(map[string]any)
+	if !ok {
+		return nil, false
+	}
+	props, ok := m["properties"].(map[string]any)
+	if !ok || len(props) == 0 {
+		return nil, false
+	}
+	return props, true
+}
+
 // MakeTextContent constructs a Content value containing text.
 func MakeTextContent(text string) Content {
 	return &mcp.TextContent{Text: text}

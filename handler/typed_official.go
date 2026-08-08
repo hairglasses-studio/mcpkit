@@ -38,13 +38,24 @@ func TypedHandler[In any, Out any](name, description string, fn TypedHandlerFunc
 	// Build the Tool with InputSchema as a map (the official SDK uses `any` for InputSchema)
 	inputSchema := generateSchemaMap[In]()
 
+	// OutputSchema, same map shape as InputSchema (the official SDK uses `any`
+	// for both). This was previously never populated on this build — every
+	// TypedHandler tool advertised no output schema at all, unlike the mcp-go
+	// side's generateOutputSchema. registry.ToolDefinition.OutputSchema is
+	// *ToolOutputSchema (= *any here); ApplyToolMetadata (registry/metadata.go,
+	// portable) copies *td.OutputSchema into td.Tool.OutputSchema at
+	// registration time on both tags, so setting it here is sufficient — no
+	// other wiring needed.
+	var outputSchema registry.ToolOutputSchema = generateSchemaMap[Out]()
+
 	td := registry.ToolDefinition{
 		Tool: mcp.Tool{
 			Name:        name,
 			Description: description,
 			InputSchema: inputSchema,
 		},
-		Handler: wrapped,
+		Handler:      wrapped,
+		OutputSchema: &outputSchema,
 	}
 
 	return td
