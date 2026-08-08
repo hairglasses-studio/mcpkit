@@ -1,11 +1,20 @@
+//go:build !official_sdk
+
+// notify_test.go exercises DynamicRegistry's list-changed notification wiring
+// (AddPrompt/RemovePrompt -> notifications/prompts/list_changed). DynamicRegistry
+// (dynamic.go) has zero official_sdk implementation — it is mcp-go specific,
+// same known gap as resources' NewDynamicRegistry (see resources/notify_test.go
+// and the 254818d port commit). Porting DynamicRegistry itself is out of scope
+// here; this file just carries the correct build tag so `go test -tags
+// official_sdk ./prompts` doesn't fail to compile on it.
 package prompts
 
 import (
 	"context"
 	"testing"
 
-	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/hairglasses-studio/mcpkit/registry"
+	"github.com/mark3labs/mcp-go/mcp"
 )
 
 func TestWirePromptListChanged_Add(t *testing.T) {
