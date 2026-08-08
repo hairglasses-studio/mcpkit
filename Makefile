@@ -21,7 +21,10 @@ OFFICIAL_SDK_BUILD_PACKAGES := \
 	./prompts \
 	./feedback \
 	./testing/conformance \
-	./middleware/correlation
+	./middleware/correlation \
+	./discovery \
+	./sanitize \
+	./resilience
 
 # `prompts` was previously excluded from this list: prompts/notify_test.go
 # was untagged, using DynamicRegistry (which has no official_sdk port)
@@ -40,7 +43,15 @@ OFFICIAL_SDK_BUILD_PACKAGES := \
 # compat aliases + stdlib (same class as boundedwrite/truncate, d6bb0be) —
 # untagging it was the first blocker secretstudios-mcp's own
 # `-tags official_sdk` build attempt hit (it consumes correlation.FromContext
-# + correlation.Middleware).
+# + correlation.Middleware). `discovery`, `sanitize`, and `resilience` were
+# each mostly-or-entirely gratuitously tagged (2026-08-08, P52.6 round 4):
+# discovery/metadata.go and wellknown.go only touched registry-neutral types
+# plus stdlib (one real fix needed: registry.TemplateURI instead of
+# .URITemplate.Raw()); sanitize/output.go and resilience/error_compactor.go
+# likewise only touched registry compat aliases + stdlib. Untagging surfaced
+# a large pre-existing but dormant discovery test suite (marketplace/client/
+# publisher tests) that was already portable and is now exercised under
+# official_sdk too.
 OFFICIAL_SDK_TEST_PACKAGES := \
 	./registry \
 	./handler \
@@ -53,7 +64,10 @@ OFFICIAL_SDK_TEST_PACKAGES := \
 	./prompts \
 	./feedback \
 	./testing/conformance \
-	./middleware/correlation
+	./middleware/correlation \
+	./discovery \
+	./sanitize \
+	./resilience
 
 BENCH_PACKAGES ?= ./mcptest ./testing/benchmark
 BENCH_FLAGS ?= -bench=. -benchmem -run '^$$'
