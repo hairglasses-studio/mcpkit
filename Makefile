@@ -128,6 +128,9 @@ build:
 test:
 	go test ./... -count=1
 
+test-fast:
+	go test -short ./registry ./handler ./transport ./protocol ./skills ./fleetinventory ./surfaceinventory ./cmd/...
+
 vet:
 	go vet ./...
 
@@ -135,7 +138,7 @@ lint:
 	@command -v golangci-lint >/dev/null 2>&1 && golangci-lint run ./... || \
 	(command -v staticcheck >/dev/null 2>&1 && staticcheck ./... || echo "no linter installed, skipping")
 
-check: build vet test skill-surface-check
+check: build vet test-fast skill-surface-check
 
 # Dual-SDK targets — verify the official_sdk build tag on packages with
 # complete official-SDK implementations. Test scope is intentionally narrower

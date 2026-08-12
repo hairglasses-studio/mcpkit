@@ -34,11 +34,12 @@ Runnable MCP servers demonstrating mcpkit packages and patterns. Every example i
 | [stateless-http](stateless-http/) | Horizontally scalable HTTP server with Redis-backed sessions, multi-source session extraction, and health checks. |
 | [gateway](gateway/) | Aggregate tools from multiple upstream MCP servers behind namespaced routing with per-upstream resilience. |
 
-## Agent protocols
+## Agent protocols & Spec bridging
 
 | Example | Summary |
 |---|---|
 | [a2a-bridge](a2a-bridge/) | Expose mcpkit tools as an A2A (Agent-to-Agent) agent over HTTP, with skill discovery via agent card. |
+| [openapi](openapi/) | Auto-generate MCP tools from an OpenAPI v3 spec using `bridge/openapi` and proxy calls to a REST API. |
 | [rdcycle](rdcycle/) | R&D cycle workflow: research + roadmap + rdcycle modules wired through ralph's `WorkflowLoop`. |
 
 ## Running an example
