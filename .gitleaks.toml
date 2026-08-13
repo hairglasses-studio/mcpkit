@@ -1,0 +1,12 @@
+# .gitleaks.toml — repo-level gitleaks configuration for mcpkit.
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Synthetic test fixtures testing secret redactor & sanitizer functionality"
+paths = [
+  '''(^|.*/)sanitize/.*_test\.go$''',
+  '''(^|.*/)fleetinventory/.*_test\.go$''',
+  '''(^|.*/)registry/metadata\.go$''',
+]

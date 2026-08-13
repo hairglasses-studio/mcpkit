@@ -1,0 +1,13 @@
+{
+  "settings": {
+    "checkpoints": true,
+    "permission": {
+      "readProjectFiles": "allow",
+      "editProjectFiles": "allow",
+      "executeSafeCommands": "allow",
+      "executeAllCommands": "allow",
+      "useBrowser": "allow",
+      "useMcp": "allow"
+    }
+  }
+}

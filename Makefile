@@ -207,3 +207,72 @@ smoke-matrix:
 
 HG_PIPELINE_MK ?= $(or $(wildcard $(abspath $(CURDIR)/../dotfiles/make/pipeline.mk)),$(wildcard $(HOME)/hairglasses-studio/dotfiles/make/pipeline.mk))
 -include $(HG_PIPELINE_MK)
+
+# ── landing gate (ported by port-landing-gate.sh) ──
+.PHONY: help lint test ci gitleaks shellcheck secret-check ownership-check
+
+help: ## Show help documentation for Makefile targets
+	@command grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | sort | \
+		awk 'BEGIN{FS=":.*## "}{printf "  %-28s %s\n", $$1, $$2}'
+
+gitleaks: ## Secret scan (git history)
+	@if [ -x scripts/check-gitleaks.sh ]; then \
+		bash scripts/check-gitleaks.sh; \
+	elif command -v gitleaks >/dev/null 2>&1; then \
+		gitleaks detect --no-git -v; \
+	else \
+		echo "gitleaks: skipped (scanner not installed)"; \
+	fi
+
+shellcheck: ## Shell check executables and scripts
+	@files="$$( { command find bin -maxdepth 1 -type f -perm -u+x -print; \
+		command find bin -maxdepth 1 -type f -name '*.sh' -print; \
+		command find scripts -type f -name '*.sh' -print; } 2>/dev/null | sort -u)"; \
+	if [ -z "$$files" ]; then \
+		echo "shellcheck: no shell scripts found"; \
+		exit 0; \
+	fi; \
+	echo "$$files" | xargs shellcheck -S warning -e SC2155,SC2034,SC2043,SC1090
+
+secret-check: ## Enforce secret deny patterns
+	@if [ -x bin/secret-deny-check ]; then bash bin/secret-deny-check; else echo "secret-check: skipped"; fi
+
+ownership-check: ## Check convention ownership boundaries
+	@if [ -x bin/convention-ownership-check ]; then bash bin/convention-ownership-check; else echo "ownership-check: skipped"; fi
+
+lint: ## Shell syntax + shellcheck
+	@echo "==> Validating shell syntax..."
+	@bash -n bin/* scripts/*.sh 2>/dev/null || true
+	@echo "==> Shellcheck..."
+	@$(MAKE) --no-print-directory shellcheck
+
+test: ## Run tests
+	@echo "==> Running tests..."
+	@if [ -d bin ]; then \
+		for t in bin/*-selftest; do \
+			if [ -x "$$t" ]; then echo "==> $$t"; bash "$$t"; fi; \
+		done; \
+	fi
+
+ci: ## Aggregate landing gate
+	@set -e; \
+	run_gate() { \
+		name="$$1"; shift; \
+		echo "--- $$name"; \
+		if "$$@"; then \
+			echo "--- $$name: PASS"; \
+		else \
+			echo "--- $$name: FAIL (exit $$?)"; \
+			fail=1; \
+		fi; \
+	}; \
+	fail=0; unknown=0; \
+	run_gate secret-check $(MAKE) --no-print-directory secret-check; \
+	run_gate ownership-check $(MAKE) --no-print-directory ownership-check; \
+	run_gate lint $(MAKE) --no-print-directory lint; \
+	run_gate test $(MAKE) --no-print-directory test; \
+	if [ "$$fail" -ne 0 ]; then \
+		echo "ci: SOME GATES FAILED"; \
+		exit 1; \
+	fi; \
+	echo "ci: ALL GATES PASSED"

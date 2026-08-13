@@ -1,0 +1,107 @@
+#!/usr/bin/env bash
+# cline-harness-doctor — one-shot health check for repo and session health.
+# Read-only diagnostic check script.
+set -uo pipefail
+
+REPO_ROOT="${CLINE_HARNESS_REPO_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+[[ -e "$REPO_ROOT/.git" ]] || { echo "ERROR: $REPO_ROOT is not a git repo" >&2; exit 2; }
+cd "$REPO_ROOT" || exit 2
+
+JSON=0
+SKIP_CI=0
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --json) JSON=1 ;;
+    --skip-ci) SKIP_CI=1 ;;
+    *) ;;
+  esac
+  shift
+done
+
+RESULTS=$(mktemp)
+cleanup() { rm -f "$RESULTS"; }
+trap cleanup EXIT
+FAILS=0
+WARNS=0
+PASSES=0
+
+rec() {
+  local status="$1" check="$2" detail="$3"
+  case "$status" in
+    OK) PASSES=$((PASSES+1)) ;;
+    WARN) WARNS=$((WARNS+1)) ;;
+    FAIL) FAILS=$((FAILS+1)) ;;
+  esac
+  printf '%s\t%s\t%s\n' "$status" "$check" "$detail" >> "$RESULTS"
+  if [[ $JSON -eq 0 ]]; then
+    printf '%-4s\t%s\t%s\n' "$status" "$check" "$detail"
+  fi
+  return 0
+}
+
+[[ $JSON -eq 0 ]] && echo "==> cline-harness-doctor (repo=$REPO_ROOT)"
+
+# 1. Repo state
+rec "OK" "branch" "$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "HEAD")"
+if git rev-parse --verify origin/main >/dev/null 2>&1; then
+  AHEAD=$(git log origin/main..HEAD --oneline 2>/dev/null | wc -l | tr -d ' ')
+  [[ "$AHEAD" -eq 0 ]] && rec "OK" "branch.ahead" "no unpushed commits" || rec "WARN" "branch.ahead" "$AHEAD unpushed commits"
+  BEHIND=$(git log HEAD..origin/main --oneline 2>/dev/null | wc -l | tr -d ' ')
+  [[ "$BEHIND" -eq 0 ]] && rec "OK" "branch.behind" "up to date with origin/main" || rec "WARN" "branch.behind" "$BEHIND commits behind origin/main"
+fi
+
+# 2. make ci
+if [[ $SKIP_CI -eq 1 ]]; then
+  rec "WARN" "make-ci" "skipped (--skip-ci)"
+else
+  if make ci >/dev/null 2>&1; then
+    rec "OK" "make-ci" "clean"
+  else
+    rec "FAIL" "make-ci" "failed"
+  fi
+fi
+
+# 3. Disjoint additive tools
+if [[ -x bin/secret-deny-check ]]; then
+  if bin/secret-deny-check >/dev/null 2>&1; then
+    rec "OK" "secret-deny-check" "clean"
+  else
+    rec "FAIL" "secret-deny-check" "non-zero exit"
+  fi
+fi
+
+if [[ -x bin/convention-ownership-check ]]; then
+  if bin/convention-ownership-check >/dev/null 2>&1; then
+    rec "OK" "convention-ownership-check" "clean"
+  else
+    rec "FAIL" "convention-ownership-check" "non-zero exit"
+  fi
+fi
+
+if [[ $JSON -eq 1 ]]; then
+  python3 - "$RESULTS" "$PASSES" "$WARNS" "$FAILS" <<'PYEOF'
+import json, sys
+results_path, p, w, f = sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4])
+checks = []
+with open(results_path) as fh:
+    for line in fh:
+        line = line.rstrip("\n")
+        if not line:
+            continue
+        status, check, detail = line.split("\t", 2)
+        checks.append({"status": status, "check": check, "detail": detail})
+print(json.dumps({
+    "tool": "cline-harness-doctor",
+    "checks": checks,
+    "summary": {"pass": p, "warn": w, "fail": f, "total": len(checks), "ok": f == 0},
+}, indent=2))
+PYEOF
+else
+  [[ $FAILS -eq 0 ]] && echo "cline-harness-doctor: ALL GREEN (pass=$PASSES warn=$WARNS)" \
+                     || echo "cline-harness-doctor: $FAILS FAILURE(S)"
+fi
+
+if [[ $FAILS -gt 0 ]]; then
+  exit 1
+fi
+exit 0

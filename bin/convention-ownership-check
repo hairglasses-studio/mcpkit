@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+# convention-ownership-check — audit cline-harness convention boundaries
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="${1:-$(cd "$SCRIPT_DIR/.." && pwd)}"
+
+ERRORS=0
+
+echo "Checking ownership boundaries for repo: $REPO_ROOT"
+
+# Check required directories and files if this is a harness repo with ownership boundaries
+if [[ -f "$REPO_ROOT/manifest/ownership-boundary.tsv" ]]; then
+  REQUIRED_DIRS=(
+    "manifest"
+    "templates"
+    "fixtures"
+    "bin"
+  )
+
+  for dir in "${REQUIRED_DIRS[@]}"; do
+    if [[ ! -d "$REPO_ROOT/$dir" ]]; then
+      echo "ERROR: Missing required directory $dir" >&2
+      ERRORS=$((ERRORS + 1))
+    fi
+  done
+
+  REQUIRED_FILES=(
+    "AGENTS.md"
+    "CLAUDE.md"
+    "GEMINI.md"
+    "README.md"
+    "ROADMAP.md"
+    "FLEET-MIGRATION.md"
+    "PROJECT.md"
+    "NEVER-COMMIT.md"
+    "Makefile"
+    "manifest/README.md"
+    "manifest/ownership-boundary.tsv"
+    "manifest/fleet-migration.tsv"
+    "manifest/fleet-inventory.tsv"
+    "manifest/default-sync-paths.list"
+    ".github/workflows/ci.yml"
+    "bin/convention-ownership-check"
+    "bin/convention-ownership-check-selftest"
+    "bin/secret-deny-check"
+    "bin/secret-deny-check-selftest"
+  )
+
+  for file in "${REQUIRED_FILES[@]}"; do
+    if [[ ! -f "$REPO_ROOT/$file" ]]; then
+      echo "ERROR: Missing required file $file" >&2
+      ERRORS=$((ERRORS + 1))
+    fi
+  done
+fi
+
+# Check executable permissions in bin/
+if [[ -d "$REPO_ROOT/bin" ]]; then
+  for bin_file in "$REPO_ROOT/bin/"*; do
+    if [[ -f "$bin_file" && ! -x "$bin_file" ]]; then
+      echo "ERROR: File $bin_file is not executable" >&2
+      ERRORS=$((ERRORS + 1))
+    fi
+  done
+fi
+
+# Ownership-class parity: every ownership class referenced must be closed.
+# Allowed closed classes are checked below against ownership-boundary.tsv.
+
+if [[ -f "$REPO_ROOT/manifest/ownership-boundary.tsv" ]]; then
+  while IFS=$'\t' read -r cls _label _rest; do
+    [[ -z "$cls" ]] && continue
+    case "${cls,,}" in
+      "shared provider-neutral"|"cline harness-specific"|"claude harness-specific"|"codex harness-specific"|"agy harness-specific"|"repo-local projection"|"external owner") ;;
+      *)
+        echo "ERROR: Unclosed ownership class in ownership-boundary.tsv: $cls" >&2
+        ERRORS=$((ERRORS + 1))
+        ;;
+    esac
+  done < <(tail -n +2 "$REPO_ROOT/manifest/ownership-boundary.tsv")
+fi
+
+# Audit subagent write boundaries and 5-component handoff standards in .agents/
+if [[ -d "$REPO_ROOT/.agents" ]]; then
+  while IFS= read -r handoff_file; do
+    if [[ -f "$handoff_file" ]]; then
+      rel_path="${handoff_file#"$REPO_ROOT"/}"
+      missing_sections=()
+      grep -q -i 'observation' "$handoff_file" || missing_sections+=("Observation")
+      grep -q -i 'logic chain' "$handoff_file" || missing_sections+=("Logic Chain")
+      grep -q -i 'caveats' "$handoff_file" || missing_sections+=("Caveats")
+      grep -q -i 'conclusion' "$handoff_file" || missing_sections+=("Conclusion")
+      grep -q -i 'verification method' "$handoff_file" || missing_sections+=("Verification Method")
+      if [[ ${#missing_sections[@]} -gt 0 ]]; then
+        echo "ERROR: Handoff report $rel_path missing required section(s): ${missing_sections[*]}" >&2
+        ERRORS=$((ERRORS + 1))
+      fi
+    fi
+  done < <(find "$REPO_ROOT/.agents" -name "handoff.md" 2>/dev/null || true)
+fi
+
+if [[ $ERRORS -gt 0 ]]; then
+  echo "Ownership check failed with $ERRORS errors." >&2
+  exit 1
+fi
+
+echo "Ownership check passed cleanly."
