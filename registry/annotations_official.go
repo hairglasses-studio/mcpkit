@@ -41,6 +41,9 @@ func InferIsWrite(name string) bool {
 //     Tool.Title field (previously only Tool.Annotations.Title was set,
 //     which is the legacy/deprecated location — mcp-go already set both).
 func ApplyMCPAnnotations(td ToolDefinition, prefix string) ToolDefinition {
+	if td.ReadOnlyOverride != nil {
+		td.IsWrite = !*td.ReadOnlyOverride
+	}
 	title := toolNameToTitle(td.Tool.Name, prefix)
 	SetToolTitle(&td.Tool, title)
 

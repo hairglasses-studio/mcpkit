@@ -30,6 +30,9 @@ func InferIsWrite(name string) bool {
 // It sets both Tool.Title (top-level, preferred by MCP spec) and
 // Tool.Annotations.Title (legacy field) to the same generated string.
 func ApplyMCPAnnotations(td ToolDefinition, prefix string) ToolDefinition {
+	if td.ReadOnlyOverride != nil {
+		td.IsWrite = !*td.ReadOnlyOverride
+	}
 	title := toolNameToTitle(td.Tool.Name, prefix)
 	SetToolTitle(&td.Tool, title)
 	td.Tool.Annotations.Title = title

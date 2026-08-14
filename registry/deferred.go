@@ -34,7 +34,9 @@ func (r *ToolRegistry) RegisterDeferredModule(module ToolModule, deferredTools m
 		if tool.RuntimeGroup == "" && r.config.RuntimeGroupMapper != nil {
 			tool.RuntimeGroup = r.config.RuntimeGroupMapper(tool.Category)
 		}
-		if !tool.IsWrite {
+		if tool.ReadOnlyOverride != nil {
+			tool.IsWrite = !*tool.ReadOnlyOverride
+		} else if !tool.IsWrite {
 			tool.IsWrite = InferIsWrite(tool.Tool.Name)
 		}
 		if deferredTools[tool.Tool.Name] {

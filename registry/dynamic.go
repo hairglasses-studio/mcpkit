@@ -42,7 +42,9 @@ func (d *DynamicRegistry) notify() {
 // AddTool registers a single tool at runtime and notifies listeners.
 func (d *DynamicRegistry) AddTool(td ToolDefinition) {
 	d.mu.Lock()
-	if !td.IsWrite {
+	if td.ReadOnlyOverride != nil {
+		td.IsWrite = !*td.ReadOnlyOverride
+	} else if !td.IsWrite {
 		td.IsWrite = InferIsWrite(td.Tool.Name)
 	}
 	if td.RuntimeGroup == "" && d.config.RuntimeGroupMapper != nil {

@@ -93,6 +93,9 @@ type ToolDefinition struct {
 	// upsert-safe, or a "_restart" whose target does not tolerate a
 	// redundant call the same as a single call.
 	IdempotentOverride *bool
+	// ReadOnlyOverride, when non-nil, forces IsWrite to !*ReadOnlyOverride,
+	// overriding InferIsWrite suffix heuristics.
+	ReadOnlyOverride *bool
 }
 
 // ToolModule is the interface that tool modules implement.
@@ -176,7 +179,9 @@ func (r *ToolRegistry) RegisterModule(module ToolModule) {
 		if tool.RuntimeGroup == "" && r.config.RuntimeGroupMapper != nil {
 			tool.RuntimeGroup = r.config.RuntimeGroupMapper(tool.Category)
 		}
-		if !tool.IsWrite {
+		if tool.ReadOnlyOverride != nil {
+			tool.IsWrite = !*tool.ReadOnlyOverride
+		} else if !tool.IsWrite {
 			tool.IsWrite = InferIsWrite(tool.Tool.Name)
 		}
 		r.tools[tool.Tool.Name] = tool
