@@ -107,7 +107,15 @@ func checkOutputs(repoRoot string) error {
 	if err != nil {
 		return err
 	}
+	claudeProjectionUnavailable := brokenSymlink(filepath.Join(repoRoot, ".claude"))
 	for _, f := range files {
+		// The checked-in .claude entry points at the workspace-level docs
+		// projection. A standalone clone or managed worktree intentionally has
+		// no sibling docs checkout, so validate the repo-owned outputs without
+		// treating that external projection as missing source.
+		if claudeProjectionUnavailable && strings.HasPrefix(filepath.Clean(f.Path), ".claude"+string(filepath.Separator)) {
+			continue
+		}
 		path := filepath.Join(repoRoot, f.Path)
 		actual, err := os.ReadFile(path)
 		if err != nil {
@@ -118,6 +126,15 @@ func checkOutputs(repoRoot string) error {
 		}
 	}
 	return nil
+}
+
+func brokenSymlink(path string) bool {
+	info, err := os.Lstat(path)
+	if err != nil || info.Mode()&os.ModeSymlink == 0 {
+		return false
+	}
+	_, err = os.Stat(path)
+	return os.IsNotExist(err)
 }
 
 func generateOutputs(repoRoot string) ([]docFile, error) {

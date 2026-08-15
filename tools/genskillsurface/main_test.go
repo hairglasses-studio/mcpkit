@@ -17,6 +17,25 @@ func TestCheckOutputs(t *testing.T) {
 	}
 }
 
+func TestBrokenSymlink(t *testing.T) {
+	root := t.TempDir()
+	link := filepath.Join(root, "projection")
+	if err := os.Symlink(filepath.Join(root, "missing"), link); err != nil {
+		t.Fatalf("create broken symlink: %v", err)
+	}
+	if !brokenSymlink(link) {
+		t.Fatal("brokenSymlink() = false for a dangling projection")
+	}
+
+	dir := filepath.Join(root, "present")
+	if err := os.Mkdir(dir, 0o755); err != nil {
+		t.Fatalf("create directory: %v", err)
+	}
+	if brokenSymlink(dir) {
+		t.Fatal("brokenSymlink() = true for a real directory")
+	}
+}
+
 func TestFrontDoorDocsPresent(t *testing.T) {
 	cfg, err := loadSurfaceConfig(filepath.Join("..", ".."))
 	if err != nil {
