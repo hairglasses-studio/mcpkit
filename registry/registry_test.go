@@ -13,7 +13,7 @@ type testModule struct {
 }
 
 func (m *testModule) Name() string            { return m.name }
-func (m *testModule) Description() string      { return "test module" }
+func (m *testModule) Description() string     { return "test module" }
 func (m *testModule) Tools() []ToolDefinition { return m.tools }
 
 func newTestTool(name, category string, handler ToolHandlerFunc) ToolDefinition {
@@ -92,6 +92,33 @@ func TestRegistryInferIsWrite(t *testing.T) {
 	if !td.IsWrite {
 		t.Error("my_delete should be a write tool")
 	}
+}
+
+func TestRegistryReadOnlyOverrideWinsOverNameInference(t *testing.T) {
+	readOnly := true
+	write := false
+	r := NewToolRegistry()
+
+	readTool := newTestTool("maintenance_restart", "test", nil)
+	readTool.ReadOnlyOverride = &readOnly
+	writeTool := newTestTool("maintenance_status", "test", nil)
+	writeTool.ReadOnlyOverride = &write
+	r.RegisterModule(&testModule{
+		name:  "overrides",
+		tools: []ToolDefinition{readTool, writeTool},
+	})
+
+	gotRead, _ := r.GetTool("maintenance_restart")
+	if gotRead.IsWrite {
+		t.Error("maintenance_restart should remain read-only despite its write-like suffix")
+	}
+	assertReadOnlyHint(t, ApplyMCPAnnotations(gotRead, "maintenance_"), true)
+
+	gotWrite, _ := r.GetTool("maintenance_status")
+	if !gotWrite.IsWrite {
+		t.Error("maintenance_status should be writable when explicitly overridden")
+	}
+	assertReadOnlyHint(t, ApplyMCPAnnotations(gotWrite, "maintenance_"), false)
 }
 
 func TestRegistryRuntimeGroupMapper(t *testing.T) {

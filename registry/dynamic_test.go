@@ -47,6 +47,20 @@ func TestDynamicRegistry_AddTool_InfersIsWrite(t *testing.T) {
 	}
 }
 
+func TestDynamicRegistry_AddTool_ReadOnlyOverrideWinsOverNameInference(t *testing.T) {
+	readOnly := true
+	d := NewDynamicRegistry()
+	td := makeDynamicTool("resource_restart", "cat")
+	td.ReadOnlyOverride = &readOnly
+
+	d.AddTool(td)
+
+	got, _ := d.GetTool("resource_restart")
+	if got.IsWrite {
+		t.Error("resource_restart should remain read-only when explicitly overridden")
+	}
+}
+
 func TestDynamicRegistry_RemoveTool(t *testing.T) {
 	d := NewDynamicRegistry()
 

@@ -44,6 +44,23 @@ func TestRegisterDeferredModule_AllToolsStored(t *testing.T) {
 	}
 }
 
+func TestRegisterDeferredModule_ReadOnlyOverrideWinsOverNameInference(t *testing.T) {
+	readOnly := true
+	r := NewToolRegistry()
+	td := makeDeferredTool("resource_restart", "cat")
+	td.ReadOnlyOverride = &readOnly
+
+	r.RegisterDeferredModule(&testModule{
+		name:  "mod",
+		tools: []ToolDefinition{td},
+	}, map[string]bool{"resource_restart": true})
+
+	got, _ := r.GetTool("resource_restart")
+	if got.IsWrite {
+		t.Error("resource_restart should remain read-only when explicitly overridden")
+	}
+}
+
 func TestListEagerTools(t *testing.T) {
 	r := NewToolRegistry()
 
