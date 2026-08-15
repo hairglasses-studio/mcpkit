@@ -1,13 +1,9 @@
-//go:build !official_sdk
-
 package gateway
 
 import (
 	"context"
 	"fmt"
 	"sync"
-
-	"github.com/mark3labs/mcp-go/mcp"
 
 	"github.com/hairglasses-studio/mcpkit/registry"
 )
@@ -199,7 +195,7 @@ func (g *Gateway) Close() error {
 
 // makeProxyHandler creates a tool handler that forwards calls to the upstream server.
 func (g *Gateway) makeProxyHandler(upstreamName, originalToolName string) registry.ToolHandlerFunc {
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return func(ctx context.Context, request registry.CallToolRequest) (*registry.CallToolResult, error) {
 		g.mu.RLock()
 		u, exists := g.upstreams[upstreamName]
 		g.mu.RUnlock()
@@ -212,12 +208,8 @@ func (g *Gateway) makeProxyHandler(upstreamName, originalToolName string) regist
 			return registry.MakeErrorResult(fmt.Sprintf("upstream %q is unhealthy", upstreamName)), nil
 		}
 
-		// Forward the call with the original (non-namespaced) tool name
-		forwardReq := mcp.CallToolRequest{}
-		forwardReq.Params.Name = originalToolName
-		forwardReq.Params.Arguments = request.Params.Arguments
-
-		result, err := u.client.CallTool(ctx, forwardReq)
+		// Forward the call with the original (non-namespaced) tool name.
+		result, err := u.client.callTool(ctx, originalToolName, registry.ExtractArguments(request))
 		if err != nil {
 			return registry.MakeErrorResult(fmt.Sprintf("upstream %q call failed: %v", upstreamName, err)), nil
 		}

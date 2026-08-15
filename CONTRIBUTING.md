@@ -49,6 +49,10 @@ go vet ./...
 
 ### Full Pipeline
 
+Repository-local Make/script checks are authoritative. GitHub Actions is
+deprecated; any remaining workflow result is advisory and must not replace a
+fresh local gate for the commit being reviewed.
+
 ```bash
 make check      # build + vet + test
 make check-dual # default checks plus official_sdk build/test gates
@@ -70,7 +74,7 @@ targets across all hairglasses-studio repos: `build`, `vet`, `test`, `lint`,
 5. **Commit** with conventional commit messages (see below).
 6. **Push** to your fork and open a PR against `main`.
 7. **Fill out the PR description** covering what changed, why, and how you tested it.
-8. **Wait for CI** and maintainer review.
+8. **Record the local gate results** and wait for maintainer review.
 
 Keep PRs focused. One logical change per PR is easier to review than a combined
 refactor-plus-feature.
@@ -84,7 +88,7 @@ Before requesting review, confirm:
 - New code follows the dependency layers and does not import upward.
 - Tool handlers return MCP error results instead of raw Go errors when callers need to see the failure.
 - Default tests pass for affected packages with `go test ./<package> -count=1`.
-- SDK compatibility is preserved with `make build-official` and `make test-official` when touching `registry`, `handler`, `mcptest`, transport, session, resources, prompts, or sampling surfaces.
+- SDK compatibility is preserved with `make build-official` and `make test-official` when touching `registry`, `handler`, `mcptest`, transport, session, gateway, resources, prompts, or sampling surfaces.
 - Roadmap changes include evidence and do not mark future upstream-dependent work complete.
 
 ### Branch Naming

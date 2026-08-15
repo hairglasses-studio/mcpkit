@@ -1,5 +1,3 @@
-//go:build !official_sdk
-
 package gateway
 
 import (
@@ -9,10 +7,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/mark3labs/mcp-go/client"
-	"github.com/mark3labs/mcp-go/client/transport"
-	"github.com/mark3labs/mcp-go/mcp"
 
 	"github.com/hairglasses-studio/mcpkit/registry"
 )
@@ -87,7 +81,7 @@ type Federation struct {
 // peerState tracks the internal connection state for a single peer.
 type peerState struct {
 	endpoint string
-	client   *client.Client
+	client   upstreamClient
 	tools    []ToolInfo
 	lastSeen time.Time
 	healthy  bool
@@ -153,7 +147,7 @@ func (f *Federation) Stop() error {
 	for _, ps := range f.peers {
 		ps.mu.Lock()
 		if ps.client != nil {
-			if err := ps.client.Close(); err != nil {
+			if err := ps.client.close(); err != nil {
 				lastErr = err
 			}
 			ps.client = nil
@@ -263,20 +257,20 @@ func (f *Federation) discoverPeer(ctx context.Context, endpoint string) {
 	discoverCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	result, err := ps.client.ListTools(discoverCtx, mcp.ListToolsRequest{})
+	tools, err := ps.client.listTools(discoverCtx)
 	if err != nil {
 		f.logger.Warn("federation: failed to list tools from peer",
 			"endpoint", endpoint, "error", err)
 		ps.healthy = false
 		// Close the broken client so we reconnect next cycle.
-		ps.client.Close()
+		_ = ps.client.close()
 		ps.client = nil
 		return
 	}
 
 	// Build the new tool list.
-	newTools := make([]ToolInfo, 0, len(result.Tools))
-	for _, t := range result.Tools {
+	newTools := make([]ToolInfo, 0, len(tools))
+	for _, t := range tools {
 		newTools = append(newTools, ToolInfo{
 			Name:        t.Name,
 			Description: t.Description,
@@ -307,9 +301,9 @@ func (f *Federation) discoverPeer(ctx context.Context, endpoint string) {
 	for _, ti := range newTools {
 		fedName := f.federatedToolName(endpoint, ti.Name)
 		if !oldNames[fedName] {
-			// Find the original mcp.Tool for this tool info.
-			var tool mcp.Tool
-			for _, t := range result.Tools {
+			// Find the original tool descriptor for this tool info.
+			var tool registry.Tool
+			for _, t := range tools {
 				if t.Name == ti.Name {
 					tool = t
 					break
@@ -342,36 +336,17 @@ func (f *Federation) getOrCreatePeer(endpoint string) *peerState {
 }
 
 // connectPeer establishes a new MCP client connection to a peer gateway.
-func (f *Federation) connectPeer(ctx context.Context, endpoint string) (*client.Client, error) {
-	tp, err := transport.NewStreamableHTTP(endpoint)
+func (f *Federation) connectPeer(ctx context.Context, endpoint string) (upstreamClient, error) {
+	c, err := newUpstreamClient(ctx, endpoint, "mcpkit-federation", f.config.AuthToken)
 	if err != nil {
-		return nil, fmt.Errorf("creating transport for %s: %w", endpoint, err)
+		return nil, fmt.Errorf("connecting to %s: %w", endpoint, err)
 	}
-
-	c := client.NewClient(tp)
-	if err := c.Start(ctx); err != nil {
-		return nil, fmt.Errorf("starting client for %s: %w", endpoint, err)
-	}
-
-	initReq := mcp.InitializeRequest{}
-	initReq.Params.ProtocolVersion = mcp.LATEST_PROTOCOL_VERSION
-	initReq.Params.ClientInfo = mcp.Implementation{
-		Name:    "mcpkit-federation",
-		Version: "1.0.0",
-	}
-	initReq.Params.Capabilities = mcp.ClientCapabilities{}
-
-	if _, err := c.Initialize(ctx, initReq); err != nil {
-		c.Close()
-		return nil, fmt.Errorf("initializing connection to %s: %w", endpoint, err)
-	}
-
 	return c, nil
 }
 
 // makePeerProxyHandler creates a handler that forwards tool calls to a peer gateway.
 func (f *Federation) makePeerProxyHandler(endpoint, originalToolName string) registry.ToolHandlerFunc {
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return func(ctx context.Context, request registry.CallToolRequest) (*registry.CallToolResult, error) {
 		ps := f.getOrCreatePeer(endpoint)
 
 		ps.mu.RLock()
@@ -385,11 +360,7 @@ func (f *Federation) makePeerProxyHandler(endpoint, originalToolName string) reg
 			), nil
 		}
 
-		forwardReq := mcp.CallToolRequest{}
-		forwardReq.Params.Name = originalToolName
-		forwardReq.Params.Arguments = request.Params.Arguments
-
-		result, err := c.CallTool(ctx, forwardReq)
+		result, err := c.callTool(ctx, originalToolName, registry.ExtractArguments(request))
 		if err != nil {
 			return registry.MakeErrorResult(
 				fmt.Sprintf("federation peer %q call failed: %v", endpoint, err),

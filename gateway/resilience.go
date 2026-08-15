@@ -1,5 +1,3 @@
-//go:build !official_sdk
-
 package gateway
 
 import (
@@ -7,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"time"
-
-	"github.com/mark3labs/mcp-go/mcp"
 
 	"github.com/hairglasses-studio/mcpkit/registry"
 	"github.com/hairglasses-studio/mcpkit/resilience"
@@ -53,7 +49,7 @@ type upstreamResilience struct {
 	cb      *resilience.CircuitBreaker
 	limiter *resilience.RateLimiter
 	timeout time.Duration
-	cache   *resilience.KeyedCache[*mcp.CallToolResult]
+	cache   *resilience.KeyedCache[*registry.CallToolResult]
 }
 
 // newUpstreamResilience creates resilience instances from a policy.
@@ -70,7 +66,7 @@ func newUpstreamResilience(name string, policy UpstreamPolicy) *upstreamResilien
 		ur.limiter = resilience.NewRateLimiter(policy.RateLimit.Rate, policy.RateLimit.Burst)
 	}
 	if policy.ResponseCache != nil {
-		ur.cache = resilience.NewKeyedCache[*mcp.CallToolResult](policy.ResponseCache.TTL, policy.ResponseCache.MaxEntries)
+		ur.cache = resilience.NewKeyedCache[*registry.CallToolResult](policy.ResponseCache.TTL, policy.ResponseCache.MaxEntries)
 	}
 	return ur
 }
@@ -83,11 +79,11 @@ func (ur *upstreamResilience) wrapHandler(upstreamName string, next registry.Too
 	if ur == nil {
 		return next
 	}
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return func(ctx context.Context, request registry.CallToolRequest) (*registry.CallToolResult, error) {
 		// 0. Response cache check
 		var cacheKey string
 		if ur.cache != nil {
-			cacheKey = resilience.CacheKey(request.Params.Name, request.GetArguments())
+			cacheKey = resilience.CacheKey(requestToolName(request), registry.ExtractArguments(request))
 			if cached, ok := ur.cache.Get(cacheKey); ok {
 				return cached, nil
 			}
@@ -110,10 +106,10 @@ func (ur *upstreamResilience) wrapHandler(upstreamName string, next registry.Too
 		}
 
 		// 3. Circuit breaker
-		var result *mcp.CallToolResult
+		var result *registry.CallToolResult
 		var err error
 		if ur.cb != nil {
-			result, err = resilience.ExecuteWithResult(ur.cb, ctx, func(cbCtx context.Context) (*mcp.CallToolResult, error) {
+			result, err = resilience.ExecuteWithResult(ur.cb, ctx, func(cbCtx context.Context) (*registry.CallToolResult, error) {
 				return next(cbCtx, request)
 			})
 			if errors.Is(err, resilience.ErrCircuitOpen) {
@@ -127,7 +123,7 @@ func (ur *upstreamResilience) wrapHandler(upstreamName string, next registry.Too
 
 		// Only cache clean successes — a transient upstream error or an
 		// MCP-level error result must not get served back on repeat.
-		if ur.cache != nil && err == nil && result != nil && !result.IsError {
+		if ur.cache != nil && err == nil && result != nil && !registry.IsResultError(result) {
 			ur.cache.Set(cacheKey, result)
 		}
 		return result, err

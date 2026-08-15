@@ -231,13 +231,16 @@ graph TD
 
 ## Commands
 
+The repository-local Make targets are the authoritative CI contract. GitHub
+Actions is deprecated and is not a release or merge gate.
+
 ```bash
 go build ./...           # Build all packages
 go vet ./...             # Static analysis
 go test ./... -count=1   # Run all tests (no cache)
 make check               # All three above
 make build-official      # Verify official SDK build
-make check-dual          # Full check + official SDK build
+make check-dual          # Canonical default + official SDK gate
 ```
 
 ## License

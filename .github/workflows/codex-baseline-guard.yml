@@ -1,9 +1,9 @@
+# DEPRECATED: Manual diagnostics only. Authoritative gates run locally with
+# `GOWORK=off make ci` and `GOWORK=off make check-dual`.
+
 name: Codex Baseline Guard
 
 on:
-  pull_request:
-  push:
-    branches: [main, master]
   workflow_dispatch:
 
 permissions:

@@ -1,12 +1,8 @@
-//go:build !official_sdk
-
 package gateway
 
 import (
 	"context"
 	"sync"
-
-	"github.com/mark3labs/mcp-go/mcp"
 
 	"github.com/hairglasses-studio/mcpkit/registry"
 	"github.com/hairglasses-studio/mcpkit/session"
@@ -79,7 +75,7 @@ func NewSessionAffinity(gw *Gateway, config ...SessionAffinityConfig) *SessionAf
 // Requests without a session in the context are also passed through unchanged.
 func (sa *SessionAffinity) Middleware() registry.Middleware {
 	return func(name string, td registry.ToolDefinition, next registry.ToolHandlerFunc) registry.ToolHandlerFunc {
-		return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		return func(ctx context.Context, request registry.CallToolRequest) (*registry.CallToolResult, error) {
 			sess, ok := session.FromContext(ctx)
 			if !ok {
 				return next(ctx, request)

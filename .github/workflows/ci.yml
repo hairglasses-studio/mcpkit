@@ -1,3 +1,6 @@
+# DEPRECATED: Manual diagnostics only. Authoritative gates run locally with
+# `GOWORK=off make ci` and `GOWORK=off make check-dual`.
+#
 # CI — calls the org-wide reusable Go test workflow.
 #
 # Replaces inline test steps with:
@@ -6,10 +9,7 @@
 name: CI
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

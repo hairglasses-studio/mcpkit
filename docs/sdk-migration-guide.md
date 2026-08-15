@@ -2,7 +2,7 @@
 
 This guide covers moving an mcpkit-based server from direct `mcp-go` coupling toward the official `github.com/modelcontextprotocol/go-sdk` build path. mcpkit still defaults to `github.com/mark3labs/mcp-go`; the `official_sdk` build tag is a migration lane that lets tool modules move first while SDK-specific server edges move later.
 
-For the current v2 readiness check, see [go-sdk v2.0 Compatibility Assessment](sdk-v2-compat-assessment.md). As of 2026-05-10, upstream has no `v2.*` module tag and mcpkit remains pinned to `github.com/modelcontextprotocol/go-sdk v1.6.0`.
+For the historical v2 readiness check, see [go-sdk v2.0 Compatibility Assessment](sdk-v2-compat-assessment.md). mcpkit is pinned to `github.com/modelcontextprotocol/go-sdk v1.7.0`, whose 2026-07-28 protocol path adds stateless `server/discover` negotiation and request-routing headers.
 
 ## Consumer pin status (2026-05-10, post-v0.6.0)
 
@@ -21,24 +21,27 @@ No fleet consumer is on the dual-SDK build tag (`-tags official_sdk`) by default
 
 ## Current Support
 
-Use these commands before and after every migration slice:
+Use these authoritative local gates before and after every migration slice.
+GitHub Actions is deprecated and is not a substitute for these checks:
 
 ```bash
-go test ./registry ./handler ./mcptest ./feedback -count=1
+make check
 make build-official
 make test-official
+# or run the combined gate:
+make check-dual
 ```
 
 `make build-official` currently compiles the supported official-SDK package set:
 
 ```text
-./registry ./handler ./mcptest ./transport ./session ./gateway ./health ./sampling ./resources ./prompts ./feedback
+./registry ./handler ./mcptest ./transport ./session ./health ./sampling ./resources ./prompts ./feedback ./testing/conformance ./middleware/correlation ./middleware/gate ./observability ./discovery ./sanitize ./resilience ./gateway ./a2a ./bridge/a2a
 ```
 
 `make test-official` intentionally runs a narrower test set where official-SDK fixtures are complete:
 
 ```text
-./registry ./handler ./mcptest ./transport ./session ./gateway ./health ./sampling ./feedback
+./registry ./handler ./mcptest ./transport ./session ./health ./sampling ./resources ./prompts ./feedback ./testing/conformance ./middleware/correlation ./middleware/gate ./observability ./discovery ./sanitize ./resilience ./gateway ./a2a ./bridge/a2a
 ```
 
 Do not change that test scope to `./...` until every package fixture is SDK-neutral.
@@ -148,7 +151,7 @@ Keep direct SDK imports in one of these places only:
 
    Keep the exported package API identical across both files. Tests should use the same pattern for SDK-specific request construction or schema literals.
 
-5. Add both build paths to CI:
+5. Add both build paths to the repository-local CI contract:
 
    ```bash
    make test
@@ -174,5 +177,5 @@ Keep direct SDK imports in one of these places only:
 - Argument reads use `registry.ExtractArguments` or `handler.Get*Param`; test fixtures and adapters use `registry.NewCallToolRequest` or `registry.SetCallToolArguments`.
 - Content creation uses `registry.MakeTextContent`, `registry.MakeTextResult`, or `handler.TextResult`.
 - Server registration uses `registry.NewMCPServer`, `registry.AddToolToServer`, and `registry.ServeStdio`.
-- CI runs the default SDK path and the official-SDK package set.
+- Local CI runs the default SDK path and the official-SDK package set.
 - Roadmap items that depend on latest upstream versions are verified separately before being marked complete.

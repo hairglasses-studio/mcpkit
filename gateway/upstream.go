@@ -1,5 +1,3 @@
-//go:build !official_sdk
-
 package gateway
 
 import (
@@ -10,9 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/mark3labs/mcp-go/client"
-	"github.com/mark3labs/mcp-go/client/transport"
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/hairglasses-studio/mcpkit/registry"
 )
 
 // UpstreamConfig configures an upstream MCP server connection.
@@ -63,14 +59,23 @@ type UpstreamInfo struct {
 	CircuitState string // empty when no circuit breaker is configured
 }
 
+// upstreamClient is the SDK-neutral request surface used by Gateway and
+// Federation. The transport and handshake live in build-specific files.
+type upstreamClient interface {
+	listTools(context.Context) ([]registry.Tool, error)
+	callTool(context.Context, string, map[string]any) (*registry.CallToolResult, error)
+	ping(context.Context) error
+	close() error
+}
+
 // upstream manages a connection to a single upstream MCP server.
 type upstream struct {
 	config     UpstreamConfig
-	client     *client.Client
+	client     upstreamClient
 	resilience *upstreamResilience
 
 	mu    sync.RWMutex
-	tools []mcp.Tool
+	tools []registry.Tool
 
 	healthy      atomic.Bool
 	failCount    atomic.Int32
@@ -79,42 +84,24 @@ type upstream struct {
 
 // connect establishes a client connection to the upstream server.
 func (u *upstream) connect(ctx context.Context) error {
-	tp, err := transport.NewStreamableHTTP(u.config.URL)
+	c, err := newUpstreamClient(ctx, u.config.URL, "mcpkit-gateway", "")
 	if err != nil {
 		return err
 	}
-	c := client.NewClient(tp)
-	if err := c.Start(ctx); err != nil {
-		return err
-	}
-
-	initReq := mcp.InitializeRequest{}
-	initReq.Params.ProtocolVersion = mcp.LATEST_PROTOCOL_VERSION
-	initReq.Params.ClientInfo = mcp.Implementation{
-		Name:    "mcpkit-gateway",
-		Version: "1.0.0",
-	}
-	initReq.Params.Capabilities = mcp.ClientCapabilities{}
-
-	if _, err := c.Initialize(ctx, initReq); err != nil {
-		c.Close()
-		return err
-	}
-
 	u.client = c
 	u.healthy.Store(true)
 	return nil
 }
 
 // syncTools fetches the current tool list from the upstream.
-func (u *upstream) syncTools(ctx context.Context) ([]mcp.Tool, error) {
-	result, err := u.client.ListTools(ctx, mcp.ListToolsRequest{})
+func (u *upstream) syncTools(ctx context.Context) ([]registry.Tool, error) {
+	tools, err := u.client.listTools(ctx)
 	if err != nil {
 		return nil, err
 	}
 	u.mu.Lock()
-	filtered := make([]mcp.Tool, 0, len(result.Tools))
-	for _, tool := range result.Tools {
+	filtered := make([]registry.Tool, 0, len(tools))
+	for _, tool := range tools {
 		if u.config.allowsTool(tool.Name) {
 			filtered = append(filtered, tool)
 		}
@@ -138,7 +125,7 @@ func (u *upstream) startHealthLoop(ctx context.Context, onHealthChange func(name
 				return
 			case <-ticker.C:
 				pingCtx, pingCancel := context.WithTimeout(ctx, 10*time.Second)
-				err := u.client.Ping(pingCtx)
+				err := u.client.ping(pingCtx)
 				pingCancel()
 				if err != nil {
 					count := u.failCount.Add(1)
@@ -170,7 +157,7 @@ func (u *upstream) close() error {
 		u.cancelHealth()
 	}
 	if u.client != nil {
-		return u.client.Close()
+		return u.client.close()
 	}
 	return nil
 }

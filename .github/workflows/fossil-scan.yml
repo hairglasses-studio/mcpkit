@@ -1,8 +1,9 @@
+# DEPRECATED: Manual diagnostics only. Authoritative gates run locally with
+# `GOWORK=off make ci` and `GOWORK=off make check-dual`.
+
 name: Fossil scan (informational)
 
 on:
-  pull_request:
-    branches: [main]
   workflow_dispatch:
 
 jobs:

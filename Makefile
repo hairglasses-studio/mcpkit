@@ -1,14 +1,11 @@
 .PHONY: build test vet lint check build-official test-official check-dual bench bench-guard rdloop-build rdloop-dry rdloop rdloop-12h rdloop-status skill-surface skill-surface-check smoke-matrix
 
-# NOTE: `gateway` is deliberately absent from both lists below. Every
-# substantive file in the package is `!official_sdk`-only (gateway.go,
-# upstream.go, dynamic.go, resilience.go, federation.go, session_affinity.go,
-# observability.go, affinity.go + their _test.go pairs) with no official_sdk
-# counterpart — under -tags official_sdk the package compiles to just doc.go
-# + errors.go and `go test` reports `[no test files]`. Listing it here was a
-# false-green: green build/test output for zero ported functionality and
-# zero tests (found 2026-08-07, P52.6). Re-add only once gateway actually has
-# an official_sdk implementation.
+# These lists are the authoritative local dual-SDK gates. Packages belong here
+# only when their official_sdk build compiles real functionality and the test
+# list additionally requires meaningful official-path coverage. `gateway` was
+# re-added after its SDK-neutral core, v1.7.0 upstream client, and real HTTP
+# discovery/routing/fallback tests landed; it is no longer a doc.go-only
+# false-green.
 OFFICIAL_SDK_BUILD_PACKAGES := \
 	./registry \
 	./handler \
@@ -27,6 +24,7 @@ OFFICIAL_SDK_BUILD_PACKAGES := \
 	./discovery \
 	./sanitize \
 	./resilience \
+	./gateway \
 	./a2a \
 	./bridge/a2a
 
@@ -110,6 +108,7 @@ OFFICIAL_SDK_TEST_PACKAGES := \
 	./discovery \
 	./sanitize \
 	./resilience \
+	./gateway \
 	./a2a \
 	./bridge/a2a
 
