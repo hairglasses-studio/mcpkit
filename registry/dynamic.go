@@ -110,6 +110,23 @@ func (r *ToolRegistry) FilteredTools(filter ToolFilter) []ToolDefinition {
 
 // RegisterFilteredWithServer registers only tools passing the filter with an MCP server.
 func (r *ToolRegistry) RegisterFilteredWithServer(s *MCPServer, filter ToolFilter) {
+	r.RegisterFilteredWithServerTransform(s, filter, nil)
+}
+
+// DescriptorTransform rewrites a tool's published descriptor immediately
+// before server registration (e.g. schema compression for deferred-domain
+// activation payloads). It receives the fully annotated definition (after
+// ApplyToolMetadata) and must preserve the tool name; only the returned
+// definition's Tool descriptor is published. Handlers are untouched: calls
+// always dispatch through the registry's own middleware-wrapped handler for
+// the original definition.
+type DescriptorTransform func(td ToolDefinition) ToolDefinition
+
+// RegisterFilteredWithServerTransform is RegisterFilteredWithServer with an
+// optional descriptor transform applied after metadata annotation and before
+// server registration. A nil transform behaves identically to
+// RegisterFilteredWithServer.
+func (r *ToolRegistry) RegisterFilteredWithServerTransform(s *MCPServer, filter ToolFilter, transform DescriptorTransform) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -118,6 +135,9 @@ func (r *ToolRegistry) RegisterFilteredWithServer(s *MCPServer, filter ToolFilte
 			continue
 		}
 		annotated := ApplyToolMetadata(tool, r.config.ToolNamePrefix, r.deferred[tool.Tool.Name])
+		if transform != nil {
+			annotated = transform(annotated)
+		}
 		wrapped := r.wrapHandler(tool.Tool.Name, tool)
 		AddToolToServer(s, annotated.Tool, wrapped)
 	}

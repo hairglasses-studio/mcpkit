@@ -423,6 +423,58 @@ func TestRegisterFilteredWithServer_WithOutputSchema(t *testing.T) {
 	r.RegisterFilteredWithServer(s, func(_ ToolDefinition) bool { return true })
 }
 
+func TestRegisterFilteredWithServerTransform(t *testing.T) {
+	r := NewToolRegistry(Config{ToolNamePrefix: "pfx_"})
+
+	r.RegisterModule(&testModule{
+		name: "test",
+		tools: []ToolDefinition{
+			{
+				Tool:     Tool{Name: "cat_a_tool", Description: "catA tool", InputSchema: objectInputSchema()},
+				Handler:  func(_ context.Context, _ CallToolRequest) (*CallToolResult, error) { return MakeTextResult("ok"), nil },
+				Category: "catA",
+			},
+			{
+				Tool:     Tool{Name: "cat_b_tool", Description: "catB tool", InputSchema: objectInputSchema()},
+				Handler:  func(_ context.Context, _ CallToolRequest) (*CallToolResult, error) { return MakeTextResult("ok"), nil },
+				Category: "catB",
+			},
+		},
+	})
+
+	s := NewMCPServer("test", "0.0.0")
+	var seen []string
+	var sawAnnotatedTitle bool
+	r.RegisterFilteredWithServerTransform(s, ByCategory("catA"), func(td ToolDefinition) ToolDefinition {
+		seen = append(seen, td.Tool.Name)
+		sawAnnotatedTitle = td.Tool.Annotations.Title != ""
+		td.Tool.Description = "compressed"
+		return td
+	})
+
+	// The transform must run once, only for the filtered tool, and after
+	// metadata annotation (ApplyToolMetadata has already set the title).
+	if len(seen) != 1 || seen[0] != "cat_a_tool" {
+		t.Fatalf("transform saw %v, want exactly [cat_a_tool]", seen)
+	}
+	if !sawAnnotatedTitle {
+		t.Fatal("transform ran before ApplyToolMetadata (annotations title unset)")
+	}
+
+	// The registry's stored definition (the discovery source of truth) must
+	// remain untouched: only the published server descriptor changes.
+	stored, ok := r.GetTool("cat_a_tool")
+	if !ok {
+		t.Fatal("cat_a_tool missing from registry after transform registration")
+	}
+	if stored.Tool.Description != "catA tool" {
+		t.Fatalf("registry definition mutated by transform: %q", stored.Tool.Description)
+	}
+
+	// Nil transform must be accepted and behave like RegisterFilteredWithServer.
+	r.RegisterFilteredWithServerTransform(s, ByCategory("catB"), nil)
+}
+
 func TestNotDeferred_Filter(t *testing.T) {
 	deferred := map[string]bool{
 		"tool_lazy": true,
