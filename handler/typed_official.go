@@ -36,7 +36,7 @@ func TypedHandler[In any, Out any](name, description string, fn TypedHandlerFunc
 	}
 
 	// Build the Tool with InputSchema as a map (the official SDK uses `any` for InputSchema)
-	inputSchema := generateSchemaMap[In]()
+	inputSchema := reflectSchemaMap[In]()
 
 	// OutputSchema, same map shape as InputSchema (the official SDK uses `any`
 	// for both). This was previously never populated on this build — every
@@ -46,7 +46,7 @@ func TypedHandler[In any, Out any](name, description string, fn TypedHandlerFunc
 	// portable) copies *td.OutputSchema into td.Tool.OutputSchema at
 	// registration time on both tags, so setting it here is sufficient — no
 	// other wiring needed.
-	var outputSchema registry.ToolOutputSchema = generateSchemaMap[Out]()
+	var outputSchema registry.ToolOutputSchema = reflectSchemaMap[Out]()
 
 	td := registry.ToolDefinition{
 		Tool: mcp.Tool{
@@ -61,46 +61,12 @@ func TypedHandler[In any, Out any](name, description string, fn TypedHandlerFunc
 	return td
 }
 
-// generateSchemaMap generates a JSON Schema map from a Go struct type.
-// This produces a map[string]any that the official SDK accepts as InputSchema.
-func generateSchemaMap[T any]() map[string]any {
-	// Use JSON marshaling of a zero value to introspect the struct
-	var zero T
-	data, err := json.Marshal(zero)
-	if err != nil {
-		return map[string]any{"type": "object"}
-	}
-
-	// Parse the zero value to discover field names
-	var fields map[string]any
-	if err := json.Unmarshal(data, &fields); err != nil {
-		return map[string]any{"type": "object"}
-	}
-
-	properties := make(map[string]any, len(fields))
-	for key, val := range fields {
-		properties[key] = inferFieldSchema(val)
-	}
-
-	return map[string]any{
-		"type":       "object",
-		"properties": properties,
-	}
-}
-
-func inferFieldSchema(val any) map[string]any {
-	switch val.(type) {
-	case string:
-		return map[string]any{"type": "string"}
-	case float64:
-		return map[string]any{"type": "number"}
-	case bool:
-		return map[string]any{"type": "boolean"}
-	case []any:
-		return map[string]any{"type": "array"}
-	case map[string]any:
-		return map[string]any{"type": "object"}
-	default:
-		return map[string]any{"type": "string"}
-	}
-}
+// NOTE (P78.38, 2026-08-16): generateSchemaMap/inferFieldSchema used to live
+// here, deriving the schema by marshaling a ZERO VALUE of the type and
+// enumerating the resulting JSON keys. That silently dropped every
+// `json:",omitempty"` field -- which is most of them -- along with all
+// descriptions, enums, defaults and required-ness, and mistyped anything
+// that marshaled to null. Both schemas now come from schema_reflect.go's
+// reflectSchemaMap, the same reflection typed.go (mcp-go) uses, so the two
+// builds cannot drift apart again. See schema_reflect.go's header for the
+// measured before/after.

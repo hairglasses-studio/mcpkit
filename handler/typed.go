@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/invopop/jsonschema"
 	"github.com/mark3labs/mcp-go/mcp"
 
 	"github.com/hairglasses-studio/mcpkit/registry"
@@ -79,22 +78,11 @@ func TypedHandler[In any, Out any](name, description string, fn TypedHandlerFunc
 }
 
 // generateInputSchema generates a ToolArgumentsSchema from a Go struct type.
+// The reflection itself lives in schema_reflect.go (untagged) so the
+// official_sdk build derives properties from the exact same code -- see that
+// file's header for the P78.38 divergence this sharing exists to prevent.
 func generateInputSchema[T any]() mcp.ToolArgumentsSchema {
-	r := jsonschema.Reflector{DoNotReference: true}
-	schema := r.Reflect(new(T))
-
-	props := make(map[string]any)
-	if schema.Properties != nil {
-		for pair := schema.Properties.Oldest(); pair != nil; pair = pair.Next() {
-			props[pair.Key] = schemaToMap(pair.Value)
-		}
-	}
-
-	var required []string
-	if len(schema.Required) > 0 {
-		required = schema.Required
-	}
-
+	props, required := reflectSchemaProperties[T]()
 	return mcp.ToolArgumentsSchema{
 		Type:       "object",
 		Properties: props,
@@ -102,67 +90,13 @@ func generateInputSchema[T any]() mcp.ToolArgumentsSchema {
 	}
 }
 
-// generateOutputSchema generates a ToolOutputSchema from a Go struct type.
+// generateOutputSchema generates a ToolOutputSchema from a Go struct type,
+// from the same shared reflection as generateInputSchema.
 func generateOutputSchema[T any]() *mcp.ToolOutputSchema {
-	r := jsonschema.Reflector{DoNotReference: true}
-	schema := r.Reflect(new(T))
-
-	props := make(map[string]any)
-	if schema.Properties != nil {
-		for pair := schema.Properties.Oldest(); pair != nil; pair = pair.Next() {
-			props[pair.Key] = schemaToMap(pair.Value)
-		}
-	}
-
-	var required []string
-	if len(schema.Required) > 0 {
-		required = schema.Required
-	}
-
-	out := &mcp.ToolOutputSchema{
+	props, required := reflectSchemaProperties[T]()
+	return &mcp.ToolOutputSchema{
 		Type:       "object",
 		Properties: props,
 		Required:   required,
 	}
-	return out
-}
-
-// schemaToMap converts a jsonschema.Schema to a map for use in mcp schemas.
-func schemaToMap(s *jsonschema.Schema) map[string]any {
-	m := make(map[string]any)
-
-	if s.Type != "" {
-		m["type"] = s.Type
-	}
-	if s.Description != "" {
-		m["description"] = s.Description
-	}
-	if s.Format != "" {
-		m["format"] = s.Format
-	}
-	if len(s.Enum) > 0 {
-		m["enum"] = s.Enum
-	}
-	if s.Default != nil {
-		m["default"] = s.Default
-	}
-
-	// Handle array items
-	if s.Items != nil && s.Items.Type != "" {
-		m["items"] = schemaToMap(s.Items)
-	}
-
-	// Handle nested object properties
-	if s.Properties != nil && s.Properties.Len() > 0 {
-		props := make(map[string]any)
-		for pair := s.Properties.Oldest(); pair != nil; pair = pair.Next() {
-			props[pair.Key] = schemaToMap(pair.Value)
-		}
-		m["properties"] = props
-		if len(s.Required) > 0 {
-			m["required"] = s.Required
-		}
-	}
-
-	return m
 }
