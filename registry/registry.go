@@ -2,6 +2,7 @@ package registry
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"runtime/debug"
@@ -431,17 +432,97 @@ func (r *ToolRegistry) wrapHandler(toolName string, td ToolDefinition) ToolHandl
 	}
 }
 
-// truncateResponse truncates text content exceeding maxSize.
+// truncateResponse bounds a tool result to maxSize across the WHOLE result —
+// every text content block plus structuredContent — not per field.
+//
+// It used to be per-field, and that was a correctness defect rather than a
+// tuning choice (secretstudios-mcp notes/tool-result-size-audit-2026-08-23.md
+// §4.2). Results built by handler.StructuredResult carry the same data twice:
+// indented in content[0].text and again as structuredContent. The old loop
+// clipped the text half, appended "[TRUNCATED: response exceeded NKB limit]"
+// to it, and shipped the complete structuredContent alongside untouched — so
+// the caller was told the response had been truncated while the full payload
+// sat in the same result, and the server emitted ~2.7x its own ceiling.
+// Measured live on secretstudios_tool_catalog: 353,127 bytes against a
+// 131,072-byte cap (text clipped at the cap and marked, structuredContent
+// complete with all 369 tools). The same loop also gave every text block its
+// own independent maxSize, so N blocks shipped N*maxSize with no marker.
+//
+// Enforcement order when a result is over budget:
+//
+//  1. structuredContent is dropped. It cannot be "truncated" — it is an
+//     arbitrary value that must stay valid JSON (and, when the tool declares
+//     an outputSchema, conform to it), so a partial one is not a thing that
+//     can exist. Dropping it is spec-safe: structuredContent is optional on
+//     the wire, and both SDKs leave result validation to the caller on the
+//     untyped AddTool path this registry uses.
+//  2. The remaining text blocks share a single maxSize budget, and the block
+//     that gets cut carries the marker — the pre-existing behaviour for
+//     text-only tools, unchanged.
+//  3. If nothing needed cutting but structuredContent was dropped, a notice
+//     block is appended rather than editing an existing block, so a text
+//     block that is valid JSON stays parseable.
+//
+// Dropping the structured half rather than the text half is deliberate: the
+// text block is the representation every client can read (clients that prefer
+// structuredContent fall back to it when absent), so it is the half that must
+// survive.
 func truncateResponse(result *CallToolResult, maxSize int) *CallToolResult {
 	if result == nil || maxSize <= 0 {
 		return result
 	}
-	for i, content := range result.Content {
+
+	textBytes := 0
+	for _, content := range result.Content {
 		if text, ok := ExtractTextContent(content); ok {
-			if len(text) > maxSize {
-				result.Content[i] = MakeTextContent(text[:maxSize] + fmt.Sprintf("\n\n[TRUNCATED: response exceeded %dKB limit]", maxSize/1024))
-			}
+			textBytes += len(text)
 		}
 	}
+
+	// Only measure structuredContent when the text half has not already blown
+	// the budget on its own — the marshal is O(payload) and pointless once we
+	// know the answer.
+	structBytes := 0
+	if result.StructuredContent != nil && textBytes <= maxSize {
+		if encoded, err := json.Marshal(result.StructuredContent); err == nil {
+			structBytes = len(encoded)
+		}
+	}
+	if textBytes+structBytes <= maxSize {
+		return result
+	}
+
+	droppedStructured := result.StructuredContent != nil
+	result.StructuredContent = nil
+
+	limit := fmt.Sprintf("%dKB", maxSize/1024)
+	suffix := "]"
+	if droppedStructured {
+		suffix = "; structuredContent omitted for the same reason — narrow the request (limit/offset/filters) for a complete result]"
+	}
+
+	remaining := maxSize
+	cut := false
+	for i, content := range result.Content {
+		text, ok := ExtractTextContent(content)
+		if !ok {
+			continue
+		}
+		if len(text) <= remaining {
+			remaining -= len(text)
+			continue
+		}
+		result.Content[i] = MakeTextContent(text[:remaining] +
+			fmt.Sprintf("\n\n[TRUNCATED: response exceeded %s limit%s", limit, suffix))
+		remaining = 0
+		cut = true
+	}
+
+	if !cut && droppedStructured {
+		result.Content = append(result.Content, MakeTextContent(
+			fmt.Sprintf("[TRUNCATED: response exceeded %s limit; structuredContent (%d bytes) omitted — narrow the request (limit/offset/filters) for a complete result]",
+				limit, structBytes)))
+	}
+
 	return result
 }
