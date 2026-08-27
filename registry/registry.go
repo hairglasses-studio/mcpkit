@@ -377,6 +377,29 @@ func (r *ToolRegistry) RegisterWithServer(s *MCPServer) {
 // and any configured middleware chain.
 func (r *ToolRegistry) wrapHandler(toolName string, td ToolDefinition) ToolHandlerFunc {
 	handler := td.Handler
+	maxSize := effectiveMaxResponseSize(td, r.config.MaxResponseSize)
+	policy := truncationPolicyFor(toolName, td)
+
+	// Truncation runs INNERMOST — closer to the handler than any configured
+	// middleware — so that every middleware observes the result the client
+	// will actually receive rather than the one the handler produced.
+	//
+	// It used to run only in the outer wrapper below, after the whole
+	// middleware chain, and that made an over-ceiling result invisible to
+	// observability: a consumer's telemetry middleware saw the handler's
+	// intact result and recorded outcome=ok, while the client was handed a
+	// mutilated one it then rejected. Measured live on secretstudios-mcp
+	// 2026-08-27: two device_inventory_snapshot calls were fatally rejected
+	// by Claude Code and BOTH were written to the invocation ledger as
+	// outcome=ok, so nothing in the estate could see the failure.
+	//
+	// The outer call is kept as a pure size backstop, for the case where a
+	// result-rewriting middleware (redaction, error compaction) grows the
+	// result back over the cap on the way out. truncateResponse is
+	// idempotent — it budgets for its own marker so a bounded result stays
+	// bounded — so the second pass is a no-op on anything the first pass
+	// already handled.
+	handler = truncationHandler(handler, maxSize, policy)
 
 	// Apply user-configured middleware (innermost applied first, so iterate in reverse)
 	for i := len(r.config.Middleware) - 1; i >= 0; i-- {
@@ -387,7 +410,6 @@ func (r *ToolRegistry) wrapHandler(toolName string, td ToolDefinition) ToolHandl
 	if timeout == 0 {
 		timeout = r.config.DefaultTimeout
 	}
-	maxSize := effectiveMaxResponseSize(td, r.config.MaxResponseSize)
 
 	return func(ctx context.Context, request CallToolRequest) (result *CallToolResult, err error) {
 		// Enforce timeout
@@ -411,8 +433,8 @@ func (r *ToolRegistry) wrapHandler(toolName string, td ToolDefinition) ToolHandl
 
 		result, err = handler(ctx, request)
 
-		// Truncate oversized responses
-		result = truncateResponse(result, maxSize)
+		// Size backstop only; the semantic pass ran innermost (see above).
+		result = truncateResponse(result, maxSize, policy)
 
 		// Log errors
 		if err != nil {
@@ -432,6 +454,150 @@ func (r *ToolRegistry) wrapHandler(toolName string, td ToolDefinition) ToolHandl
 	}
 }
 
+// TruncationMarker is the prefix mcpkit stamps into the text block it clips
+// when a result is over the response cap. Exported so a consumer can detect a
+// degraded result programmatically instead of string-matching a literal that
+// might change; see IsTruncatedResult.
+const TruncationMarker = "[TRUNCATED:"
+
+// ResultTooLargeCode is the error code that prefixes the error result
+// returned when an over-cap result CANNOT be degraded — see truncateResponse.
+// It follows the "[CODE] message" shape wrapHandler's error logging already
+// parses, so an over-cap refusal shows up as error_code=RESULT_TOO_LARGE.
+const ResultTooLargeCode = "[RESULT_TOO_LARGE]"
+
+// maxListedParams bounds how many parameter names the over-cap message names,
+// so the guidance can never itself become a large payload.
+const maxListedParams = 16
+
+// narrowingParamHints are substrings that identify a request parameter as one
+// a caller can use to make the response smaller. Matched case-insensitively
+// against the tool's OWN declared input properties — the message never names a
+// parameter the tool does not accept, which is the whole point of deriving
+// this per tool rather than hardcoding "limit/offset/filters" everywhere.
+var narrowingParamHints = []string{
+	"limit", "offset", "page", "cursor", "max", "top_n", "count",
+	"since", "until", "filter", "fields", "scope", "detail", "brief",
+}
+
+// truncationPolicy carries the per-tool facts the truncation path needs and
+// cannot re-derive from a bare *CallToolResult: which tool this is, whether it
+// declares an outputSchema (which decides whether an over-cap result can be
+// degraded at all), and the parameter names a caller could narrow with.
+type truncationPolicy struct {
+	toolName string
+	// declaresOutputSchema is true when the tool advertises an outputSchema
+	// on the wire. That advertisement changes an over-cap result from a
+	// degradation into a fatal one: a schema-validating client rejects a
+	// success-shaped result with no structuredContent outright.
+	declaresOutputSchema bool
+	// paramNames are the tool's declared input properties, sorted.
+	paramNames []string
+}
+
+// truncationPolicyFor reads the policy off a tool definition. Both SDK shapes
+// are covered: ToolDefinition.OutputSchema is the pre-ApplyToolMetadata field,
+// and Tool.OutputSchema is where ApplyToolMetadata copies it — wrapHandler is
+// handed the raw definition, so either may be the populated one.
+func truncationPolicyFor(toolName string, td ToolDefinition) truncationPolicy {
+	policy := truncationPolicy{toolName: toolName}
+
+	if td.OutputSchema != nil {
+		policy.declaresOutputSchema = true
+	}
+	if _, ok := OutputSchemaType(td.Tool); ok {
+		policy.declaresOutputSchema = true
+	}
+	if _, ok := OutputSchemaProperties(td.Tool); ok {
+		policy.declaresOutputSchema = true
+	}
+
+	if props, ok := InputSchemaProperties(td.Tool.InputSchema); ok {
+		names := make([]string, 0, len(props))
+		for name := range props {
+			names = append(names, name)
+		}
+		sort.Strings(names)
+		policy.paramNames = names
+	}
+	return policy
+}
+
+// narrowingParams returns the subset of this tool's own parameters that look
+// like they can shrink a response. Empty when the tool declares none.
+func (p truncationPolicy) narrowingParams() []string {
+	var out []string
+	for _, name := range p.paramNames {
+		lower := strings.ToLower(name)
+		for _, hint := range narrowingParamHints {
+			if strings.Contains(lower, hint) {
+				out = append(out, name)
+				break
+			}
+		}
+	}
+	return out
+}
+
+// narrowingHint is the short parenthetical used inside the degraded-result
+// marker. It names the tool's real parameters when it has narrowing ones and
+// falls back to the generic wording only when it does not.
+func (p truncationPolicy) narrowingHint() string {
+	if names := p.narrowingParams(); len(names) > 0 {
+		return strings.Join(capNames(names, 6), "/")
+	}
+	return "limit/offset/filters"
+}
+
+// capNames bounds a name list, reporting the overflow rather than hiding it.
+func capNames(names []string, limit int) []string {
+	if limit <= 0 || len(names) <= limit {
+		return names
+	}
+	out := make([]string, 0, limit+1)
+	out = append(out, names[:limit]...)
+	return append(out, fmt.Sprintf("(+%d more)", len(names)-limit))
+}
+
+// IsTruncatedResult reports whether a result carries mcpkit's truncation
+// marker — i.e. it is a degraded, partial result rather than a complete one.
+func IsTruncatedResult(result *CallToolResult) bool {
+	if result == nil {
+		return false
+	}
+	for _, content := range result.Content {
+		if text, ok := ExtractTextContent(content); ok && strings.Contains(text, TruncationMarker) {
+			return true
+		}
+	}
+	return false
+}
+
+// IsResultTooLargeError reports whether a result is the error mcpkit returns
+// when an over-cap result could not be degraded without breaking the tool's
+// declared outputSchema.
+func IsResultTooLargeError(result *CallToolResult) bool {
+	if result == nil || !IsResultError(result) {
+		return false
+	}
+	for _, content := range result.Content {
+		if text, ok := ExtractTextContent(content); ok && strings.HasPrefix(text, ResultTooLargeCode) {
+			return true
+		}
+	}
+	return false
+}
+
+// truncationHandler wraps a handler so its result is bounded before any
+// configured middleware observes it. See wrapHandler for why the ordering
+// matters.
+func truncationHandler(next ToolHandlerFunc, maxSize int, policy truncationPolicy) ToolHandlerFunc {
+	return func(ctx context.Context, request CallToolRequest) (*CallToolResult, error) {
+		result, err := next(ctx, request)
+		return truncateResponse(result, maxSize, policy), err
+	}
+}
+
 // truncateResponse bounds a tool result to maxSize across the WHOLE result —
 // every text content block plus structuredContent — not per field.
 //
@@ -448,26 +614,64 @@ func (r *ToolRegistry) wrapHandler(toolName string, td ToolDefinition) ToolHandl
 // complete with all 369 tools). The same loop also gave every text block its
 // own independent maxSize, so N blocks shipped N*maxSize with no marker.
 //
+// # Why dropping structuredContent is not always a legal degradation
+//
+// The first fix for the above dropped structuredContent unconditionally and
+// clipped the text half. For a tool that declares NO outputSchema that is a
+// real degradation and remains the behaviour here. For a tool that DOES
+// declare one it is not a degradation at all, it is a fatal result: a
+// schema-validating client rejects a success-shaped result carrying no
+// structuredContent outright. Claude Code 2.1.247 does exactly this — its
+// bundled client throws
+//
+//	Tool <name> has an output schema but did not return structured content
+//
+// on `!structuredContent && !isError`, and separately validates any
+// structuredContent that IS present against the schema even on an error
+// result. Two consequences follow, and both shape the code below:
+//
+//   - A degraded success is worse than useless for such a tool: the caller
+//     sees a schema complaint, not a size problem. Measured live on
+//     secretstudios-mcp 2026-08-27: two device_inventory_snapshot calls died
+//     this way, and the agent then spent 11 further tool calls and 3 tool
+//     searches before falling back to raw shell.
+//   - Synthesising a placeholder structuredContent is not available either.
+//     This layer registers tools untyped and does not know the schema's
+//     shape, and anything it invented would be validated against that schema
+//     — failing validation in the good case and, in the bad case, PASSING as
+//     a plausible-looking empty payload that reads as "no results" rather
+//     than "too large". Fabricating a success is the one outcome worse than
+//     an error.
+//
+// So an over-cap result from a schema-declaring tool becomes a real MCP error
+// result. The client surfaces an error result's text (that is the only
+// channel an error has), the tool's actual parameter names are named in it,
+// and every observer — audit middleware, telemetry, the wrapHandler error log
+// — sees a non-ok outcome instead of a silent success.
+//
 // Enforcement order when a result is over budget:
 //
-//  1. structuredContent is dropped. It cannot be "truncated" — it is an
-//     arbitrary value that must stay valid JSON (and, when the tool declares
-//     an outputSchema, conform to it), so a partial one is not a thing that
-//     can exist. Dropping it is spec-safe: structuredContent is optional on
-//     the wire, and both SDKs leave result validation to the caller on the
-//     untyped AddTool path this registry uses.
-//  2. The remaining text blocks share a single maxSize budget, and the block
-//     that gets cut carries the marker — the pre-existing behaviour for
-//     text-only tools, unchanged.
-//  3. If nothing needed cutting but structuredContent was dropped, a notice
+//  1. If the tool declares an outputSchema AND the handler produced
+//     structuredContent, return ResultTooLargeCode as an error result naming
+//     the sizes and the tool's own narrowing parameters. Nothing is degraded.
+//  2. Otherwise structuredContent is dropped. It cannot be "truncated" — it
+//     is an arbitrary value that must stay valid JSON, so a partial one is
+//     not a thing that can exist. Dropping it is spec-safe here precisely
+//     because case 1 already removed the schema-declaring tools.
+//  3. The remaining text blocks share a single budget — maxSize minus room
+//     reserved for the marker, so the bounded result lands AT or under the
+//     cap and a second pass over it is a no-op. The first block that
+//     overflows carries the marker; any block after it is emptied rather
+//     than given a marker of its own.
+//  4. If nothing needed cutting but structuredContent was dropped, a notice
 //     block is appended rather than editing an existing block, so a text
 //     block that is valid JSON stays parseable.
 //
-// Dropping the structured half rather than the text half is deliberate: the
-// text block is the representation every client can read (clients that prefer
-// structuredContent fall back to it when absent), so it is the half that must
-// survive.
-func truncateResponse(result *CallToolResult, maxSize int) *CallToolResult {
+// Dropping the structured half rather than the text half in case 2 is
+// deliberate: the text block is the representation every client can read
+// (clients that prefer structuredContent fall back to it when absent), so it
+// is the half that must survive.
+func truncateResponse(result *CallToolResult, maxSize int, policy truncationPolicy) *CallToolResult {
 	if result == nil || maxSize <= 0 {
 		return result
 	}
@@ -492,37 +696,131 @@ func truncateResponse(result *CallToolResult, maxSize int) *CallToolResult {
 		return result
 	}
 
+	// Case 1: not degradable. Refuse, loudly and with actionable guidance.
+	if result.StructuredContent != nil && policy.declaresOutputSchema {
+		// The fast path above skips this marshal when the text half alone is
+		// already over budget. Here the number is quoted back to the caller,
+		// so pay for it rather than reporting a misleading zero.
+		if structBytes == 0 {
+			if encoded, err := json.Marshal(result.StructuredContent); err == nil {
+				structBytes = len(encoded)
+			}
+		}
+		slog.Warn("tool result over the response cap and not degradable",
+			"tool", policy.toolName,
+			"max_bytes", maxSize,
+			"text_bytes", textBytes,
+			"structured_bytes", structBytes,
+			"reason", "tool declares an outputSchema; a result without structuredContent is rejected by the client")
+		return MakeErrorResult(clampMessage(oversizeErrorMessage(policy, maxSize, textBytes, structBytes), maxSize))
+	}
+
 	droppedStructured := result.StructuredContent != nil
 	result.StructuredContent = nil
 
+	// Report a sub-kilobyte cap in bytes; "%dKB" renders a 100-byte cap as
+	// "0KB", which reads as "no limit at all".
 	limit := fmt.Sprintf("%dKB", maxSize/1024)
+	if maxSize < 1024 {
+		limit = fmt.Sprintf("%dB", maxSize)
+	}
 	suffix := "]"
 	if droppedStructured {
-		suffix = "; structuredContent omitted for the same reason — narrow the request (limit/offset/filters) for a complete result]"
+		suffix = fmt.Sprintf("; structuredContent omitted for the same reason — narrow the request (%s) for a complete result]", policy.narrowingHint())
+	}
+	cutMarker := fmt.Sprintf("\n\n%s response exceeded %s limit%s", TruncationMarker, limit, suffix)
+	noticeBlock := fmt.Sprintf("%s response exceeded %s limit; structuredContent (%d bytes) omitted — narrow the request (%s) for a complete result]",
+		TruncationMarker, limit, structBytes, policy.narrowingHint())
+
+	// Reserve room for whichever notice this pass will append, so the bounded
+	// result lands at or under maxSize. That reservation is what makes this
+	// function idempotent: the backstop pass in wrapHandler sees an already
+	// in-budget result and returns it untouched instead of clipping a second
+	// time and stacking a second marker. The notice block is only ever
+	// appended when structuredContent was dropped, so reserving room for it
+	// otherwise would throw away payload that fits — at a small cap that is
+	// most of the response.
+	reserve := len(cutMarker)
+	if droppedStructured && len(noticeBlock) > reserve {
+		reserve = len(noticeBlock)
+	}
+	remaining := maxSize - reserve
+	if remaining < 0 {
+		remaining = 0
 	}
 
-	remaining := maxSize
 	cut := false
 	for i, content := range result.Content {
 		text, ok := ExtractTextContent(content)
 		if !ok {
 			continue
 		}
+		if cut {
+			// Everything after the cut point is already past the budget.
+			// Empty it rather than stamping another marker on it — N markers
+			// on N blocks is how the pre-reservation version could still
+			// overshoot the cap it had just enforced.
+			if text != "" {
+				result.Content[i] = MakeTextContent("")
+			}
+			continue
+		}
 		if len(text) <= remaining {
 			remaining -= len(text)
 			continue
 		}
-		result.Content[i] = MakeTextContent(text[:remaining] +
-			fmt.Sprintf("\n\n[TRUNCATED: response exceeded %s limit%s", limit, suffix))
+		result.Content[i] = MakeTextContent(text[:remaining] + cutMarker)
 		remaining = 0
 		cut = true
 	}
 
 	if !cut && droppedStructured {
-		result.Content = append(result.Content, MakeTextContent(
-			fmt.Sprintf("[TRUNCATED: response exceeded %s limit; structuredContent (%d bytes) omitted — narrow the request (limit/offset/filters) for a complete result]",
-				limit, structBytes)))
+		result.Content = append(result.Content, MakeTextContent(noticeBlock))
 	}
 
+	slog.Warn("tool result truncated",
+		"tool", policy.toolName,
+		"max_bytes", maxSize,
+		"text_bytes", textBytes,
+		"structured_bytes", structBytes,
+		"dropped_structured_content", droppedStructured)
+
 	return result
+}
+
+// oversizeErrorMessage builds the guidance an agent actually needs: what the
+// cap was, how far over the result was, why nothing partial came back, and
+// which of THIS tool's parameters can shrink it.
+func oversizeErrorMessage(policy truncationPolicy, maxSize, textBytes, structBytes int) string {
+	name := policy.toolName
+	if name == "" {
+		name = "this tool"
+	}
+
+	var b strings.Builder
+	fmt.Fprintf(&b, "%s %s produced a %d-byte result (text %d + structuredContent %d), over its %d-byte response limit.\n\n",
+		ResultTooLargeCode, name, textBytes+structBytes, textBytes, structBytes, maxSize)
+	b.WriteString("No partial result was returned. This tool declares an outputSchema, and structuredContent cannot be clipped and still satisfy it — a truncated success-shaped result is rejected by schema-validating clients with \"has an output schema but did not return structured content\", which hides the real cause.\n\n")
+
+	if narrowing := policy.narrowingParams(); len(narrowing) > 0 {
+		fmt.Fprintf(&b, "Retry with a narrower request. Narrowing parameters this tool accepts: %s.\n",
+			strings.Join(capNames(narrowing, maxListedParams), ", "))
+	} else {
+		b.WriteString("Retry with a narrower request.\n")
+	}
+	if len(policy.paramNames) > 0 {
+		fmt.Fprintf(&b, "All parameters %s accepts: %s.\n",
+			name, strings.Join(capNames(policy.paramNames, maxListedParams), ", "))
+	}
+	return b.String()
+}
+
+// clampMessage keeps the guidance itself inside the cap it is explaining.
+// Cutting on a byte boundary can split a rune, so the tail is scrubbed back to
+// valid UTF-8 rather than shipped as a mojibake byte.
+func clampMessage(msg string, maxSize int) string {
+	if maxSize <= 0 || len(msg) <= maxSize {
+		return msg
+	}
+	return strings.ToValidUTF8(msg[:maxSize], "")
 }

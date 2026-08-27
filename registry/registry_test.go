@@ -3,6 +3,7 @@ package registry
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 )
 
@@ -309,8 +310,21 @@ func TestRegistryTruncation(t *testing.T) {
 	if !ok {
 		t.Fatal("first content is not TextContent")
 	}
-	if len(text) <= 100 {
-		t.Error("expected truncated response to be longer than max (includes suffix)")
+	// This used to assert len(text) > 100 — i.e. that the truncated response
+	// OVERSHOOTS the cap by the length of the appended marker. That overshoot
+	// was accidental, and it is now gone: truncateResponse reserves room for
+	// its own marker inside the budget, so a bounded result stays bounded when
+	// the backstop pass in wrapHandler runs over it a second time. Without the
+	// reservation that second pass clips an already-clipped result and stacks
+	// a second marker.
+	//
+	// The intent the old assertion was reaching for is preserved below: the
+	// response WAS cut, and it says so.
+	if !strings.Contains(text, TruncationMarker) {
+		t.Errorf("expected a truncated response to carry the %s marker; got %q", TruncationMarker, text)
+	}
+	if len(text) > 100 {
+		t.Errorf("truncated response is %d bytes against a 100-byte cap: the marker reservation did not hold", len(text))
 	}
 }
 
