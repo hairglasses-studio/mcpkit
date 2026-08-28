@@ -12,6 +12,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- **registry** — `SearchTools` now ranks on normalized tokens instead of raw substring scans: punctuation becomes separators, common stopwords are ignored, exact-name and exact-alias phrase matches outrank partial fallbacks, prefix matching is bounded by minimum length and token-length ratio, fuzzy matching is capped to short edit distances, and deterministic tie-breaking keeps identical-score results stable. This closes the false-positive `down`→`download` path while preserving typo recovery and partial natural-language queries; focused tests now pin Unicode tokenization, stopword handling, alias priority, bounded typo tolerance, partial-result floors, score ordering, and deterministic ties.
+
 ### Added
 
 - **fleetinventory — dependency vulnerability advisory** (from the SBOM/CI research): version-presence matching of each repo's go.mod pins against an offline snapshot of the Go vuln DB `index/modules.json` (`FetchVulnDBModules` refreshes it out-of-band; `ScanOptions.VulnDBPath` points at the cache; empty/absent → no-op). Parses go.mod via `golang.org/x/mod/modfile` (applying versioned `replace` overrides, dropping local-path replaces) and compares with `x/mod/semver`. Per-repo `RepoReport.VulnFindings` + a "Dependency vulnerabilities (advisory)" report section. Explicitly ADVISORY, not a scored penalty: version-presence over-flags vulnerable-but-unreachable transitive deps that a full govulncheck scores clean (govulncheck stays the precision lane); the value is the fleet-wide MAP no per-repo run gives. Live against the real DB: **87 findings** across the fleet (x/net GO-2026-4918 cluster, x/sys, x/text, otel, grpc), scan ~5.2s. Honest scope: mark3labs/mcp-go is not in the Go vuln DB, so its GitHub-advisory DNS-rebinding CVE is NOT asserted here; official go-sdk pins (all ≥v1.5.0) are checked and clean. New direct dep: `golang.org/x/mod` (pure Go).

@@ -227,7 +227,7 @@ func TestSearchTools_MultiWordQuery(t *testing.T) {
 		},
 	})
 
-	// Both words must match — "github" and "list" should match github_list_issues
+	// The result that matches both words should outrank partial fallbacks.
 	results := r.SearchTools("github list")
 	if len(results) == 0 {
 		t.Fatal("expected results for multi-word query 'github list'")
@@ -244,12 +244,9 @@ func TestSearchTools_MultiWordQuery(t *testing.T) {
 	}
 }
 
-func TestSearchTools_IDFScoring(t *testing.T) {
-	// Tools with a term shared by many tools should score lower for that term
-	// than tools with a rare term. We test that the rare-term tool ranks higher.
+func TestSearchTools_UniqueDescriptionTerm(t *testing.T) {
 	r := NewToolRegistry()
 
-	// "tool" appears in all names — should reduce its IDF weight
 	tools := []ToolDefinition{
 		makeSearchTool("tool_alpha", "Common operation description", "cat", nil),
 		makeSearchTool("tool_beta", "Common operation description", "cat", nil),
@@ -468,5 +465,213 @@ func TestSearchTools_RuntimeGroupMatch(t *testing.T) {
 	}
 	if results[0].Tool.Tool.Name != "tool_alpha" {
 		t.Errorf("expected tool_alpha to match, got %q", results[0].Tool.Tool.Name)
+	}
+}
+
+func TestSearchTools_UnicodeTokenizationSplitsPunctuation(t *testing.T) {
+	got := searchTokens("Crème_brûlée-東京/42")
+	want := []string{"crème", "brûlée", "東京", "42"}
+	if len(got) != len(want) {
+		t.Fatalf("tokens = %q, want %q", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("tokens[%d] = %q, want %q (all tokens: %q)", i, got[i], want[i], got)
+		}
+	}
+}
+
+func TestSearchTools_StopwordsDoNotControlRanking(t *testing.T) {
+	r := NewToolRegistry()
+	r.RegisterModule(&testModule{
+		name: "mod",
+		tools: []ToolDefinition{
+			makeSearchTool("router_service_restart", "Restart a router service safely", "router", nil),
+			makeSearchTool("router_service_restart_helper", "a on the", "router", nil),
+		},
+	})
+
+	results := r.SearchTools("restart a service on the router")
+	if len(results) < 2 {
+		t.Fatalf("expected both relevant tools, got %#v", results)
+	}
+	if got := results[0].Tool.Tool.Name; got != "router_service_restart" {
+		t.Fatalf("top result = %q, want router_service_restart", got)
+	}
+}
+
+func TestSearchTools_PartialFallbackAndMatchFloor(t *testing.T) {
+	r := NewToolRegistry()
+	r.RegisterModule(&testModule{
+		name: "mod",
+		tools: []ToolDefinition{
+			makeSearchTool("dhcp_inspect", "Inspect DHCP state", "network", nil),
+			makeSearchTool("system_status", "Inspect system state", "system", nil),
+		},
+	})
+
+	results := r.SearchTools("dhcp renew")
+	if len(results) == 0 || results[0].Tool.Tool.Name != "dhcp_inspect" {
+		t.Fatalf("two-token partial fallback = %#v, want dhcp_inspect first", results)
+	}
+
+	if results := r.SearchTools("systm absent"); len(results) != 0 {
+		t.Fatalf("multi-token fuzzy-only query returned %#v, want no results", results)
+	}
+	if results := r.SearchTools("dhcp absent missing"); len(results) != 0 {
+		t.Fatalf("three-token one-match query returned %#v, want no results", results)
+	}
+}
+
+func TestSearchTools_ExactAliasPhrasePriority(t *testing.T) {
+	r := NewToolRegistry()
+	r.RegisterModule(&testModule{
+		name: "mod",
+		tools: []ToolDefinition{
+			{
+				Tool:        Tool{Name: "canonical_firewall_diagnostics", Description: "Inspect firewall rules"},
+				Handler:     func(_ context.Context, _ CallToolRequest) (*CallToolResult, error) { return MakeTextResult("ok"), nil },
+				SearchTerms: []string{"legacy_firewall_rules"},
+			},
+			makeSearchTool("legacy_firewall_rules_helper", "Helper for legacy firewall rules", "firewall", nil),
+		},
+	})
+
+	results := r.SearchTools("legacy_firewall_rules")
+	if len(results) < 2 {
+		t.Fatalf("expected alias and competing result, got %#v", results)
+	}
+	if got := results[0].Tool.Tool.Name; got != "canonical_firewall_diagnostics" {
+		t.Fatalf("top result = %q, want exact SearchTerm alias target", got)
+	}
+	if got := results[0].MatchType; got != "search_term" {
+		t.Fatalf("alias MatchType = %q, want search_term", got)
+	}
+}
+
+func TestSearchTools_BoundedSingleTokenTypo(t *testing.T) {
+	r := NewToolRegistry()
+	r.RegisterModule(&testModule{
+		name: "mod",
+		tools: []ToolDefinition{
+			makeSearchTool("gateway_monitor", "Inspect gateway state", "network", nil),
+		},
+	})
+
+	results := r.SearchTools("monitar")
+	if len(results) != 1 || results[0].Tool.Tool.Name != "gateway_monitor" {
+		t.Fatalf("single-token typo results = %#v, want gateway_monitor", results)
+	}
+	if results := r.SearchTools("monitxy"); len(results) != 0 {
+		t.Fatalf("seven-rune two-edit typo returned %#v, want no results", results)
+	}
+}
+
+func TestSearchTools_DeterministicCanonicalNameTieBreak(t *testing.T) {
+	r := NewToolRegistry()
+	r.RegisterModule(&testModule{
+		name: "mod",
+		tools: []ToolDefinition{
+			makeSearchTool("beta_probe", "Inspect latency", "monitoring", nil),
+			makeSearchTool("alpha_probe", "Inspect latency", "monitoring", nil),
+		},
+	})
+
+	for run := 0; run < 20; run++ {
+		results := r.SearchTools("latency")
+		if len(results) != 2 {
+			t.Fatalf("run %d: got %d results, want 2", run, len(results))
+		}
+		if got := results[0].Tool.Tool.Name; got != "alpha_probe" {
+			t.Fatalf("run %d: top result = %q, want alpha_probe", run, got)
+		}
+	}
+}
+
+func TestSearchTools_WANDownDoesNotMatchDownloadContains(t *testing.T) {
+	r := NewToolRegistry()
+	r.RegisterModule(&testModule{
+		name: "mod",
+		tools: []ToolDefinition{
+			makeSearchTool("wan_inspect", "Inspect whether WAN is down", "network", nil),
+			makeSearchTool("download_contract", "Fetch a generated contract", "developer", nil),
+		},
+	})
+
+	results := r.SearchTools("wan is down")
+	if len(results) == 0 || results[0].Tool.Tool.Name != "wan_inspect" {
+		t.Fatalf("WAN-down results = %#v, want wan_inspect first", results)
+	}
+	for _, result := range results {
+		if result.Tool.Tool.Name == "download_contract" {
+			t.Fatalf("download_contract matched token fragment 'down': %#v", results)
+		}
+	}
+}
+
+func TestSearchTools_ExactFieldWeightsAndPerTokenBest(t *testing.T) {
+	tool := func(name, description, category, runtimeGroup string, tags, terms []string) ToolDefinition {
+		return ToolDefinition{
+			Tool:         Tool{Name: name, Description: description},
+			Handler:      func(_ context.Context, _ CallToolRequest) (*CallToolResult, error) { return MakeTextResult("ok"), nil },
+			Category:     category,
+			RuntimeGroup: runtimeGroup,
+			Tags:         tags,
+			SearchTerms:  terms,
+		}
+	}
+	r := NewToolRegistry()
+	r.RegisterModule(&testModule{
+		name: "mod",
+		tools: []ToolDefinition{
+			tool("needle_name", "none", "none", "none", []string{"needle"}, nil),
+			tool("tag_match", "none", "none", "none", []string{"needle"}, nil),
+			tool("term_match", "none", "none", "none", nil, []string{"needle alias"}),
+			tool("category_match", "none", "needle", "none", nil, nil),
+			tool("runtime_match", "none", "none", "needle", nil, nil),
+			tool("description_match", "needle", "none", "none", nil, nil),
+		},
+	})
+
+	results := r.SearchTools("needle")
+	want := map[string]int{
+		"needle_name":       90,
+		"tag_match":         80,
+		"term_match":        75,
+		"category_match":    60,
+		"runtime_match":     60,
+		"description_match": 30,
+	}
+	if len(results) != len(want) {
+		t.Fatalf("got %d results, want %d: %#v", len(results), len(want), results)
+	}
+	for _, result := range results {
+		if result.Score != want[result.Tool.Tool.Name] {
+			t.Errorf("%s score = %d, want %d", result.Tool.Tool.Name, result.Score, want[result.Tool.Tool.Name])
+		}
+	}
+	if results[0].Tool.Tool.Name != "needle_name" || results[1].Tool.Tool.Name != "tag_match" || results[2].Tool.Tool.Name != "term_match" {
+		t.Fatalf("weighted order starts %q, %q, %q; want name, tag, search term", results[0].Tool.Tool.Name, results[1].Tool.Tool.Name, results[2].Tool.Tool.Name)
+	}
+}
+
+func TestSearchTools_PrefixRequiresLengthAndRatio(t *testing.T) {
+	r := NewToolRegistry()
+	r.RegisterModule(&testModule{
+		name: "mod",
+		tools: []ToolDefinition{
+			makeSearchTool("monitor_probe", "none", "none", nil),
+			makeSearchTool("configuration_probe", "none", "none", nil),
+		},
+	})
+
+	if results := r.SearchTools("monit"); len(results) == 0 || results[0].Tool.Tool.Name != "monitor_probe" {
+		t.Fatalf("five-rune sufficiently-complete prefix did not match monitor_probe: %#v", results)
+	}
+	if results := r.SearchTools("moni"); len(results) != 0 {
+		t.Fatalf("four-rune prefix returned %#v, want no results", results)
+	}
+	if results := r.SearchTools("config"); len(results) != 0 {
+		t.Fatalf("prefix below the 0.60 length ratio returned %#v, want no results", results)
 	}
 }

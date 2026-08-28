@@ -3,6 +3,7 @@ package registry
 import (
 	"sort"
 	"strings"
+	"unicode"
 )
 
 // ToolSearchResult represents a tool match with relevance score.
@@ -12,308 +13,329 @@ type ToolSearchResult struct {
 	MatchType string // "name", "tag", "search_term", "category", "runtime_group", "description"
 }
 
-// SearchTools searches for tools matching a query string.
-// Supports multi-word queries (all words must match), TF-IDF-style weighting
-// for rarer terms, and fuzzy matching within edit distance 2 for typo tolerance.
+const (
+	searchWeightName         = 90
+	searchWeightTag          = 80
+	searchWeightSearchTerm   = 75
+	searchWeightCategory     = 60
+	searchWeightRuntimeGroup = 60
+	searchWeightDescription  = 30
+)
+
+var searchStopwords = map[string]struct{}{
+	"a": {}, "an": {}, "the": {}, "is": {}, "are": {}, "was": {}, "were": {},
+	"be": {}, "been": {}, "being": {}, "do": {}, "does": {}, "did": {},
+	"please": {}, "can": {}, "could": {}, "would": {}, "should": {}, "me": {},
+	"my": {}, "our": {}, "us": {}, "on": {}, "in": {}, "at": {}, "by": {},
+	"for": {}, "from": {}, "into": {}, "of": {}, "to": {}, "with": {},
+	"and": {}, "or": {}, "then": {}, "this": {}, "that": {}, "these": {},
+	"those": {}, "it": {}, "its": {},
+}
+
+type searchField struct {
+	matchType string
+	weight    int
+	tokens    []string
+}
+
+type searchTokenMatch struct {
+	score     int
+	matchType string
+	strong    bool
+}
+
+type rankedToolSearchResult struct {
+	result               ToolSearchResult
+	exactWholeName       bool
+	exactWholeSearchTerm bool
+	allTokensMatched     bool
+	matchedCount         int
+}
+
+// SearchTools searches for tools matching a natural-language query.
+//
+// Search is deliberately token based: punctuation (including '_' and '-') is
+// a separator, stopwords are discarded, and each query token receives only its
+// best field match. This prevents repeated metadata from multiplying a weak
+// signal while still allowing a partially specified multi-word request to
+// return useful candidates.
 func (r *ToolRegistry) SearchTools(query string) []ToolSearchResult {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	query = strings.ToLower(strings.TrimSpace(query))
-	if query == "" {
+	queryTokensAll := searchTokens(query)
+	if len(queryTokensAll) == 0 {
 		return nil
 	}
-	queryWords := strings.Fields(query)
-	idf := r.buildIDF()
+	queryTokens := filterSearchStopwords(queryTokensAll)
+	if len(queryTokens) == 0 {
+		return nil
+	}
+	queryPhrase := strings.Join(queryTokensAll, " ")
 
-	var results []ToolSearchResult
-
+	ranked := make([]rankedToolSearchResult, 0, len(r.tools))
 	for _, tool := range r.tools {
-		toolNameLower := strings.ToLower(tool.Tool.Name)
-		descLower := strings.ToLower(tool.Tool.Description)
-		categoryLower := strings.ToLower(tool.Category)
-		runtimeGroupLower := strings.ToLower(tool.RuntimeGroup)
+		fields := toolSearchFields(tool)
+		matchedCount := 0
+		strongCount := 0
+		totalScore := 0
+		bestMatch := searchTokenMatch{}
 
-		tagsLower := make([]string, len(tool.Tags))
-		for i, t := range tool.Tags {
-			tagsLower[i] = strings.ToLower(t)
-		}
-		searchTermsLower := make([]string, len(tool.SearchTerms))
-		for i, term := range tool.SearchTerms {
-			searchTermsLower[i] = strings.ToLower(term)
-		}
-
-		allWordsMatched := true
-		totalScore := 0.0
-		bestMatchType := ""
-
-		for _, word := range queryWords {
-			wordMatched := false
-			wordScore := 0.0
-
-			weight := 1.0
-			if idf != nil {
-				if w, ok := idf[word]; ok {
-					weight = w
-				} else {
-					weight = 3.0
-				}
+		for _, queryToken := range queryTokens {
+			match := bestSearchTokenMatch(queryToken, fields)
+			if match.score == 0 {
+				continue
 			}
-
-			// Name match (highest priority)
-			if strings.Contains(toolNameLower, word) {
-				wordScore += 25 * weight
-				wordMatched = true
-				if bestMatchType == "" {
-					bestMatchType = "name"
-				}
-			} else if fuzzy := fuzzyMatchSegments(word, toolNameLower); fuzzy > 0 {
-				wordScore += float64(10*fuzzy) * weight
-				wordMatched = true
-				if bestMatchType == "" {
-					bestMatchType = "name"
-				}
+			matchedCount++
+			totalScore += match.score
+			if match.strong {
+				strongCount++
 			}
-
-			// Tag match
-			for _, tagLower := range tagsLower {
-				if tagLower == word {
-					wordScore += 40 * weight
-					wordMatched = true
-					if bestMatchType == "" || bestMatchType == "description" {
-						bestMatchType = "tag"
-					}
-				} else if strings.Contains(tagLower, word) {
-					wordScore += 20 * weight
-					wordMatched = true
-					if bestMatchType == "" || bestMatchType == "description" {
-						bestMatchType = "tag"
-					}
-				} else if fuzzy := fuzzyMatchSegments(word, tagLower); fuzzy > 0 {
-					wordScore += float64(8*fuzzy) * weight
-					wordMatched = true
-					if bestMatchType == "" || bestMatchType == "description" {
-						bestMatchType = "tag"
-					}
-				}
+			if match.score > bestMatch.score {
+				bestMatch = match
 			}
-
-			// Explicit search terms / synonyms
-			for _, termLower := range searchTermsLower {
-				if termLower == word {
-					wordScore += 30 * weight
-					wordMatched = true
-					if bestMatchType == "" || bestMatchType == "description" || bestMatchType == "category" {
-						bestMatchType = "search_term"
-					}
-				} else if strings.Contains(termLower, word) {
-					wordScore += 16 * weight
-					wordMatched = true
-					if bestMatchType == "" || bestMatchType == "description" || bestMatchType == "category" {
-						bestMatchType = "search_term"
-					}
-				} else if fuzzy := fuzzyMatchSegments(word, termLower); fuzzy > 0 {
-					wordScore += float64(7*fuzzy) * weight
-					wordMatched = true
-					if bestMatchType == "" || bestMatchType == "description" || bestMatchType == "category" {
-						bestMatchType = "search_term"
-					}
-				}
-			}
-
-			// Category match
-			if strings.Contains(categoryLower, word) {
-				wordScore += 15 * weight
-				wordMatched = true
-				if bestMatchType == "" || bestMatchType == "description" {
-					bestMatchType = "category"
-				}
-			} else if fuzzy := fuzzyMatchSegments(word, categoryLower); fuzzy > 0 {
-				wordScore += float64(6*fuzzy) * weight
-				wordMatched = true
-				if bestMatchType == "" || bestMatchType == "description" {
-					bestMatchType = "category"
-				}
-			}
-
-			// Runtime group match
-			if runtimeGroupLower != "" {
-				if strings.Contains(runtimeGroupLower, word) {
-					wordScore += 18 * weight
-					wordMatched = true
-					if bestMatchType == "" || bestMatchType == "description" {
-						bestMatchType = "runtime_group"
-					}
-				} else if fuzzy := fuzzyMatchSegments(word, runtimeGroupLower); fuzzy > 0 {
-					wordScore += float64(7*fuzzy) * weight
-					wordMatched = true
-					if bestMatchType == "" || bestMatchType == "description" {
-						bestMatchType = "runtime_group"
-					}
-				}
-			}
-
-			// Description match (lowest priority)
-			if len(word) > 2 {
-				if strings.Contains(descLower, word) {
-					wordScore += 5 * weight
-					wordMatched = true
-					if bestMatchType == "" {
-						bestMatchType = "description"
-					}
-				} else {
-					for dw := range strings.FieldsSeq(descLower) {
-						if len(dw) < 3 {
-							continue
-						}
-						dist := levenshtein(word, dw)
-						maxDist := 1
-						if len(word) >= 5 || len(dw) >= 5 {
-							maxDist = 2
-						}
-						if dist > 0 && dist <= maxDist {
-							wordScore += 3 * weight
-							wordMatched = true
-							if bestMatchType == "" {
-								bestMatchType = "description"
-							}
-							break
-						}
-					}
-				}
-			}
-
-			if !wordMatched {
-				allWordsMatched = false
-				break
-			}
-			totalScore += wordScore
 		}
 
-		if !allWordsMatched || totalScore <= 0 {
+		if !passesSearchFloor(len(queryTokens), matchedCount, strongCount) {
 			continue
 		}
 
-		if strings.Contains(toolNameLower, query) {
-			totalScore += 100
-			bestMatchType = "name"
+		exactWholeName := strings.Join(searchTokens(tool.Tool.Name), " ") == queryPhrase
+		exactWholeSearchTerm := false
+		for _, term := range tool.SearchTerms {
+			if strings.Join(searchTokens(term), " ") == queryPhrase {
+				exactWholeSearchTerm = true
+				break
+			}
 		}
 
-		results = append(results, ToolSearchResult{
-			Tool:      tool,
-			Score:     int(totalScore),
-			MatchType: bestMatchType,
+		matchType := bestMatch.matchType
+		if exactWholeName {
+			matchType = "name"
+		} else if exactWholeSearchTerm {
+			matchType = "search_term"
+		}
+		ranked = append(ranked, rankedToolSearchResult{
+			result: ToolSearchResult{
+				Tool:      tool,
+				Score:     totalScore,
+				MatchType: matchType,
+			},
+			exactWholeName:       exactWholeName,
+			exactWholeSearchTerm: exactWholeSearchTerm,
+			allTokensMatched:     matchedCount == len(queryTokens),
+			matchedCount:         matchedCount,
 		})
 	}
 
-	sort.Slice(results, func(i, j int) bool {
-		if results[i].Score != results[j].Score {
-			return results[i].Score > results[j].Score
+	sort.Slice(ranked, func(i, j int) bool {
+		left, right := ranked[i], ranked[j]
+		if left.exactWholeName != right.exactWholeName {
+			return left.exactWholeName
 		}
-		return results[i].Tool.Tool.Name < results[j].Tool.Tool.Name
+		if left.exactWholeSearchTerm != right.exactWholeSearchTerm {
+			return left.exactWholeSearchTerm
+		}
+		if left.allTokensMatched != right.allTokensMatched {
+			return left.allTokensMatched
+		}
+		if left.matchedCount != right.matchedCount {
+			return left.matchedCount > right.matchedCount
+		}
+		if left.result.Score != right.result.Score {
+			return left.result.Score > right.result.Score
+		}
+		return left.result.Tool.Tool.Name < right.result.Tool.Tool.Name
 	})
 
+	results := make([]ToolSearchResult, len(ranked))
+	for i := range ranked {
+		results[i] = ranked[i].result
+	}
 	return results
 }
 
-// levenshtein computes the edit distance between two strings.
-func levenshtein(a, b string) int {
-	if len(a) == 0 {
-		return len(b)
+func toolSearchFields(tool ToolDefinition) []searchField {
+	fields := []searchField{{
+		matchType: "name",
+		weight:    searchWeightName,
+		tokens:    searchTokens(tool.Tool.Name),
+	}}
+	for _, tag := range tool.Tags {
+		fields = append(fields, searchField{
+			matchType: "tag",
+			weight:    searchWeightTag,
+			tokens:    searchTokens(tag),
+		})
 	}
-	if len(b) == 0 {
-		return len(a)
+	for _, term := range tool.SearchTerms {
+		fields = append(fields, searchField{
+			matchType: "search_term",
+			weight:    searchWeightSearchTerm,
+			tokens:    searchTokens(term),
+		})
+	}
+	fields = append(fields,
+		searchField{
+			matchType: "category",
+			weight:    searchWeightCategory,
+			tokens:    searchTokens(tool.Category),
+		},
+		searchField{
+			matchType: "runtime_group",
+			weight:    searchWeightRuntimeGroup,
+			tokens:    searchTokens(tool.RuntimeGroup),
+		},
+		searchField{
+			matchType: "description",
+			weight:    searchWeightDescription,
+			tokens:    searchTokens(tool.Tool.Description),
+		},
+	)
+	return fields
+}
+
+func bestSearchTokenMatch(queryToken string, fields []searchField) searchTokenMatch {
+	best := searchTokenMatch{}
+	for _, field := range fields {
+		for _, candidateToken := range field.tokens {
+			score, strong := scoreSearchToken(queryToken, candidateToken, field.weight)
+			if score > best.score {
+				best = searchTokenMatch{
+					score:     score,
+					matchType: field.matchType,
+					strong:    strong,
+				}
+			}
+		}
+	}
+	return best
+}
+
+func scoreSearchToken(queryToken, candidateToken string, weight int) (score int, strong bool) {
+	if queryToken == candidateToken {
+		return weight, true
 	}
 
-	prev := make([]int, len(b)+1)
-	curr := make([]int, len(b)+1)
+	queryLen := len([]rune(queryToken))
+	candidateLen := len([]rune(candidateToken))
+	if queryLen >= 5 && candidateLen >= queryLen && strings.HasPrefix(candidateToken, queryToken) && queryLen*100 >= candidateLen*60 {
+		return weight / 2, true
+	}
+
+	maxDistance := 0
+	switch {
+	case queryLen >= 8:
+		maxDistance = 2
+	case queryLen >= 4:
+		maxDistance = 1
+	}
+	if maxDistance == 0 || absInt(queryLen-candidateLen) > maxDistance {
+		return 0, false
+	}
+	distance := levenshtein(queryToken, candidateToken)
+	if distance == 0 || distance > maxDistance {
+		return 0, false
+	}
+	// Fuzzy matches are recovery evidence, never peers of exact or prefix
+	// matches. Keep them positive so a single-token typo remains discoverable.
+	return weight / 3, false
+}
+
+func passesSearchFloor(queryCount, matchedCount, strongCount int) bool {
+	if matchedCount == 0 {
+		return false
+	}
+	if queryCount == 1 {
+		return true
+	}
+	if strongCount == 0 {
+		return false
+	}
+	if queryCount == 2 {
+		return matchedCount >= 1
+	}
+	return matchedCount >= 2
+}
+
+func filterSearchStopwords(tokens []string) []string {
+	filtered := make([]string, 0, len(tokens))
+	for _, token := range tokens {
+		if _, stopword := searchStopwords[token]; stopword {
+			continue
+		}
+		filtered = append(filtered, token)
+	}
+	return filtered
+}
+
+// searchTokens lowercases text and splits it at every non-letter/non-digit
+// rune. In particular, underscores and hyphens do not create opaque tokens.
+func searchTokens(text string) []string {
+	var tokens []string
+	var token strings.Builder
+	flush := func() {
+		if token.Len() == 0 {
+			return
+		}
+		tokens = append(tokens, token.String())
+		token.Reset()
+	}
+	for _, r := range text {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) {
+			token.WriteRune(unicode.ToLower(r))
+			continue
+		}
+		flush()
+	}
+	flush()
+	return tokens
+}
+
+// levenshtein computes the edit distance between two Unicode strings.
+func levenshtein(a, b string) int {
+	aRunes := []rune(a)
+	bRunes := []rune(b)
+	if len(aRunes) == 0 {
+		return len(bRunes)
+	}
+	if len(bRunes) == 0 {
+		return len(aRunes)
+	}
+
+	prev := make([]int, len(bRunes)+1)
+	curr := make([]int, len(bRunes)+1)
 	for j := range prev {
 		prev[j] = j
 	}
 
-	for i := 1; i <= len(a); i++ {
+	for i := 1; i <= len(aRunes); i++ {
 		curr[0] = i
-		for j := 1; j <= len(b); j++ {
+		for j := 1; j <= len(bRunes); j++ {
 			cost := 1
-			if a[i-1] == b[j-1] {
+			if aRunes[i-1] == bRunes[j-1] {
 				cost = 0
 			}
-			ins := curr[j-1] + 1
-			del := prev[j] + 1
-			sub := prev[j-1] + cost
-			min := ins
-			if del < min {
-				min = del
+			insert := curr[j-1] + 1
+			delete := prev[j] + 1
+			substitute := prev[j-1] + cost
+			minimum := insert
+			if delete < minimum {
+				minimum = delete
 			}
-			if sub < min {
-				min = sub
+			if substitute < minimum {
+				minimum = substitute
 			}
-			curr[j] = min
+			curr[j] = minimum
 		}
 		prev, curr = curr, prev
 	}
-	return prev[len(b)]
+	return prev[len(bRunes)]
 }
 
-// fuzzyMatchSegments checks whether word fuzzy-matches any segment of target
-// (split on _, -, space). Returns the fuzzy bonus (0 = no match).
-func fuzzyMatchSegments(word, target string) int {
-	if len(word) < 3 {
-		return 0
+func absInt(value int) int {
+	if value < 0 {
+		return -value
 	}
-	segments := strings.FieldsFunc(target, func(r rune) bool {
-		return r == '_' || r == ' ' || r == '-'
-	})
-	for _, seg := range segments {
-		if len(seg) == 0 {
-			continue
-		}
-		dist := levenshtein(word, seg)
-		maxDist := 1
-		if len(word) >= 5 || len(seg) >= 5 {
-			maxDist = 2
-		}
-		if dist > 0 && dist <= maxDist {
-			return maxDist - dist + 1
-		}
-	}
-	return 0
-}
-
-// buildIDF builds a simple inverse-document-frequency map across all tool text.
-func (r *ToolRegistry) buildIDF() map[string]float64 {
-	total := len(r.tools)
-	if total == 0 {
-		return nil
-	}
-
-	docCount := make(map[string]int)
-	for _, tool := range r.tools {
-		seen := make(map[string]bool)
-		text := strings.ToLower(tool.Tool.Name + " " + tool.Tool.Description + " " +
-			tool.Category + " " + strings.Join(tool.Tags, " "))
-		for _, w := range strings.FieldsFunc(text, func(r rune) bool {
-			return r == '_' || r == ' ' || r == '-' || r == ',' || r == '.' || r == '(' || r == ')'
-		}) {
-			if len(w) > 1 && !seen[w] {
-				seen[w] = true
-				docCount[w]++
-			}
-		}
-	}
-
-	idf := make(map[string]float64, len(docCount))
-	for w, count := range docCount {
-		ratio := float64(total) / float64(count)
-		if ratio > 10 {
-			idf[w] = 3.0
-		} else if ratio > 5 {
-			idf[w] = 2.0
-		} else if ratio > 2 {
-			idf[w] = 1.5
-		} else {
-			idf[w] = 1.0
-		}
-	}
-	return idf
+	return value
 }
