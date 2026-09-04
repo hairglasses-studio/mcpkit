@@ -61,8 +61,8 @@ func TestAPISamplingClient_CreateMessage_Success(t *testing.T) {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			t.Errorf("decode request: %v", err)
 		}
-		if req.Model != "claude-sonnet-4-6" {
-			t.Errorf("expected default model claude-sonnet-4-6, got %q", req.Model)
+		if req.Model != "claude-sonnet-5" {
+			t.Errorf("expected default model claude-sonnet-5, got %q", req.Model)
 		}
 		// CompletionRequest sets default of 1024, so that's what arrives.
 		if req.MaxTokens != 1024 {

@@ -17,10 +17,12 @@ func TestNormalizeModelName(t *testing.T) {
 		{"exact gemini-3.1-pro", "gemini-3.1-pro", "gemini-3.1-pro"},
 
 		// Alias match
-		{"alias opus", "opus", "claude-opus-4-8"},
+		{"alias opus", "opus", "claude-opus-5"},
 		{"alias sonnet", "sonnet", "claude-sonnet-5"},
 		{"alias haiku", "haiku", "claude-haiku-4-5"},
-		{"alias fable", "fable", "claude-fable-5"},
+		{"alias fable", "fable", "claude-fable-5-1"},
+		{"1m suffix stripped", "claude-fable-5-1[1m]", "claude-fable-5-1"},
+		{"1m suffix on alias", "opus[1m]", "claude-opus-5"},
 		{"alias o1-preview", "o1-preview", "o1"},
 		{"alias gemini-pro", "gemini-pro", "gemini-3.1-pro"},
 		{"alias dated claude", "claude-opus-4-6-20260401", "claude-opus-4-6"},
@@ -100,8 +102,11 @@ func TestModelCost(t *testing.T) {
 
 func TestDefaultPricingCompleteness(t *testing.T) {
 	required := []string{
+		"claude-fable-5-1",
+		"claude-mythos-5-1",
 		"claude-fable-5",
 		"claude-mythos-5",
+		"claude-opus-5",
 		"claude-opus-4-8",
 		"claude-opus-4-7",
 		"claude-opus-4-6",

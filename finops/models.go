@@ -16,11 +16,16 @@ type Pricing struct {
 // prior 2026-04 baseline and should be treated as potentially stale.
 var DefaultPricing = map[string]Pricing{
 	// Claude models
-	"claude-fable-5":  {10.0, 50.0},
-	"claude-mythos-5": {10.0, 50.0},
-	"claude-opus-4-8": {5.0, 25.0},
-	"claude-opus-4-7": {5.0, 25.0},
-	"claude-opus-4-6": {5.0, 25.0},
+	// Claude 5.1 / Opus 5 rows verified against the bundled claude-api model
+	// table (cached 2026-06-24) on 2026-09-03.
+	"claude-fable-5-1":  {10.0, 50.0},
+	"claude-mythos-5-1": {10.0, 50.0},
+	"claude-fable-5":    {10.0, 50.0},
+	"claude-mythos-5":   {10.0, 50.0},
+	"claude-opus-5":     {5.0, 25.0},
+	"claude-opus-4-8":   {5.0, 25.0},
+	"claude-opus-4-7":   {5.0, 25.0},
+	"claude-opus-4-6":   {5.0, 25.0},
 	// claude-sonnet-5 has introductory pricing of $2.00/$10.00 per 1M tokens
 	// through 2026-08-31; this table uses the standard post-intro pricing.
 	"claude-sonnet-5":   {3.0, 15.0},
@@ -53,10 +58,10 @@ var modelAliases = map[string]string{
 	"claude-sonnet-4-6-20260401": "claude-sonnet-4-6",
 	"claude-opus-4-5-20250514":   "claude-opus-4-5",
 	"claude-sonnet-4-5-20250514": "claude-sonnet-4-5",
-	"opus":                       "claude-opus-4-8",
+	"opus":                       "claude-opus-5",
 	"sonnet":                     "claude-sonnet-5",
 	"haiku":                      "claude-haiku-4-5",
-	"fable":                      "claude-fable-5",
+	"fable":                      "claude-fable-5-1",
 
 	// OpenAI aliases
 	"o1-preview": "o1",
@@ -71,6 +76,9 @@ func NormalizeModelName(raw string) string {
 		return ""
 	}
 	lower := strings.ToLower(raw)
+	// Claude Code spells the 1M-context opt-in as a "[1m]" suffix on the
+	// model ID; pricing is identical, so strip it before lookup.
+	lower = strings.TrimSuffix(lower, "[1m]")
 
 	if canonical, ok := modelAliases[lower]; ok {
 		return canonical

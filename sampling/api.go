@@ -111,7 +111,7 @@ func (c *APISamplingClient) CreateMessage(ctx context.Context, req CreateMessage
 
 	model := c.DefaultModel
 	if model == "" {
-		model = "claude-sonnet-4-6"
+		model = "claude-sonnet-5"
 	}
 	if md, ok := req.Metadata.(map[string]any); ok {
 		if pm, ok := md["preferredModel"].(string); ok && pm != "" {
