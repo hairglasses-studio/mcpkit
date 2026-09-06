@@ -19,8 +19,10 @@ func (m *minimalModule) Description() string { return "Minimal module for exampl
 func (m *minimalModule) Tools() []registry.ToolDefinition {
 	return []registry.ToolDefinition{
 		{
-			Tool:    registry.Tool{Name: "greet", Description: "Greet the user"},
-			Handler: func(_ context.Context, _ registry.CallToolRequest) (*registry.CallToolResult, error) { return registry.MakeTextResult("hello"), nil },
+			Tool: registry.Tool{Name: "greet", Description: "Greet the user"},
+			Handler: func(_ context.Context, _ registry.CallToolRequest) (*registry.CallToolResult, error) {
+				return registry.MakeTextResult("hello"), nil
+			},
 		},
 	}
 }

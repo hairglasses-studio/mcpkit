@@ -195,20 +195,20 @@ var VendorBrands = map[uint16]string{
 	0x046d: "logitech",    // Logitech
 
 	// MIDI controllers
-	0x1235: "focusrite",   // Focusrite / Novation
-	0x09e8: "akai",        // Akai Professional
-	0x1c75: "arturia",     // Arturia
-	0x0944: "korg",        // KORG
-	0x0582: "roland",      // Roland
-	0x07cf: "casio",       // Casio
-	0x0499: "yamaha",      // Yamaha
+	0x1235: "focusrite",          // Focusrite / Novation
+	0x09e8: "akai",               // Akai Professional
+	0x1c75: "arturia",            // Arturia
+	0x0944: "korg",               // KORG
+	0x0582: "roland",             // Roland
+	0x07cf: "casio",              // Casio
+	0x0499: "yamaha",             // Yamaha
 	0x17cc: "native_instruments", // Native Instruments
-	0x1397: "behringer",   // Behringer / Music Tribe
-	0x1410: "novation",    // Novation
-	0x0763: "m_audio",     // M-Audio
-	0x2011: "keith_mcmillen", // Keith McMillen Instruments
-	0x314b: "roli",        // ROLI
-	0x303a: "intech",     // Intech Studio (ESP32-S3 based Grid modules)
+	0x1397: "behringer",          // Behringer / Music Tribe
+	0x1410: "novation",           // Novation
+	0x0763: "m_audio",            // M-Audio
+	0x2011: "keith_mcmillen",     // Keith McMillen Instruments
+	0x314b: "roli",               // ROLI
+	0x303a: "intech",             // Intech Studio (ESP32-S3 based Grid modules)
 
 	// Stream Deck / macro pads
 	0x0fd9: "elgato", // Elgato
@@ -219,7 +219,7 @@ var VendorBrands = map[uint16]string{
 	0x3344: "virpil",              // Virpil
 
 	// Racing
-	0x0eb7: "fanatec",             // Fanatec
+	0x0eb7: "fanatec", // Fanatec
 	// 0x044f also Thrustmaster for racing wheels, handled by product ID
 }
 

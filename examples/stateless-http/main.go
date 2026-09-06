@@ -169,8 +169,10 @@ type SessionDemoModule struct {
 	store    session.SessionStore
 }
 
-func (m *SessionDemoModule) Name() string        { return "session_demo" }
-func (m *SessionDemoModule) Description() string { return "Session-aware demo tools for stateless HTTP scaling" }
+func (m *SessionDemoModule) Name() string { return "session_demo" }
+func (m *SessionDemoModule) Description() string {
+	return "Session-aware demo tools for stateless HTTP scaling"
+}
 
 func (m *SessionDemoModule) Tools() []registry.ToolDefinition {
 	serverID := m.serverID

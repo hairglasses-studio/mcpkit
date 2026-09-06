@@ -467,8 +467,8 @@ func (c *darwinIOKitConnection) convertHat(elem *elementMeta, val int32, now tim
 		Type:      EventHat,
 		Timestamp: now,
 		Source:    "ABS_HAT0X",
-		HatX:     hatX,
-		HatY:     hatY,
+		HatX:      hatX,
+		HatY:      hatY,
 		RawValue:  val,
 	}
 }

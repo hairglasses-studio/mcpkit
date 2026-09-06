@@ -446,8 +446,8 @@ func TestParseMIDI_ThreeMessagesBackToBack(t *testing.T) {
 	t.Parallel()
 	buf := []byte{
 		0x90, 60, 100, // Note On
-		0xC5, 10,      // Program Change ch5
-		0x82, 48, 64,  // Note Off ch2
+		0xC5, 10, // Program Change ch5
+		0x82, 48, 64, // Note Off ch2
 	}
 	events := parseMIDIBytes(testDeviceID, buf, len(buf))
 
@@ -511,9 +511,9 @@ func TestParseMIDI_SysExBetweenMessages(t *testing.T) {
 	t.Parallel()
 	// NoteOn, then SysEx, then CC — all three should parse.
 	buf := []byte{
-		0x90, 60, 100,                         // Note On
-		0xF0, 0x7E, 0x7F, 0x09, 0x01, 0xF7,   // SysEx
-		0xB0, 1, 64,                            // CC
+		0x90, 60, 100, // Note On
+		0xF0, 0x7E, 0x7F, 0x09, 0x01, 0xF7, // SysEx
+		0xB0, 1, 64, // CC
 	}
 	events := parseMIDIBytes(testDeviceID, buf, len(buf))
 
@@ -536,8 +536,8 @@ func TestParseMIDI_NonF0SystemMessage(t *testing.T) {
 	// System messages other than SysEx (e.g., 0xF8 timing clock) should be skipped.
 	// 0xF8 is a single-byte system message, followed by valid NoteOn.
 	buf := []byte{
-		0xF8,           // Timing Clock (system realtime, no data bytes)
-		0x90, 60, 100,  // Note On
+		0xF8,          // Timing Clock (system realtime, no data bytes)
+		0x90, 60, 100, // Note On
 	}
 	events := parseMIDIBytes(testDeviceID, buf, len(buf))
 
@@ -584,8 +584,8 @@ func TestNormalizeAxis_SignedStick(t *testing.T) {
 		want float64
 	}{
 		{0, (0 - (-0.5)) / 32767.5},           // near center
-		{32767, (32767 - (-0.5)) / 32767.5},    // near +1.0
-		{-32768, (-32768 - (-0.5)) / 32767.5},  // near -1.0
+		{32767, (32767 - (-0.5)) / 32767.5},   // near +1.0
+		{-32768, (-32768 - (-0.5)) / 32767.5}, // near -1.0
 	}
 	for _, tt := range tests {
 		got := normalizeAxis(tt.raw, -32768, 32767)

@@ -413,10 +413,10 @@ func containsSubstring(s, substr string) bool {
 // TestSanitizeHeaders tests header masking for sensitive and non-sensitive headers.
 func TestSanitizeHeaders(t *testing.T) {
 	tests := []struct {
-		name         string
-		headers      map[string]string
-		maskedKeys   []string
-		passedKeys   []string
+		name       string
+		headers    map[string]string
+		maskedKeys []string
+		passedKeys []string
 	}{
 		{
 			name: "authorization_masked",
@@ -457,7 +457,7 @@ func TestSanitizeHeaders(t *testing.T) {
 		{
 			name: "set_cookie_masked",
 			headers: map[string]string{
-				"Set-Cookie": "session=xyz789; Path=/; HttpOnly",
+				"Set-Cookie":   "session=xyz789; Path=/; HttpOnly",
 				"X-Request-ID": "req-123",
 			},
 			maskedKeys: []string{"Set-Cookie"},
@@ -475,18 +475,18 @@ func TestSanitizeHeaders(t *testing.T) {
 		{
 			name: "non_sensitive_headers_pass_through",
 			headers: map[string]string{
-				"Content-Type":   "application/json",
-				"Accept":         "application/json",
-				"X-Request-ID":   "req-abc-123",
+				"Content-Type": "application/json",
+				"Accept":       "application/json",
+				"X-Request-ID": "req-abc-123",
 			},
 			maskedKeys: []string{},
 			passedKeys: []string{"Content-Type", "Accept", "X-Request-ID"},
 		},
 		{
-			name:         "empty_headers",
-			headers:      map[string]string{},
-			maskedKeys:   []string{},
-			passedKeys:   []string{},
+			name:       "empty_headers",
+			headers:    map[string]string{},
+			maskedKeys: []string{},
+			passedKeys: []string{},
 		},
 	}
 
@@ -616,8 +616,8 @@ func TestRedactedString(t *testing.T) {
 
 	t.Run("json_encoding_in_struct", func(t *testing.T) {
 		type Config struct {
-			Name     string         `json:"name"`
-			APIKey   RedactedString `json:"api_key"`
+			Name   string         `json:"name"`
+			APIKey RedactedString `json:"api_key"`
 		}
 		cfg := Config{Name: "test", APIKey: RedactedString("supersecretkey123")}
 		data, err := json.Marshal(cfg)

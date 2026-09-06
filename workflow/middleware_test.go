@@ -268,4 +268,3 @@ func TestEngine_NodeMiddleware_Resume(t *testing.T) {
 		t.Fatalf("expected node to execute during resume, visited: %v", visited)
 	}
 }
-

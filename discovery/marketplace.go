@@ -12,11 +12,11 @@ import (
 
 // Sentinel errors returned by Marketplace methods.
 var (
-	ErrAgentNotFound    = errors.New("marketplace: agent not found")
-	ErrAgentExists      = errors.New("marketplace: agent already registered")
-	ErrNoMatch          = errors.New("marketplace: no matching agent found")
-	ErrEmptyID          = errors.New("marketplace: agent ID must not be empty")
-	ErrEmptyName        = errors.New("marketplace: agent name must not be empty")
+	ErrAgentNotFound     = errors.New("marketplace: agent not found")
+	ErrAgentExists       = errors.New("marketplace: agent already registered")
+	ErrNoMatch           = errors.New("marketplace: no matching agent found")
+	ErrEmptyID           = errors.New("marketplace: agent ID must not be empty")
+	ErrEmptyName         = errors.New("marketplace: agent name must not be empty")
 	ErrInvalidTrustScore = errors.New("marketplace: trust score must be between 0.0 and 1.0")
 )
 
@@ -36,19 +36,19 @@ type AgentEntry struct {
 
 // MarketplaceStats holds aggregate statistics about the marketplace.
 type MarketplaceStats struct {
-	TotalAgents      int                `json:"total_agents"`
-	ByProtocol       map[string]int     `json:"by_protocol"`
-	ByCapability     map[string]int     `json:"by_capability"`
-	AvgTrustScore    float64            `json:"avg_trust_score"`
-	AvgCostPerTask   float64            `json:"avg_cost_per_task"`
-	AvgSuccessRate   float64            `json:"avg_success_rate"`
+	TotalAgents    int            `json:"total_agents"`
+	ByProtocol     map[string]int `json:"by_protocol"`
+	ByCapability   map[string]int `json:"by_capability"`
+	AvgTrustScore  float64        `json:"avg_trust_score"`
+	AvgCostPerTask float64        `json:"avg_cost_per_task"`
+	AvgSuccessRate float64        `json:"avg_success_rate"`
 }
 
 // ratingAccumulator tracks cumulative task outcomes for trust score computation.
 type ratingAccumulator struct {
-	totalTasks    int
-	successCount  int
-	totalCost     float64
+	totalTasks   int
+	successCount int
+	totalCost    float64
 }
 
 // Marketplace indexes and searches for agents by capability.

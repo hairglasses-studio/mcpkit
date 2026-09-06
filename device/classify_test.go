@@ -44,7 +44,7 @@ func TestClassifyDevice_AllVendorBrands(t *testing.T) {
 		{"elgato vendor unknown PID", 0x0fd9, 0xFFFF, "Elgato Unknown", TypeGenericHID},
 
 		// Vendors that do NOT have vendor-level heuristic (brand not in switch)
-		{"pdp vendor no heuristic", 0x0e6f, 0xFFFF, "PDP Controller", TypeGamepad},     // name fallback
+		{"pdp vendor no heuristic", 0x0e6f, 0xFFFF, "PDP Controller", TypeGamepad},       // name fallback
 		{"powera vendor no heuristic", 0x24c6, 0xFFFF, "PowerA Controller", TypeGamepad}, // name fallback
 		{"logitech vendor no heuristic", 0x046d, 0xFFFF, "Logitech Unknown", TypeUnknown},
 		{"razer vendor no heuristic", 0x1532, 0xFFFF, "Razer Unknown", TypeUnknown},

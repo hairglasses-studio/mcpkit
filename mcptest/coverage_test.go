@@ -240,4 +240,3 @@ func TestAssertResourceContains_NotText(t *testing.T) {
 		t.Error("AssertResourceContains should fail when resource content is not text")
 	}
 }
-

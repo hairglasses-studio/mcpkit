@@ -97,8 +97,8 @@ func TestPatternPhone(t *testing.T) {
 	}
 
 	nonMatches := []string{
-		"55-867-5309",   // too short first group
-		"555-8675-309",  // wrong grouping
+		"55-867-5309",  // too short first group
+		"555-8675-309", // wrong grouping
 		"not a phone",
 		"",
 	}
@@ -122,9 +122,9 @@ func TestPatternSSN(t *testing.T) {
 	}
 
 	nonMatches := []string{
-		"12-345-6789",  // wrong grouping
-		"123456789",    // no dashes
-		"123-456-789",  // wrong middle group
+		"12-345-6789", // wrong grouping
+		"123456789",   // no dashes
+		"123-456-789", // wrong middle group
 		"",
 	}
 	for _, s := range nonMatches {

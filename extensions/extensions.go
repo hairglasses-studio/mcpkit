@@ -9,8 +9,8 @@ import (
 
 // Extension declares an optional capability.
 type Extension struct {
-	Name        string            // e.g. "mcpkit:health", "mcpkit:finops"
-	Version     string            // semver, e.g. "1.0.0"
+	Name        string // e.g. "mcpkit:health", "mcpkit:finops"
+	Version     string // semver, e.g. "1.0.0"
 	Description string
 	Required    bool              // if true, server won't start without client support
 	Metadata    map[string]string // arbitrary key-value for capability details

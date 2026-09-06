@@ -299,4 +299,3 @@ func sanitizePath(path string) string {
 	path = strings.Trim(path, "_")
 	return path
 }
-

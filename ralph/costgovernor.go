@@ -50,10 +50,10 @@ type iterationRecord struct {
 // CostGovernor is a 3-layer cost defense that monitors token spend and
 // productivity to decide whether to continue, downgrade, or halt execution.
 type CostGovernor struct {
-	mu                sync.Mutex
-	config            CostGovernorConfig
-	totalTokens       int64
-	history           []iterationRecord
+	mu                 sync.Mutex
+	config             CostGovernorConfig
+	totalTokens        int64
+	history            []iterationRecord
 	unproductiveStreak int
 }
 

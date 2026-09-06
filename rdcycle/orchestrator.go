@@ -11,44 +11,44 @@ import (
 
 // CycleResult holds the outcome of a single orchestrated cycle.
 type CycleResult struct {
-	CycleNum   int       `json:"cycle_num"`
-	SpecPath   string    `json:"spec_path"`
+	CycleNum   int        `json:"cycle_num"`
+	SpecPath   string     `json:"spec_path"`
 	ScanOutput ScanOutput `json:"scan_output"`
 	PlanOutput PlanOutput `json:"plan_output"`
-	Progress   bool      `json:"progress"` // true if tasks were completed
-	Cost       float64   `json:"cost"`
-	Error      string    `json:"error,omitempty"`
-	StartedAt  time.Time `json:"started_at"`
-	FinishedAt time.Time `json:"finished_at"`
+	Progress   bool       `json:"progress"` // true if tasks were completed
+	Cost       float64    `json:"cost"`
+	Error      string     `json:"error,omitempty"`
+	StartedAt  time.Time  `json:"started_at"`
+	FinishedAt time.Time  `json:"finished_at"`
 }
 
 // OrchestratorConfig configures the perpetual cycle orchestrator.
 type OrchestratorConfig struct {
-	ArtifactStore ArtifactStore
-	Breaker       *CircuitBreaker
-	Governor      *CostVelocityGovernor
-	SpecDir       string
-	MaxCycles     int // 0 = unlimited
+	ArtifactStore  ArtifactStore
+	Breaker        *CircuitBreaker
+	Governor       *CostVelocityGovernor
+	SpecDir        string
+	MaxCycles      int // 0 = unlimited
 	ImproveCadence int // run improve every N cycles (default 5)
-	OnCycleStart  func(cycleNum int, specPath string)
-	OnCycleEnd    func(cycleNum int, result CycleResult)
-	RalphStarter  func(ctx context.Context, specPath string) error
+	OnCycleStart   func(cycleNum int, specPath string)
+	OnCycleEnd     func(cycleNum int, result CycleResult)
+	RalphStarter   func(ctx context.Context, specPath string) error
 	// CostReader returns the cumulative dollar cost so far.
 	// Used to compute per-cycle cost deltas for the governor.
-	CostReader    func() float64
+	CostReader func() float64
 }
 
 // Orchestrator runs the perpetual R&D cycle loop.
 type Orchestrator struct {
-	mu           sync.Mutex
-	mod          *Module
-	cfg          OrchestratorConfig
-	synth        *TaskSynthesizer
+	mu            sync.Mutex
+	mod           *Module
+	cfg           OrchestratorConfig
+	synth         *TaskSynthesizer
 	adaptiveSynth *Synthesizer
-	running      bool
-	stopCh       chan struct{}
-	cycleNum     int
-	results      []CycleResult
+	running       bool
+	stopCh        chan struct{}
+	cycleNum      int
+	results       []CycleResult
 }
 
 // NewOrchestrator creates a new orchestrator bound to the given module.

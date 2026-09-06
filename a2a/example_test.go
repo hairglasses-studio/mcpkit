@@ -168,9 +168,9 @@ func ExampleAgentCardFromRegistry() {
 func ExampleToSDKAgentCard() {
 	// mcpkit native card.
 	card := a2a.AgentCard{
-		Name:    "my-agent",
-		URL:     "https://agent.example.com",
-		Version: "1.0.0",
+		Name:         "my-agent",
+		URL:          "https://agent.example.com",
+		Version:      "1.0.0",
 		Capabilities: &a2a.Capabilities{Streaming: true},
 		Skills: []a2a.Skill{
 			{ID: "search", Name: "search", Description: "Search documents"},

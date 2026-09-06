@@ -62,9 +62,9 @@ func newTestServer() *httptest.Server {
 		reqId := r.Header.Get("X-Request-Id")
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]any{
-			"petId":      r.PathValue("petId"),
-			"requestId":  reqId,
-			"vaccines":   []string{"rabies", "distemper"},
+			"petId":     r.PathValue("petId"),
+			"requestId": reqId,
+			"vaccines":  []string{"rabies", "distemper"},
 		})
 	})
 

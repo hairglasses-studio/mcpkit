@@ -104,7 +104,7 @@ func TestCompositePolicy(t *testing.T) {
 		cp := CompositePolicy{
 			Policies: []EvictionPolicy{
 				TTLPolicy{TTL: time.Hour}, // won't evict
-				StatePolicy{},              // won't evict active
+				StatePolicy{},             // won't evict active
 			},
 		}
 		s := newSession("s2", 0)

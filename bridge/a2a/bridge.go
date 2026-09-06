@@ -103,7 +103,7 @@ func NewBridge(reg *registry.ToolRegistry, cfg BridgeConfig) (*Bridge, error) {
 	executor := NewBridgeExecutor(reg, ExecutorConfig{
 		Translator:  translator,
 		Logger:      logger,
-		Middleware:   cfg.Middleware,
+		Middleware:  cfg.Middleware,
 		TaskTimeout: cfg.Timeout,
 	})
 

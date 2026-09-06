@@ -80,17 +80,17 @@ const responseBudget = 16 * 1024 // 16 KiB
 // ListProductsInput — the caller contract. schema_only defaults to true
 // so the first call to an unfamiliar tool returns cheap metadata.
 type ListProductsInput struct {
-	SchemaOnly bool   `json:"schema_only,omitempty" jsonschema:"description=Return schema metadata instead of data. Default: true (explore first)"`
-	Cursor     string `json:"cursor,omitempty" jsonschema:"description=Opaque cursor from a previous response's next_cursor field"`
-	Limit      int    `json:"limit,omitempty" jsonschema:"description=Max items per page (default 50, max capped by server)"`
+	SchemaOnly bool    `json:"schema_only,omitempty" jsonschema:"description=Return schema metadata instead of data. Default: true (explore first)"`
+	Cursor     string  `json:"cursor,omitempty" jsonschema:"description=Opaque cursor from a previous response's next_cursor field"`
+	Limit      int     `json:"limit,omitempty" jsonschema:"description=Max items per page (default 50, max capped by server)"`
 	MinPrice   float64 `json:"min_price,omitempty" jsonschema:"description=Filter: include only products with price >= min_price"`
 }
 
 // ListProductsOutput wraps the typed response. When schema_only is set,
 // Schema carries the metadata doc; otherwise Page carries the data slice.
 type ListProductsOutput struct {
-	Schema any                   `json:"schema,omitempty"`
-	Hint   string                `json:"hint,omitempty"`
+	Schema any                    `json:"schema,omitempty"`
+	Hint   string                 `json:"hint,omitempty"`
 	Page   *handler.Page[Product] `json:"page,omitempty"`
 }
 

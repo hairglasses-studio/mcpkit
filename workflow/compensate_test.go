@@ -387,14 +387,14 @@ func TestCompensationStack_ErrorsCollected(t *testing.T) {
 	errB := fmt.Errorf("error from b")
 
 	cs.Push(CompensationRecord{
-		NodeName: "a",
+		NodeName:   "a",
 		Compensate: func(_ context.Context, _ State) error { return errA },
-		State:    NewState(),
+		State:      NewState(),
 	})
 	cs.Push(CompensationRecord{
-		NodeName: "b",
+		NodeName:   "b",
 		Compensate: func(_ context.Context, _ State) error { return errB },
-		State:    NewState(),
+		State:      NewState(),
 	})
 
 	errs := cs.Compensate(context.Background())

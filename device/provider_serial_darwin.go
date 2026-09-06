@@ -94,8 +94,8 @@ type gridSerialProvider struct {
 	conns map[DeviceID]*gridSerialConnection
 }
 
-func (p *gridSerialProvider) Name() string               { return "grid_serial" }
-func (p *gridSerialProvider) DeviceTypes() []DeviceType   { return []DeviceType{TypeGenericHID} }
+func (p *gridSerialProvider) Name() string              { return "grid_serial" }
+func (p *gridSerialProvider) DeviceTypes() []DeviceType { return []DeviceType{TypeGenericHID} }
 
 func (p *gridSerialProvider) Enumerate(ctx context.Context) ([]Info, error) {
 	var paths [8][256]C.char
@@ -186,12 +186,12 @@ func (p *gridSerialProvider) Close() error {
 // ---------------------------------------------------------------------------
 
 type gridSerialConnection struct {
-	info     Info
-	fd       *os.File
-	mu       sync.Mutex
-	closed   bool
-	events   chan Event
-	readBuf  []byte
+	info    Info
+	fd      *os.File
+	mu      sync.Mutex
+	closed  bool
+	events  chan Event
+	readBuf []byte
 }
 
 func openGridSerial(info Info) (*gridSerialConnection, error) {

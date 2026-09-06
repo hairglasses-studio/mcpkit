@@ -107,7 +107,7 @@ func (s *Suite) Summary() string {
 	b.WriteString(" passed, ")
 	b.WriteString(itoa(failed))
 	b.WriteString(" failed, ")
-	b.WriteString(itoa(passed+failed))
+	b.WriteString(itoa(passed + failed))
 	b.WriteString(" total\n")
 	for _, r := range s.Results {
 		status := "PASS"

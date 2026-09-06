@@ -8,7 +8,7 @@ import (
 
 // FanOutConfig configures parallel execution.
 type FanOutConfig struct {
-	MaxConcurrency int           // 0 = unlimited
+	MaxConcurrency int // 0 = unlimited
 	Timeout        time.Duration
 	FailFast       bool // cancel remaining on first error
 	MergeFunc      func([]*StageOutput) *StageOutput

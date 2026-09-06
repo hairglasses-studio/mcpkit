@@ -59,7 +59,7 @@ func VerifyToolSignature(td ToolDefinition, sig ToolSignature, publicKey ed25519
 // associated public keys. It supports batch signing and per-tool verification.
 type SignatureStore struct {
 	mu         sync.RWMutex
-	signatures map[string]ToolSignature    // tool name -> signature
+	signatures map[string]ToolSignature     // tool name -> signature
 	publicKeys map[string]ed25519.PublicKey // signer ID -> public key
 }
 

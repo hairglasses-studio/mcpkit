@@ -252,13 +252,13 @@ func TestLoop_MaxConsecutiveSamplerFailures(t *testing.T) {
 	specFile := writeSpec(t, dir, spec)
 
 	loop, err := NewLoop(Config{
-		SpecFile:                     specFile,
-		ToolRegistry:                 registry.NewToolRegistry(),
-		Sampler:                      &alwaysFailSampler{},
-		SamplerRetries:               0,
-		SamplerBackoff:               time.Millisecond,
+		SpecFile:                      specFile,
+		ToolRegistry:                  registry.NewToolRegistry(),
+		Sampler:                       &alwaysFailSampler{},
+		SamplerRetries:                0,
+		SamplerBackoff:                time.Millisecond,
 		MaxConsecutiveSamplerFailures: 3,
-		MaxIterations:                100,
+		MaxIterations:                 100,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -282,8 +282,8 @@ func TestLoop_MaxConsecutiveSamplerFailures(t *testing.T) {
 
 // nonTextSampler returns a result whose Content is not a registry.Content type.
 type nonTextSampler struct {
-	calls  int
-	inner  *scriptedSampler
+	calls int
+	inner *scriptedSampler
 }
 
 func (s *nonTextSampler) CreateMessage(ctx context.Context, req sampling.CreateMessageRequest) (*sampling.CreateMessageResult, error) {

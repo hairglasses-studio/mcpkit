@@ -15,7 +15,7 @@ type mockAdapter struct {
 	closed   bool
 }
 
-func (m *mockAdapter) Protocol() Protocol { return m.protocol }
+func (m *mockAdapter) Protocol() Protocol                { return m.protocol }
 func (m *mockAdapter) Connect(ctx context.Context) error { return nil }
 func (m *mockAdapter) DiscoverTools(ctx context.Context) ([]mcp.Tool, error) {
 	return m.tools, nil

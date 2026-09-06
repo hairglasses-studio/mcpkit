@@ -27,23 +27,23 @@ var (
 )
 
 const (
-	xinputMaxControllers     = 4
-	errDeviceNotConnected    = 1167
-	xinputGamepadDPadUp      = 0x0001
-	xinputGamepadDPadDown    = 0x0002
-	xinputGamepadDPadLeft    = 0x0004
-	xinputGamepadDPadRight   = 0x0008
-	xinputGamepadStart       = 0x0010
-	xinputGamepadBack        = 0x0020
-	xinputGamepadLeftThumb   = 0x0040
-	xinputGamepadRightThumb  = 0x0080
-	xinputGamepadLB          = 0x0100
-	xinputGamepadRB          = 0x0200
-	xinputGamepadGuide       = 0x0400
-	xinputGamepadA           = 0x1000
-	xinputGamepadB           = 0x2000
-	xinputGamepadX           = 0x4000
-	xinputGamepadY           = 0x8000
+	xinputMaxControllers    = 4
+	errDeviceNotConnected   = 1167
+	xinputGamepadDPadUp     = 0x0001
+	xinputGamepadDPadDown   = 0x0002
+	xinputGamepadDPadLeft   = 0x0004
+	xinputGamepadDPadRight  = 0x0008
+	xinputGamepadStart      = 0x0010
+	xinputGamepadBack       = 0x0020
+	xinputGamepadLeftThumb  = 0x0040
+	xinputGamepadRightThumb = 0x0080
+	xinputGamepadLB         = 0x0100
+	xinputGamepadRB         = 0x0200
+	xinputGamepadGuide      = 0x0400
+	xinputGamepadA          = 0x1000
+	xinputGamepadB          = 0x2000
+	xinputGamepadX          = 0x4000
+	xinputGamepadY          = 0x8000
 )
 
 type xinputGamepad struct {
@@ -260,7 +260,7 @@ func (c *xinputConnection) readLoop(ctx context.Context) {
 				Type:      EventHat,
 				Timestamp: now,
 				Source:    "ABS_HAT0X",
-				HatX:     hatX,
+				HatX:      hatX,
 			})
 		}
 		if hatY != lastHatY {
@@ -269,7 +269,7 @@ func (c *xinputConnection) readLoop(ctx context.Context) {
 				Type:      EventHat,
 				Timestamp: now,
 				Source:    "ABS_HAT0Y",
-				HatY:     hatY,
+				HatY:      hatY,
 			})
 		}
 

@@ -18,8 +18,10 @@ func (m *pingModule) Description() string { return "Network ping tools" }
 func (m *pingModule) Tools() []registry.ToolDefinition {
 	return []registry.ToolDefinition{
 		{
-			Tool:    registry.Tool{Name: "ping", Description: "Ping a host"},
-			Handler: func(_ context.Context, _ registry.CallToolRequest) (*registry.CallToolResult, error) { return registry.MakeTextResult("pong"), nil },
+			Tool: registry.Tool{Name: "ping", Description: "Ping a host"},
+			Handler: func(_ context.Context, _ registry.CallToolRequest) (*registry.CallToolResult, error) {
+				return registry.MakeTextResult("pong"), nil
+			},
 			Category: "network",
 		},
 	}

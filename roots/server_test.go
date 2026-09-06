@@ -14,10 +14,10 @@ import (
 // mockBasicSession implements server.ClientSession but NOT server.SessionWithRoots.
 type mockBasicSession struct{}
 
-func (m *mockBasicSession) Initialize()                                          {}
-func (m *mockBasicSession) Initialized() bool                                    { return true }
-func (m *mockBasicSession) NotificationChannel() chan<- mcp.JSONRPCNotification  { return nil }
-func (m *mockBasicSession) SessionID() string                                    { return "basic" }
+func (m *mockBasicSession) Initialize()                                         {}
+func (m *mockBasicSession) Initialized() bool                                   { return true }
+func (m *mockBasicSession) NotificationChannel() chan<- mcp.JSONRPCNotification { return nil }
+func (m *mockBasicSession) SessionID() string                                   { return "basic" }
 
 // mockRootsSession implements server.SessionWithRoots.
 type mockRootsSession struct {

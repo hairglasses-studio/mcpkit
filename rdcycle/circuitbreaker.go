@@ -10,8 +10,8 @@ type BreakerState int
 
 const (
 	BreakerClosed   BreakerState = iota // normal operation
-	BreakerOpen                          // halted, waiting for cooldown
-	BreakerHalfOpen                      // testing after cooldown
+	BreakerOpen                         // halted, waiting for cooldown
+	BreakerHalfOpen                     // testing after cooldown
 )
 
 func (s BreakerState) String() string {

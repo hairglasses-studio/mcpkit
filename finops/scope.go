@@ -80,12 +80,12 @@ func (st *ScopedTracker) Usage(scope BudgetScope) UsageSummary {
 
 // ScopedBudgetExceededError is returned when a scoped budget is exceeded.
 type ScopedBudgetExceededError struct {
-	Scope   BudgetScope
-	Kind    string // "token" or "dollar"
-	Limit   int64
-	Used    int64
-	LimitF  float64
-	UsedF   float64
+	Scope  BudgetScope
+	Kind   string // "token" or "dollar"
+	Limit  int64
+	Used   int64
+	LimitF float64
+	UsedF  float64
 }
 
 func (e *ScopedBudgetExceededError) Error() string {

@@ -210,4 +210,3 @@ func RenderMarkdown(rm *Roadmap) string {
 
 	return sb.String()
 }
-

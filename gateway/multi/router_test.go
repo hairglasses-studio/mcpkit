@@ -473,6 +473,6 @@ type testModule struct {
 	tools []registry.ToolDefinition
 }
 
-func (m *testModule) Name() string              { return m.name }
-func (m *testModule) Description() string        { return "test module" }
+func (m *testModule) Name() string                     { return m.name }
+func (m *testModule) Description() string              { return "test module" }
 func (m *testModule) Tools() []registry.ToolDefinition { return m.tools }

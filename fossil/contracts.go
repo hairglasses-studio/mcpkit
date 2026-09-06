@@ -10,11 +10,11 @@ import (
 type FindingCategory string
 
 const (
-	CategoryUnknown      FindingCategory = "unknown"
-	CategoryDeadCode     FindingCategory = "dead_code"
-	CategoryClone        FindingCategory = "clone"
-	CategoryScaffolding  FindingCategory = "scaffolding"
-	CategoryBlastRadius  FindingCategory = "blast_radius"
+	CategoryUnknown     FindingCategory = "unknown"
+	CategoryDeadCode    FindingCategory = "dead_code"
+	CategoryClone       FindingCategory = "clone"
+	CategoryScaffolding FindingCategory = "scaffolding"
+	CategoryBlastRadius FindingCategory = "blast_radius"
 )
 
 // Location points to a finding location in source.

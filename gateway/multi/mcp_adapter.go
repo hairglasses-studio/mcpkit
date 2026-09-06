@@ -10,8 +10,8 @@ import (
 
 // mcpJSONRPCRequest represents an incoming MCP JSON-RPC 2.0 request.
 type mcpJSONRPCRequest struct {
-	JSONRPC string         `json:"jsonrpc"`
-	Method  string         `json:"method"`
+	JSONRPC string          `json:"jsonrpc"`
+	Method  string          `json:"method"`
 	ID      json.RawMessage `json:"id"`
 	Params  json.RawMessage `json:"params,omitempty"`
 }

@@ -55,8 +55,8 @@ func TestEvKeyName(t *testing.T) {
 		{0x111, "BTN_RIGHT"},
 		{0x112, "BTN_MIDDLE"},
 		{0x220, "BTN_DPAD_UP"},
-		{0xFFFF, ""},    // unknown code
-		{0x0000, ""},    // zero code
+		{0xFFFF, ""}, // unknown code
+		{0x0000, ""}, // zero code
 	}
 	for _, tt := range tests {
 		got := evKeyName(tt.code)
@@ -176,7 +176,7 @@ func TestLinuxEvdevConnection_ConvertEvent_Abs(t *testing.T) {
 		deviceInfo: Info{ID: "evdev:/dev/input/event0"},
 		absInfos: map[uint16]*absInfo{
 			0x00: {Minimum: -32768, Maximum: 32767}, // ABS_X (signed stick)
-			0x09: {Minimum: 0, Maximum: 255},         // ABS_GAS (unsigned trigger)
+			0x09: {Minimum: 0, Maximum: 255},        // ABS_GAS (unsigned trigger)
 		},
 	}
 
@@ -299,8 +299,8 @@ func TestLinuxEvdevConnection_NormalizeAxis(t *testing.T) {
 	conn := &linuxEvdevConnection{
 		absInfos: map[uint16]*absInfo{
 			0x00: {Minimum: -32768, Maximum: 32767}, // Signed stick
-			0x09: {Minimum: 0, Maximum: 255},         // Unsigned trigger
-			0x0a: {Minimum: 0, Maximum: 0},           // Degenerate (same min/max)
+			0x09: {Minimum: 0, Maximum: 255},        // Unsigned trigger
+			0x0a: {Minimum: 0, Maximum: 0},          // Degenerate (same min/max)
 		},
 	}
 

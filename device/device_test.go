@@ -177,9 +177,9 @@ type mockProvider struct {
 	openFn  func(DeviceID) (DeviceConnection, error)
 }
 
-func (m *mockProvider) Name() string                                    { return m.name }
-func (m *mockProvider) DeviceTypes() []DeviceType                       { return m.types }
-func (m *mockProvider) Enumerate(_ context.Context) ([]Info, error)     { return m.devices, nil }
+func (m *mockProvider) Name() string                                { return m.name }
+func (m *mockProvider) DeviceTypes() []DeviceType                   { return m.types }
+func (m *mockProvider) Enumerate(_ context.Context) ([]Info, error) { return m.devices, nil }
 func (m *mockProvider) Open(_ context.Context, id DeviceID) (DeviceConnection, error) {
 	if m.openFn != nil {
 		return m.openFn(id)
@@ -189,18 +189,18 @@ func (m *mockProvider) Open(_ context.Context, id DeviceID) (DeviceConnection, e
 func (m *mockProvider) Close() error { return nil }
 
 type mockConnection struct {
-	info    Info
-	events  chan Event
-	alive   bool
-	closed  bool
+	info   Info
+	events chan Event
+	alive  bool
+	closed bool
 }
 
-func (c *mockConnection) Info() Info                          { return c.info }
-func (c *mockConnection) Start(_ context.Context) error       { return nil }
-func (c *mockConnection) Events() <-chan Event                { return c.events }
-func (c *mockConnection) Feedback() DeviceFeedback            { return nil }
-func (c *mockConnection) Close() error                        { c.closed = true; close(c.events); return nil }
-func (c *mockConnection) Alive() bool                         { return c.alive }
+func (c *mockConnection) Info() Info                    { return c.info }
+func (c *mockConnection) Start(_ context.Context) error { return nil }
+func (c *mockConnection) Events() <-chan Event          { return c.events }
+func (c *mockConnection) Feedback() DeviceFeedback      { return nil }
+func (c *mockConnection) Close() error                  { c.closed = true; close(c.events); return nil }
+func (c *mockConnection) Alive() bool                   { return c.alive }
 
 func TestManager_ListDevices(t *testing.T) {
 	devices := []Info{

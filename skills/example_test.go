@@ -13,8 +13,10 @@ func ExampleNewSkillRegistry() {
 	dynReg := registry.NewDynamicRegistry()
 	// Pre-register tools that the skill will manage.
 	dynReg.AddTool(registry.ToolDefinition{
-		Tool:    registry.Tool{Name: "analyze"},
-		Handler: func(ctx context.Context, req registry.CallToolRequest) (*registry.CallToolResult, error) { return nil, nil },
+		Tool: registry.Tool{Name: "analyze"},
+		Handler: func(ctx context.Context, req registry.CallToolRequest) (*registry.CallToolResult, error) {
+			return nil, nil
+		},
 	})
 
 	sr := NewSkillRegistry(dynReg)

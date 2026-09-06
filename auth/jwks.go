@@ -15,12 +15,12 @@ import (
 // JWKSValidator validates JWT tokens by fetching keys from a JWKS endpoint.
 // It caches the key set and refreshes periodically.
 type JWKSValidator struct {
-	jwksURL    string
-	client     *http.Client
-	mu         sync.RWMutex
-	keys       map[string]*rsa.PublicKey
-	lastFetch  time.Time
-	cacheTTL   time.Duration
+	jwksURL   string
+	client    *http.Client
+	mu        sync.RWMutex
+	keys      map[string]*rsa.PublicKey
+	lastFetch time.Time
+	cacheTTL  time.Duration
 }
 
 // JWKSConfig configures JWKS-based token validation.

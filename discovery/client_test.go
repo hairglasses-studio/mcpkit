@@ -66,7 +66,7 @@ func TestSearch_QueryParams(t *testing.T) {
 	var capturedURL *url.URL
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		capturedURL = r.URL
-		writeJSON(w,SearchResult{
+		writeJSON(w, SearchResult{
 			Servers: []ServerMetadata{{ID: "s1", Name: "Server1"}},
 			Total:   1,
 		})
@@ -108,7 +108,7 @@ func TestSearch_EmptyQuery_NoQueryString(t *testing.T) {
 	var capturedURL *url.URL
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		capturedURL = r.URL
-		writeJSON(w,SearchResult{})
+		writeJSON(w, SearchResult{})
 	}))
 	defer srv.Close()
 
@@ -134,7 +134,7 @@ func TestSearch_ResponseDecoded(t *testing.T) {
 		Offset: 0,
 	}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w,want)
+		writeJSON(w, want)
 	}))
 	defer srv.Close()
 
@@ -152,7 +152,7 @@ func TestSearch_Caching_SecondCallHitsCache(t *testing.T) {
 	calls := 0
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		calls++
-		writeJSON(w,SearchResult{Total: calls}) // total changes each call
+		writeJSON(w, SearchResult{Total: calls}) // total changes each call
 	}))
 	defer srv.Close()
 
@@ -180,7 +180,7 @@ func TestSearch_CacheExpiry_AfterTTL(t *testing.T) {
 	calls := 0
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		calls++
-		writeJSON(w,SearchResult{Total: calls})
+		writeJSON(w, SearchResult{Total: calls})
 	}))
 	defer srv.Close()
 
@@ -212,7 +212,7 @@ func TestSearch_CacheInvalidation(t *testing.T) {
 	calls := 0
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		calls++
-		writeJSON(w,SearchResult{Total: calls})
+		writeJSON(w, SearchResult{Total: calls})
 	}))
 	defer srv.Close()
 
@@ -245,7 +245,7 @@ func TestGet_CorrectPath(t *testing.T) {
 	want := ServerMetadata{ID: "srv-42", Name: "Answer Server", Version: "2.0.0"}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		capturedPath = r.URL.Path
-		writeJSON(w,want)
+		writeJSON(w, want)
 	}))
 	defer srv.Close()
 
@@ -268,7 +268,7 @@ func TestGet_IDURLEncoded(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// r.RequestURI preserves the raw (percent-encoded) form sent by the client.
 		capturedRequestURI = r.RequestURI
-		writeJSON(w,ServerMetadata{ID: "has space"})
+		writeJSON(w, ServerMetadata{ID: "has space"})
 	}))
 	defer srv.Close()
 
@@ -287,7 +287,7 @@ func TestList_CorrectPath(t *testing.T) {
 	var capturedURL *url.URL
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		capturedURL = r.URL
-		writeJSON(w,SearchResult{Total: 5})
+		writeJSON(w, SearchResult{Total: 5})
 	}))
 	defer srv.Close()
 

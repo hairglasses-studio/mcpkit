@@ -116,14 +116,14 @@ type osvAPIResponse struct {
 
 // osvEntry is the minimal OSV entry fields we parse from the API response.
 type osvEntry struct {
-	ID        string     `json:"id"`
-	Summary   string     `json:"summary"`
-	Details   string     `json:"details"`
-	Aliases   []string   `json:"aliases"`
-	Published time.Time  `json:"published"`
-	Modified  time.Time  `json:"modified"`
-	Affected  []affected `json:"affected"`
-	References []osvRef  `json:"references"`
+	ID               string     `json:"id"`
+	Summary          string     `json:"summary"`
+	Details          string     `json:"details"`
+	Aliases          []string   `json:"aliases"`
+	Published        time.Time  `json:"published"`
+	Modified         time.Time  `json:"modified"`
+	Affected         []affected `json:"affected"`
+	References       []osvRef   `json:"references"`
 	DatabaseSpecific *struct {
 		URL string `json:"url"`
 	} `json:"database_specific"`
@@ -140,8 +140,8 @@ type osvPackage struct {
 }
 
 type osvRange struct {
-	Type   string      `json:"type"`
-	Events []osvEvent  `json:"events"`
+	Type   string     `json:"type"`
+	Events []osvEvent `json:"events"`
 }
 
 type osvEvent struct {

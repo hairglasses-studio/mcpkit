@@ -18,7 +18,10 @@ type HTTPServer struct {
 
 // NewHTTPServer creates a test MCP server accessible over HTTP.
 // It uses mcp-go's streamable HTTP transport with stateful sessions.
-func NewHTTPServer(t interface{ Helper(); Fatalf(string, ...any) }, reg *registry.ToolRegistry, opts ...server.StreamableHTTPOption) *HTTPServer {
+func NewHTTPServer(t interface {
+	Helper()
+	Fatalf(string, ...any)
+}, reg *registry.ToolRegistry, opts ...server.StreamableHTTPOption) *HTTPServer {
 	t.Helper()
 
 	mcpServer := registry.NewMCPServer("mcptest-http", "0.0.0-test")

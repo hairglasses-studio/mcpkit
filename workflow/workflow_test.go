@@ -501,29 +501,39 @@ func TestNodeTimeout(t *testing.T) {
 
 func TestHooks(t *testing.T) {
 	var (
-		nodeStarts    []string
-		nodeEnds      []string
-		nodeErrors    []string
-		checkpoints   []Checkpoint
-		cyclesAt      []int
-		mu            sync.Mutex
+		nodeStarts  []string
+		nodeEnds    []string
+		nodeErrors  []string
+		checkpoints []Checkpoint
+		cyclesAt    []int
+		mu          sync.Mutex
 	)
 
 	hooks := Hooks{
 		OnNodeStart: func(name string, _ State) {
-			mu.Lock(); nodeStarts = append(nodeStarts, name); mu.Unlock()
+			mu.Lock()
+			nodeStarts = append(nodeStarts, name)
+			mu.Unlock()
 		},
 		OnNodeEnd: func(name string, _ State) {
-			mu.Lock(); nodeEnds = append(nodeEnds, name); mu.Unlock()
+			mu.Lock()
+			nodeEnds = append(nodeEnds, name)
+			mu.Unlock()
 		},
 		OnNodeError: func(name string, _ error) {
-			mu.Lock(); nodeErrors = append(nodeErrors, name); mu.Unlock()
+			mu.Lock()
+			nodeErrors = append(nodeErrors, name)
+			mu.Unlock()
 		},
 		OnCheckpoint: func(cp Checkpoint) {
-			mu.Lock(); checkpoints = append(checkpoints, cp); mu.Unlock()
+			mu.Lock()
+			checkpoints = append(checkpoints, cp)
+			mu.Unlock()
 		},
 		OnCycleDetected: func(_ string, step int) {
-			mu.Lock(); cyclesAt = append(cyclesAt, step); mu.Unlock()
+			mu.Lock()
+			cyclesAt = append(cyclesAt, step)
+			mu.Unlock()
 		},
 	}
 

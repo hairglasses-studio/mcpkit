@@ -47,7 +47,7 @@ func (m *mockProvider) Exists(_ context.Context, key string) (bool, error) {
 	return ok, nil
 }
 
-func (m *mockProvider) Priority() int    { return m.priority }
+func (m *mockProvider) Priority() int     { return m.priority }
 func (m *mockProvider) IsAvailable() bool { return m.available }
 
 func (m *mockProvider) Close() error {

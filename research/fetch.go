@@ -1,4 +1,3 @@
-
 package research
 
 import (

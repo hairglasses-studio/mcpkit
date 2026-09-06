@@ -70,7 +70,7 @@ func main() {
 	// Each upstream is optional; the gateway starts with zero upstreams if
 	// none are configured and tools can be added at runtime.
 	type upstreamEnv struct {
-		name string
+		name   string
 		envVar string
 	}
 	candidates := []upstreamEnv{

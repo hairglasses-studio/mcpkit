@@ -224,7 +224,7 @@ func TestInputValidation_OptionalFieldMissing(t *testing.T) {
 	td := registry.ToolDefinition{
 		Tool: registry.Tool{
 			InputSchema: makeInputSchema(map[string]any{
-				"name":    map[string]any{"type": "string"},
+				"name":     map[string]any{"type": "string"},
 				"optional": map[string]any{"type": "integer"},
 			}, []string{"name"}),
 		},

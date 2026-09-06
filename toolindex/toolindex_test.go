@@ -59,9 +59,9 @@ type stubModule struct {
 	tools []registry.ToolDefinition
 }
 
-func (m *stubModule) Name() string                       { return m.name }
-func (m *stubModule) Description() string                { return m.desc }
-func (m *stubModule) Tools() []registry.ToolDefinition   { return m.tools }
+func (m *stubModule) Name() string                     { return m.name }
+func (m *stubModule) Description() string              { return m.desc }
+func (m *stubModule) Tools() []registry.ToolDefinition { return m.tools }
 
 var nopHandler = func(_ context.Context, _ registry.CallToolRequest) (*registry.CallToolResult, error) {
 	return registry.MakeTextResult("ok"), nil

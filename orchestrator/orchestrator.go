@@ -13,7 +13,7 @@ type StageFunc func(ctx context.Context, input StageInput) (*StageOutput, error)
 // StageInput is the input to a stage.
 type StageInput struct {
 	Data     map[string]any
-	Previous *StageOutput  // nil for first stage
+	Previous *StageOutput // nil for first stage
 	Metadata map[string]string
 }
 

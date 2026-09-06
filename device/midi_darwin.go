@@ -116,7 +116,7 @@ func init() {
 
 type darwinMIDIProvider struct{}
 
-func (p *darwinMIDIProvider) Name() string            { return "coremidi" }
+func (p *darwinMIDIProvider) Name() string              { return "coremidi" }
 func (p *darwinMIDIProvider) DeviceTypes() []DeviceType { return []DeviceType{TypeMIDI} }
 
 func (p *darwinMIDIProvider) Enumerate(_ context.Context) ([]Info, error) {

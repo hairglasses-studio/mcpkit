@@ -72,7 +72,7 @@ func NewToolIndexModule(prefix string, reg *registry.ToolRegistry) registry.Tool
 }
 
 func (m *toolIndexModule) Name() string        { return m.prefix + "_tool_index" }
-func (m *toolIndexModule) Description() string  { return "Tool catalog and search for " + m.prefix }
+func (m *toolIndexModule) Description() string { return "Tool catalog and search for " + m.prefix }
 func (m *toolIndexModule) Tools() []registry.ToolDefinition {
 	catalog := handler.TypedHandler[catalogInput, catalogOutput](
 		m.prefix+"_tool_catalog",

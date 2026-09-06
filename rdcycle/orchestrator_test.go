@@ -102,8 +102,8 @@ func TestOrchestratorBreakerStops(t *testing.T) {
 	breaker.RecordResult(false, false) // open the breaker
 
 	cfg := OrchestratorConfig{
-		SpecDir:  filepath.Join(dir, "specs"),
-		Breaker:  breaker,
+		SpecDir:   filepath.Join(dir, "specs"),
+		Breaker:   breaker,
 		MaxCycles: 10,
 		RalphStarter: func(ctx context.Context, specPath string) error {
 			return nil

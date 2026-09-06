@@ -66,8 +66,8 @@ func TestManager_Refresh_NewDevice(t *testing.T) {
 
 	var enumCount atomic.Int32
 	provider := &mockProvider{
-		name:  "refresh-mock",
-		types: []DeviceType{TypeGamepad},
+		name:    "refresh-mock",
+		types:   []DeviceType{TypeGamepad},
 		devices: []Info{devInfo},
 	}
 

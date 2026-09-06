@@ -217,6 +217,6 @@ type bridgeModule struct {
 	tools []registry.ToolDefinition
 }
 
-func (m *bridgeModule) Name() string                    { return "openapi" }
-func (m *bridgeModule) Description() string             { return "Auto-generated tools from OpenAPI spec" }
+func (m *bridgeModule) Name() string                     { return "openapi" }
+func (m *bridgeModule) Description() string              { return "Auto-generated tools from OpenAPI spec" }
 func (m *bridgeModule) Tools() []registry.ToolDefinition { return m.tools }

@@ -901,4 +901,3 @@ func (m *prefetchCheckModule) Tools() []registry.ToolDefinition {
 		},
 	}
 }
-

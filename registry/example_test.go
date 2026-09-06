@@ -15,13 +15,17 @@ func (m *echoModule) Description() string { return "Echo tool module" }
 func (m *echoModule) Tools() []registry.ToolDefinition {
 	return []registry.ToolDefinition{
 		{
-			Tool:    registry.Tool{Name: "echo_text", Description: "Echo text back"},
-			Handler: func(_ context.Context, _ registry.CallToolRequest) (*registry.CallToolResult, error) { return registry.MakeTextResult("ok"), nil },
+			Tool: registry.Tool{Name: "echo_text", Description: "Echo text back"},
+			Handler: func(_ context.Context, _ registry.CallToolRequest) (*registry.CallToolResult, error) {
+				return registry.MakeTextResult("ok"), nil
+			},
 			Category: "io",
 		},
 		{
-			Tool:    registry.Tool{Name: "echo_json", Description: "Echo JSON back"},
-			Handler: func(_ context.Context, _ registry.CallToolRequest) (*registry.CallToolResult, error) { return registry.MakeTextResult("{}"), nil },
+			Tool: registry.Tool{Name: "echo_json", Description: "Echo JSON back"},
+			Handler: func(_ context.Context, _ registry.CallToolRequest) (*registry.CallToolResult, error) {
+				return registry.MakeTextResult("{}"), nil
+			},
 			Category: "io",
 		},
 	}

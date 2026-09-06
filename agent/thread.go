@@ -6,16 +6,16 @@ import (
 
 // Standard event types for agent threads.
 const (
-	EventTypeToolCall     = "tool_call"
-	EventTypeToolResult   = "tool_result"
-	EventTypeLLMRequest   = "llm_request"
-	EventTypeLLMResponse  = "llm_response"
-	EventTypeError        = "error"
-	EventTypeHumanInput   = "human_input"
-	EventTypeHumanOutput  = "human_output"
-	EventTypeStateChange  = "state_change"
-	EventTypeCheckpoint   = "checkpoint"
-	EventTypePreFetch     = "pre_fetch"
+	EventTypeToolCall    = "tool_call"
+	EventTypeToolResult  = "tool_result"
+	EventTypeLLMRequest  = "llm_request"
+	EventTypeLLMResponse = "llm_response"
+	EventTypeError       = "error"
+	EventTypeHumanInput  = "human_input"
+	EventTypeHumanOutput = "human_output"
+	EventTypeStateChange = "state_change"
+	EventTypeCheckpoint  = "checkpoint"
+	EventTypePreFetch    = "pre_fetch"
 )
 
 // Event represents a discrete occurrence in an agent's execution.

@@ -17,9 +17,9 @@ type testModule struct {
 	prompts []PromptDefinition
 }
 
-func (m *testModule) Name() string                   { return m.name }
-func (m *testModule) Description() string            { return "test module" }
-func (m *testModule) Prompts() []PromptDefinition    { return m.prompts }
+func (m *testModule) Name() string                { return m.name }
+func (m *testModule) Description() string         { return "test module" }
+func (m *testModule) Prompts() []PromptDefinition { return m.prompts }
 
 func simpleHandler(text string) PromptHandlerFunc {
 	return func(_ context.Context, _ mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {

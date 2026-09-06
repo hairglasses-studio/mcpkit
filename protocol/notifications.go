@@ -43,15 +43,15 @@ const (
 
 // Standard MCP request methods.
 const (
-	MethodInitialize     = "initialize"
-	MethodPing           = "ping"
-	MethodToolsList      = "tools/list"
-	MethodToolsCall      = "tools/call"
-	MethodResourcesList  = "resources/list"
-	MethodResourcesRead  = "resources/read"
-	MethodPromptsList    = "prompts/list"
-	MethodPromptsGet     = "prompts/get"
-	MethodLoggingSetLevel = "logging/setLevel"
+	MethodInitialize         = "initialize"
+	MethodPing               = "ping"
+	MethodToolsList          = "tools/list"
+	MethodToolsCall          = "tools/call"
+	MethodResourcesList      = "resources/list"
+	MethodResourcesRead      = "resources/read"
+	MethodPromptsList        = "prompts/list"
+	MethodPromptsGet         = "prompts/get"
+	MethodLoggingSetLevel    = "logging/setLevel"
 	MethodCompletionComplete = "completion/complete"
 )
 

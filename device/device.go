@@ -16,13 +16,13 @@ type DeviceType int
 
 const (
 	TypeUnknown     DeviceType = iota
-	TypeMIDI                          // USB class-compliant, RTP-MIDI, BLE-MIDI
-	TypeGamepad                       // Xbox, PlayStation, Nintendo, generic
-	TypeKeyboard                      // QMK/VIA keyboard with encoders
-	TypeMouse                         // Mice with extra buttons
-	TypeGenericHID                    // Stream Deck, custom macropads
-	TypeHOTAS                         // Flight sticks, throttle quadrants
-	TypeRacingWheel                   // Steering wheels, pedals
+	TypeMIDI                   // USB class-compliant, RTP-MIDI, BLE-MIDI
+	TypeGamepad                // Xbox, PlayStation, Nintendo, generic
+	TypeKeyboard               // QMK/VIA keyboard with encoders
+	TypeMouse                  // Mice with extra buttons
+	TypeGenericHID             // Stream Deck, custom macropads
+	TypeHOTAS                  // Flight sticks, throttle quadrants
+	TypeRacingWheel            // Steering wheels, pedals
 )
 
 func (t DeviceType) String() string {
@@ -50,11 +50,11 @@ func (t DeviceType) String() string {
 type ConnectionType int
 
 const (
-	ConnUSB             ConnectionType = iota
+	ConnUSB ConnectionType = iota
 	ConnBluetooth
 	ConnWirelessDongle
-	ConnNetwork                        // RTP-MIDI, network MIDI
-	ConnVirtual                        // Software-defined devices
+	ConnNetwork // RTP-MIDI, network MIDI
+	ConnVirtual // Software-defined devices
 )
 
 func (c ConnectionType) String() string {
@@ -192,7 +192,7 @@ type HotPlugWatcher interface {
 type HotPlugType int
 
 const (
-	HotPlugConnect    HotPlugType = iota
+	HotPlugConnect HotPlugType = iota
 	HotPlugDisconnect
 )
 
@@ -245,16 +245,16 @@ func PlatformProviders() []DeviceProvider {
 type EventType int
 
 const (
-	EventButton        EventType = iota // Digital press/release
-	EventAxis                           // Analog axis change
-	EventHat                            // D-pad / hat switch
-	EventMIDINote                       // MIDI note on/off
-	EventMIDICC                         // MIDI continuous controller
-	EventMIDIProgramChange              // MIDI program change
-	EventMIDIPitchBend                  // MIDI pitch bend
-	EventMIDISysEx                      // MIDI system exclusive
-	EventKey                            // Keyboard key press/release
-	EventEncoder                        // Rotary encoder step
+	EventButton            EventType = iota // Digital press/release
+	EventAxis                               // Analog axis change
+	EventHat                                // D-pad / hat switch
+	EventMIDINote                           // MIDI note on/off
+	EventMIDICC                             // MIDI continuous controller
+	EventMIDIProgramChange                  // MIDI program change
+	EventMIDIPitchBend                      // MIDI pitch bend
+	EventMIDISysEx                          // MIDI system exclusive
+	EventKey                                // Keyboard key press/release
+	EventEncoder                            // Rotary encoder step
 )
 
 func (t EventType) String() string {

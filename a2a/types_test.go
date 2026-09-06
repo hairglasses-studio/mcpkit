@@ -41,11 +41,11 @@ func TestTextPart(t *testing.T) {
 func TestAgentCard_JSON(t *testing.T) {
 	t.Parallel()
 	card := AgentCard{
-		Name:        "test-agent",
-		Description: "A test agent",
-		URL:         "https://example.com/agent",
-		Version:     "1.0.0",
-		Provider:    &Provider{Organization: "Test Org"},
+		Name:         "test-agent",
+		Description:  "A test agent",
+		URL:          "https://example.com/agent",
+		Version:      "1.0.0",
+		Provider:     &Provider{Organization: "Test Org"},
 		Capabilities: &Capabilities{Streaming: true},
 		Skills: []Skill{
 			{ID: "greet", Name: "greet", Description: "Say hello"},

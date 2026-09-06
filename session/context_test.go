@@ -623,9 +623,9 @@ func TestXMLSafeTag(t *testing.T) {
 		{"tool_result", "tool_result"},
 		{"error", "error"},
 		{"human_request", "human_request"},
-		{"123bad", "_23bad"},    // leading digit becomes _
-		{"a b c", "a_b_c"},     // spaces become _
-		{"", "_"},              // empty becomes _
+		{"123bad", "_23bad"}, // leading digit becomes _
+		{"a b c", "a_b_c"},   // spaces become _
+		{"", "_"},            // empty becomes _
 		{"valid-tag.1", "valid-tag.1"},
 	}
 
