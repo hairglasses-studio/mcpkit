@@ -63,7 +63,7 @@ func parseFlags() options {
 	var opts options
 	flag.StringVar(&opts.root, "root", defaultRoot, "workspace root")
 	flag.StringVar(&opts.manifestPath, "manifest", "", "manifest path (default <root>/workspace/manifest.json)")
-	flag.StringVar(&opts.versionFile, "version-file", "", "go version file (default <root>/make/go-version)")
+	flag.StringVar(&opts.versionFile, "version-file", "", "go version file (default <root>/ralphglasses/dotfiles/make/go-version)")
 	flag.StringVar(&opts.repoPolicyPath, "repo-policy", "", "repo policy path (default <root>/docs/inventory/repo-catalog.policy.json)")
 	flag.BoolVar(&opts.dryRun, "dry-run", false, "show what would change")
 	flag.BoolVar(&opts.tidy, "tidy", false, "run go mod tidy after update")
@@ -84,7 +84,7 @@ func parseFlags() options {
 		opts.manifestPath = filepath.Join(opts.root, "workspace", "manifest.json")
 	}
 	if opts.versionFile == "" {
-		opts.versionFile = filepath.Join(opts.root, "make", "go-version")
+		opts.versionFile = filepath.Join(opts.root, "ralphglasses", "dotfiles", "make", "go-version")
 	}
 	if opts.repoPolicyPath == "" {
 		opts.repoPolicyPath = filepath.Join(opts.root, "docs", "inventory", "repo-catalog.policy.json")
@@ -114,6 +114,10 @@ func run(opts options) error {
 	changed := 0
 	for _, repo := range repos {
 		repoPath := repo.Path
+		if repoPath == "" {
+			// manifest v1 has no path field; repos live at <root>/<name>.
+			repoPath = repo.Name
+		}
 		if !filepath.IsAbs(repoPath) {
 			repoPath = filepath.Join(opts.root, repoPath)
 		}

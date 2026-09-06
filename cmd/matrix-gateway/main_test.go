@@ -32,6 +32,9 @@ func TestDispatchFleetTasks(t *testing.T) {
 	if _, err := os.Stat(SessionsDb); os.IsNotExist(err) {
 		t.Skip("sessions.db not found, skipping dispatch test")
 	}
+	if _, err := os.Stat(Orchestrator); os.IsNotExist(err) {
+		t.Skipf("orchestrator script %s not found, skipping dispatch test", Orchestrator)
+	}
 	err := dispatchFleetTasks()
 	if err != nil {
 		t.Fatalf("dispatchFleetTasks failed: %v", err)
