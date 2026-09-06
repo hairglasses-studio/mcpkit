@@ -5,6 +5,7 @@ package registry
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -179,15 +180,18 @@ func TestServerProgressMiddleware_NotifiesRealSession(t *testing.T) {
 		progress float64
 		total    float64
 	}
-	var received []notification
+	// Progress notifications arrive on the client's own goroutine and are not
+	// ordered against CallTool's reply, so hand them to the test over a channel
+	// instead of appending to a slice the assertions would race against.
+	got := make(chan notification, 16)
 
 	client := mcp.NewClient(&mcp.Implementation{Name: "client", Version: "0.0.1"}, &mcp.ClientOptions{
 		ProgressNotificationHandler: func(_ context.Context, req *mcp.ProgressNotificationClientRequest) {
-			received = append(received, notification{
+			got <- notification{
 				message:  req.Params.Message,
 				progress: req.Params.Progress,
 				total:    req.Params.Total,
-			})
+			}
 		},
 	})
 
@@ -210,8 +214,15 @@ func TestServerProgressMiddleware_NotifiesRealSession(t *testing.T) {
 		t.Fatalf("CallTool: %v", err)
 	}
 
-	if len(received) != 3 {
-		t.Fatalf("got %d progress notifications, want 3: %+v", len(received), received)
+	var received []notification
+	deadline := time.After(10 * time.Second)
+	for len(received) < 3 {
+		select {
+		case n := <-got:
+			received = append(received, n)
+		case <-deadline:
+			t.Fatalf("got %d progress notifications, want 3: %+v", len(received), received)
+		}
 	}
 	for i, n := range received {
 		if n.message != "frobbing widgets" {

@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 
 	"github.com/mark3labs/mcp-go/server"
+	"github.com/mark3labs/mcp-go/server/servertest"
 
 	"github.com/hairglasses-studio/mcpkit/registry"
 )
@@ -32,7 +33,7 @@ func NewHTTPServer(t interface {
 	}
 	allOpts := append(defaultOpts, opts...)
 
-	ts := server.NewTestStreamableHTTPServer(mcpServer, allOpts...)
+	ts := servertest.NewTestStreamableHTTPServer(mcpServer, allOpts...)
 
 	return &HTTPServer{
 		Server:   ts,
@@ -41,7 +42,7 @@ func NewHTTPServer(t interface {
 }
 
 // Endpoint returns the full URL for MCP requests (the server URL itself,
-// since NewTestStreamableHTTPServer routes at root).
+// since servertest.NewTestStreamableHTTPServer routes at root).
 func (s *HTTPServer) Endpoint() string {
 	return s.URL + "/mcp"
 }

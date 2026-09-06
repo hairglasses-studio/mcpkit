@@ -7,7 +7,7 @@ require (
 	github.com/getkin/kin-openapi v0.149.0
 	github.com/google/uuid v1.6.0
 	github.com/invopop/jsonschema v0.14.0
-	github.com/mark3labs/mcp-go v0.54.0
+	github.com/mark3labs/mcp-go v1.0.0
 	github.com/modelcontextprotocol/go-sdk v1.7.0
 	github.com/prometheus/client_golang v1.24.1
 	go.opentelemetry.io/contrib/bridges/otelslog v0.20.1

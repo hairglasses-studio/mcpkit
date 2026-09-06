@@ -119,5 +119,8 @@ func NewStreamableHTTPHandler(s *MCPServer, opts HTTPServerOptions) http.Handler
 		httpOpts = append(httpOpts, server.WithEndpointPath(opts.EndpointPath))
 	}
 	httpOpts = append(httpOpts, server.WithStateLess(opts.Stateless))
+	if opts.DisableLocalhostProtection {
+		httpOpts = append(httpOpts, server.WithDisableLocalhostProtection(true))
+	}
 	return server.NewStreamableHTTPServer(s, httpOpts...)
 }

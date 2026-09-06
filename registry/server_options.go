@@ -72,4 +72,13 @@ type HTTPServerOptions struct {
 	// server.WithStateLess(true); official SDK:
 	// mcp.StreamableHTTPOptions.Stateless).
 	Stateless bool
+
+	// DisableLocalhostProtection turns off the DNS-rebinding defence that
+	// mcp-go >= 0.56 (CVE-2026-81092) applies by default: a request that
+	// arrives on a loopback listener with a non-loopback Host header is
+	// rejected with 403. Leave false unless the server is deliberately
+	// fronted by a same-host proxy that rewrites Host (mcp-go:
+	// server.WithDisableLocalhostProtection(true); official SDK: no
+	// equivalent option, documented no-op there).
+	DisableLocalhostProtection bool
 }
