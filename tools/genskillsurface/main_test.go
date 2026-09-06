@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -71,5 +72,82 @@ func TestGenerateOutputsCopiesReferenceTrees(t *testing.T) {
 		if !found {
 			t.Fatalf("expected generated output %q", path)
 		}
+	}
+}
+
+// TestCheckOutputsSkipsAbsentClaudeProjection pins the two halves of the
+// `.claude` projection rule. `.claude/` is gitignored in this repo, so a fresh
+// clone has none of it: checkOutputs must not fail on projected files that were
+// never checked in (the state mcpkit's skill-surface-check gate landed in once
+// the repo's dangling `.claude` symlink was replaced with a real directory).
+// It must still report drift for a projected file that IS present and wrong,
+// otherwise the skip would make the whole gate vacuous.
+func TestCheckOutputsSkipsAbsentClaudeProjection(t *testing.T) {
+	repoRoot := filepath.Join("..", "..")
+	files, err := generateOutputs(repoRoot)
+	if err != nil {
+		t.Fatalf("generateOutputs() error: %v", err)
+	}
+
+	claudePrefix := ".claude" + string(filepath.Separator)
+	tmp := t.TempDir()
+	copyTree(t, filepath.Join(repoRoot, ".agents"), filepath.Join(tmp, ".agents"))
+
+	var claudeOutput *docFile
+	for i, f := range files {
+		if strings.HasPrefix(filepath.Clean(f.Path), claudePrefix) {
+			if claudeOutput == nil {
+				claudeOutput = &files[i]
+			}
+			continue
+		}
+		writeFile(t, filepath.Join(tmp, f.Path), f.Content)
+	}
+	if claudeOutput == nil {
+		t.Fatal("no .claude projection outputs generated; test cannot cover the skip")
+	}
+
+	// Half 1: projection entirely absent.
+	if err := checkOutputs(tmp); err != nil {
+		t.Fatalf("checkOutputs() with no .claude projection: %v", err)
+	}
+
+	// Half 2: projection present but drifted.
+	writeFile(t, filepath.Join(tmp, claudeOutput.Path), append([]byte("drifted\n"), claudeOutput.Content...))
+	if err := checkOutputs(tmp); err == nil {
+		t.Fatalf("checkOutputs() accepted drifted %s; the absent-file skip made the gate vacuous", claudeOutput.Path)
+	}
+}
+
+func writeFile(t *testing.T, path string, content []byte) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatalf("MkdirAll(%s): %v", filepath.Dir(path), err)
+	}
+	if err := os.WriteFile(path, content, 0o644); err != nil {
+		t.Fatalf("WriteFile(%s): %v", path, err)
+	}
+}
+
+func copyTree(t *testing.T, src, dst string) {
+	t.Helper()
+	if err := filepath.WalkDir(src, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(src, p)
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return os.MkdirAll(filepath.Join(dst, rel), 0o755)
+		}
+		b, err := os.ReadFile(p)
+		if err != nil {
+			return err
+		}
+		return os.WriteFile(filepath.Join(dst, rel), b, 0o644)
+	}); err != nil {
+		t.Fatalf("copyTree(%s): %v", src, err)
 	}
 }

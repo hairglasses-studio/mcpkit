@@ -113,10 +113,20 @@ func checkOutputs(repoRoot string) error {
 		// projection. A standalone clone or managed worktree intentionally has
 		// no sibling docs checkout, so validate the repo-owned outputs without
 		// treating that external projection as missing source.
-		if claudeProjectionUnavailable && strings.HasPrefix(filepath.Clean(f.Path), ".claude"+string(filepath.Separator)) {
-			continue
-		}
 		path := filepath.Join(repoRoot, f.Path)
+		if strings.HasPrefix(filepath.Clean(f.Path), ".claude"+string(filepath.Separator)) {
+			if claudeProjectionUnavailable {
+				continue
+			}
+			// `.claude/` is gitignored in this repo, so the projection is
+			// untracked local state that a fresh clone simply does not have.
+			// Skip an absent projected file rather than failing the gate on
+			// something that was never checked in; drift is still enforced
+			// for whatever the projection does contain.
+			if _, statErr := os.Stat(path); os.IsNotExist(statErr) {
+				continue
+			}
+		}
 		actual, err := os.ReadFile(path)
 		if err != nil {
 			return fmt.Errorf("read %s: %w", path, err)
