@@ -39,3 +39,38 @@ func TestToolMetaField_Missing(t *testing.T) {
 		t.Error("expected ok=false for a key never set")
 	}
 }
+
+func TestApplyToolMetadata_GoogleParity(t *testing.T) {
+	td := ToolDefinition{
+		Tool:           Tool{Name: "test_write"},
+		IsWrite:        true,
+		AlwaysLoad:     true,
+		MaxResultChars: 1000,
+	}
+	applied := ApplyToolMetadata(td, "", false)
+
+	for _, key := range []string{
+		"anthropic/alwaysLoad",
+		"google/alwaysLoad",
+		"antigravity/alwaysLoad",
+		"anthropic/requiresUserInteraction",
+		"google/requiresUserInteraction",
+		"antigravity/requiresUserInteraction",
+	} {
+		v, ok := ToolMetaField(applied.Tool, key)
+		if !ok || v != true {
+			t.Errorf("expected %s = true, got %v (ok=%v)", key, v, ok)
+		}
+	}
+
+	for _, key := range []string{
+		"anthropic/maxResultSizeChars",
+		"google/maxResultSizeChars",
+		"antigravity/maxResultSizeChars",
+	} {
+		v, ok := ToolMetaField(applied.Tool, key)
+		if !ok || v != 1000 {
+			t.Errorf("expected %s = 1000, got %v (ok=%v)", key, v, ok)
+		}
+	}
+}

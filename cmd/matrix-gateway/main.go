@@ -192,6 +192,19 @@ func runStdioServer() {
 		return mcp.NewToolResultText(res), nil
 	})
 
+	// Tool 7: fleet_request_orders
+	registry.AddToolToServer(s, mcp.NewTool("fleet_request_orders",
+		mcp.WithDescription("Message the Fleet Orchestrator on archglasses and ask for orders for all local Cline agents whenever idle"),
+	), func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		solicitorPath := filepath.Join(WorkspaceDir, "auto_idle_order_solicitor.py")
+		cmd := exec.CommandContext(ctx, "python3", solicitorPath)
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("solicitor error: %v\n%s", err, string(out))), nil
+		}
+		return mcp.NewToolResultText(string(out)), nil
+	})
+
 	if err := registry.ServeStdio(s); err != nil {
 		fmt.Fprintf(os.Stderr, "server error: %v\n", err)
 		os.Exit(1)
