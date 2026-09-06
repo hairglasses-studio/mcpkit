@@ -13,6 +13,11 @@ func TestDetectMCPRuntime(t *testing.T) {
 	}{
 		{"modern", "module x\ngo 1.26\nrequire github.com/modelcontextprotocol/go-sdk v1.7.0\n", EraModernCapable},
 		{"legacy-mark3", "module x\nrequire github.com/mark3labs/mcp-go v0.57.0\n", EraLegacyOnly},
+		// mark3labs/mcp-go v1.0.0 set LATEST_PROTOCOL_VERSION to 2026-07-28,
+		// so a v1+ pin is modern-capable. Classifying it legacy-only (the
+		// pre-2026-09 behaviour) mislabels every repo on the new major.
+		{"modern-mark3", "module x\nrequire github.com/mark3labs/mcp-go v1.0.0\n", EraModernCapable},
+		{"dual-modern-mark3-old-official", "module x\nrequire (\n\tgithub.com/mark3labs/mcp-go v1.0.0\n\tgithub.com/modelcontextprotocol/go-sdk v1.4.1\n)\n", EraDual},
 		{"legacy-old-official", "module x\nrequire github.com/modelcontextprotocol/go-sdk v1.4.1\n", EraLegacyOnly},
 		{"dual", "module x\nrequire (\n\tgithub.com/mark3labs/mcp-go v0.54.0\n\tgithub.com/modelcontextprotocol/go-sdk v1.7.0\n)\n", EraDual},
 		{"via-mcpkit", "module x\nrequire github.com/hairglasses-studio/mcpkit v0.8.0\n", EraViaMcpkit},

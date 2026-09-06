@@ -24,9 +24,14 @@ import (
 
 // Spec eras.
 const (
-	EraModernCapable = "modern-capable" // official go-sdk >= v1.7.0
-	EraDual          = "dual"           // both official (>=1.7.0) and mark3labs present
-	EraLegacyOnly    = "legacy-only"    // mark3labs/mcp-go, or official < v1.7.0
+	// A modern-capable SDK dependency is official go-sdk >= v1.7.0 OR
+	// mark3labs/mcp-go >= v1.0.0. mark3labs was legacy-only by definition
+	// until v1.0.0 (2026), which set LATEST_PROTOCOL_VERSION to 2026-07-28;
+	// treating every mark3labs pin as legacy would now mislabel any repo on
+	// v1.0.0+ (jellyfin-mcp-deluxe and ebay-hardware-seller today).
+	EraModernCapable = "modern-capable" // a modern-capable SDK, only
+	EraDual          = "dual"           // both SDKs present, at least one modern-capable
+	EraLegacyOnly    = "legacy-only"    // official < v1.7.0 and/or mark3labs < v1.0.0
 	EraViaMcpkit     = "via-mcpkit"     // depends on mcpkit, no direct SDK require
 	EraNone          = ""               // no MCP SDK dependency (non-Go or non-MCP)
 )
@@ -84,14 +89,16 @@ func detectMCPRuntime(dir string) MCPRuntime {
 	sort.Strings(rt.SDKs)
 
 	officialV, hasOfficial := versions[modOfficial]
-	_, hasMark3 := versions[modMark3]
+	mark3V, hasMark3 := versions[modMark3]
 	_, hasMcpkit := versions[modMcpkit]
 	officialModern := hasOfficial && semverAtLeast(officialV, 1, 7)
+	mark3Modern := hasMark3 && semverAtLeast(mark3V, 1, 0)
+	anyModern := officialModern || mark3Modern
 
 	switch {
-	case officialModern && hasMark3:
+	case anyModern && hasOfficial && hasMark3:
 		rt.SpecEra = EraDual
-	case officialModern:
+	case anyModern:
 		rt.SpecEra = EraModernCapable
 	case hasMark3 || hasOfficial:
 		rt.SpecEra = EraLegacyOnly

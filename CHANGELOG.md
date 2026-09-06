@@ -12,6 +12,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [v0.9.0] - 2026-09-06
+
+### Changed
+
+- **Dependencies — `github.com/mark3labs/mcp-go` v0.54.0 → v1.0.0.** Two breaking changes reached this repo. (1) `server.NewTestServer` / `NewTestStreamableHTTPServer` moved to package `server/servertest` (`mcptest/http.go`) — the only compile break found anywhere in the fleet. (2) DNS-rebinding protection is now ON BY DEFAULT for Streamable HTTP and SSE (GHSA-8g5x-gj7x-mxgm / CVE-2026-81092, High 7.6): a loopback listener that receives a non-loopback `Host` header returns 403. `registry.HTTPServerOptions` gains `DisableLocalhostProtection`, forwarded by `NewStreamableHTTPHandler` to `server.WithDisableLocalhostProtection`; the default stays protected, and a consumer behind a Host-rewriting proxy must opt out explicitly. Also note `LATEST_PROTOCOL_VERSION` is now `2026-07-28` (was `2025-11-25`) — negotiated per client, but committed `.well-known/mcp.json` fixtures across the fleet still pin the old value. Package `mcp` removed zero exported symbols and zero json-tagged fields, so `CallToolParams.Arguments` is still `any` and consumer call sites compile untouched.
+
+- **Dependencies — coupled sets refreshed.** OpenTelemetry to v1.46.0 (`otel`, `sdk`, `metric`, `trace`, plus `otel/log` v0.22.0, `contrib/bridges/otelslog` v0.20.1, `exporters/prometheus` v0.68.0 — all bumped together; a partial bump fails with `undefined: api.KeyValue`), `prometheus/client_golang` v1.24.1, `a2aproject/a2a-go/v2` v2.5.0, `getkin/kin-openapi` v0.149.0, gRPC/protobuf, and the `golang.org/x/*` set (net, crypto, text, sys, sync, mod).
+
+- **fleetinventory — spec-era classifier is now version-aware for mark3labs.** `EraLegacyOnly` was assigned to any `mark3labs/mcp-go` pin regardless of version. mcp-go v1.0.0 sets `LATEST_PROTOCOL_VERSION` to 2026-07-28, so a v1+ pin is modern-capable; the old rule mislabels every repo on the new major (jellyfin-mcp-deluxe and ebay-hardware-seller were already there before this release). Modern-capable is now "official go-sdk >= v1.7.0 OR mark3labs >= v1.0.0"; `dual` means both SDKs present with at least one modern-capable. Mutation-checked test cases pin both new classifications.
+
+### Fixed
+
+- **genskillsurface — `--check` no longer fails on an absent `.claude` projection.** `.claude/` is gitignored in this repo, so the projection is untracked local state that a fresh clone does not have; `checkOutputs` skipped it only when `.claude` was a *dangling symlink*. Once that symlink was replaced with a real directory, `make skill-surface-check` went red on a clean checkout, demanding files that were never checked in. An absent `.claude/**` output is now skipped; a present-but-drifted one still fails, so the skip cannot make the gate vacuous.
+
+- **cmd/hg-sync — the fleet Go-version sync tool reached zero repos.** Its `--version-file` default pointed at a nonexistent `<root>/make/go-version` (the real file is `ralphglasses/dotfiles/make/go-version`), and `--workspace-check` assumed a manifest `path` field that `workspace/manifest.json` (schema v1) does not have, so every repo resolved to the workspace root, found no go.mod, and was skipped — the tool reported "repos updated: 0" as success. Both defaults corrected.
+
+- **registry — flaky `TestServerProgressMiddleware_NotifiesRealSession`.** The test read its `received` slice immediately after `CallTool` returned while the client's asynchronous `ProgressNotificationHandler` was still appending to it; measured failure rate was ~10% (19/200 runs on this branch, 20/200 on the prior release — pre-existing, not caused by the SDK bump). Notifications now arrive over a buffered channel collected under a deadline: 200/200 under `-race`.
+
 ### Changed
 
 - **registry** — `SearchTools` now ranks on normalized tokens instead of raw substring scans: punctuation becomes separators, common stopwords are ignored, exact-name and exact-alias phrase matches outrank partial fallbacks, prefix matching is bounded by minimum length and token-length ratio, fuzzy matching is capped to short edit distances, and deterministic tie-breaking keeps identical-score results stable. This closes the false-positive `down`→`download` path while preserving typo recovery and partial natural-language queries; focused tests now pin Unicode tokenization, stopword handling, alias priority, bounded typo tolerance, partial-result floors, score ordering, and deterministic ties.
