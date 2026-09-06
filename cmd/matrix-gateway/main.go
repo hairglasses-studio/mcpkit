@@ -32,10 +32,10 @@ const (
 )
 
 type Guardrails struct {
-	FreeNVMeGB                float64 `json:"free_nvme_gb"`
-	UsedVRAMMiB               float64 `json:"used_vram_mib"`
+	FreeNVMeGB               float64 `json:"free_nvme_gb"`
+	UsedVRAMMiB              float64 `json:"used_vram_mib"`
 	ZeroDesktopNotifications bool    `json:"zero_desktop_notifications"`
-	Status                    string  `json:"status"`
+	Status                   string  `json:"status"`
 }
 
 func checkGuardrails() Guardrails {

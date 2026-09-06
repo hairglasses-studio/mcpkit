@@ -76,4 +76,3 @@ func main() {
 		log.Fatalf("[fulfillment-gateway] Stdio server failed: %v", err)
 	}
 }
-

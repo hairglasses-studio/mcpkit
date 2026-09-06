@@ -323,7 +323,7 @@ func TestMiddlewareOverhead_P99_PerLayer(t *testing.T) {
 	// Primary assertion: average per-layer overhead must not exceed 5%.
 	// Compare 10-layer to 0-layer (both include mcpkit base overhead),
 	// so this isolates only the middleware overhead.
-	p99_0 := p99s[0]  // 0 user middleware layers
+	p99_0 := p99s[0]   // 0 user middleware layers
 	p99_10 := p99s[10] // 10 user middleware layers
 	totalDelta := p99_10 - p99_0
 	avgPerLayer := totalDelta / 10

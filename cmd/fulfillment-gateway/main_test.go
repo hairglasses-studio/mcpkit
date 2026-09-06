@@ -37,4 +37,3 @@ func TestDaemonCycleExecution(t *testing.T) {
 		t.Fatalf("Expected initial cycle to succeed")
 	}
 }
-

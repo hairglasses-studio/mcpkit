@@ -17,13 +17,13 @@ var defaultMailboxDirs = []string{
 func SyncMailbox(sessionID, teamID, subject string, deliverables, inFlight []string) (SyncMailboxOutput, error) {
 	now := time.Now().UTC().Format(time.RFC3339)
 	payload := map[string]any{
-		"from_session":   sessionID,
-		"from_team":      teamID,
-		"from_role":      "Go MCP Unified Self-Fulfillment Gateway",
-		"timestamp_utc":  now,
-		"subject":        subject,
-		"status":         "DELIVERED_AND_BOUND",
-		"deliverables":   deliverables,
+		"from_session":    sessionID,
+		"from_team":       teamID,
+		"from_role":       "Go MCP Unified Self-Fulfillment Gateway",
+		"timestamp_utc":   now,
+		"subject":         subject,
+		"status":          "DELIVERED_AND_BOUND",
+		"deliverables":    deliverables,
 		"in_flight_tasks": inFlight,
 	}
 

@@ -116,7 +116,6 @@ func (m *MatrixManager) GetStatus(verbose bool) (MatrixStatusOutput, error) {
 	return out, nil
 }
 
-
 // ScanGaps returns sequence gap items.
 func (m *MatrixManager) ScanGaps(seriesPrefix string, limit int) ([]SequenceGapItem, error) {
 	m.mu.RLock()

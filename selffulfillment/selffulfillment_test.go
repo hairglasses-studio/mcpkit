@@ -81,8 +81,8 @@ func TestGatewaySelfFulfillmentIntegration(t *testing.T) {
 
 	tools := gwReg.ListTools()
 	expectedTools := map[string]bool{
-		"fulfillment.selffulfillment_run_cycle":          true,
-		"fulfillment.selffulfillment_status":             true,
+		"fulfillment.selffulfillment_run_cycle":        true,
+		"fulfillment.selffulfillment_status":           true,
 		"fulfillment.selffulfillment_guardrails_check": true,
 	}
 	for _, name := range tools {
@@ -91,6 +91,3 @@ func TestGatewaySelfFulfillmentIntegration(t *testing.T) {
 		}
 	}
 }
-
-
-
